@@ -3,7 +3,7 @@ import type { MapCameraChangedEvent } from "@vis.gl/react-google-maps";
 import { Input, Space, Button } from "antd";
 
 export default function NavigationMap() {
-  const apiKey = "AIzaSyCyrEONlF34m5nUE3PlXRjpI20x3rQPjgI";
+  const apiKey = "";
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
