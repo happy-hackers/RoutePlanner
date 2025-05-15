@@ -1,4 +1,6 @@
 import { Table } from "antd";
+import type { Order } from "../features/orders";
+import dayjs from "dayjs";
 
 const columns = [
   {
@@ -7,9 +9,14 @@ const columns = [
     key: "id",
   },
   {
-    title: "Delivery date",
-    dataIndex: "deliveryDate",
-    key: "deliveryDate",
+    title: "Delivery Time",
+    dataIndex: "time",
+    key: "deliveryTime",
+    render: (time: string, record: Order) => {
+      const date = dayjs(record.date).format("YYYY-MM-DD");
+      const timeDisplay = time.charAt(0).toUpperCase() + time.slice(1);
+      return `${date} ${timeDisplay}`;
+    },
   },
   {
     title: "Postcode",
@@ -18,6 +25,6 @@ const columns = [
   },
 ];
 
-export default function Orderform() {
-  return <Table columns={columns} dataSource={[]} rowKey="id" />;
+export default function Orderform({ orders }: { orders: Order[] }) {
+  return <Table columns={columns} dataSource={orders} rowKey="id" />;
 }

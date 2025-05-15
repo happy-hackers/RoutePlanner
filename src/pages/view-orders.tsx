@@ -3,12 +3,15 @@ import NewOrderModal from "../components/NewOrderModal";
 import { Button, DatePicker, Radio, Row, Col, Space } from "antd";
 import dayjs from "dayjs";
 import { useState } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store";
 
 type TimePeriod = "afternoon" | "evening";
 
 export default function ViewOrders() {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>("afternoon");
   const [date, setDate] = useState(dayjs());
+  const orders = useSelector((state: RootState) => state.orders);
 
   return (
     <Row style={{ height: "100%" }}>
@@ -36,7 +39,7 @@ export default function ViewOrders() {
               Evening
             </Radio.Button>
           </Radio.Group>
-          <Orderform />
+          <Orderform orders={orders} />
         </Space>
       </Col>
     </Row>

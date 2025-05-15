@@ -39,7 +39,9 @@ const rowSelection: TableProps<DataType>["rowSelection"] = {
   }),
 };
 
-export default function Dispatcherform() {
+export default function Dispatcherform({ id }: { id: string }) {
+  // 在这里实现id
+  console.log(id);
   return (
     <Table
       rowSelection={{ type: "checkbox", ...rowSelection }}

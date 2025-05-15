@@ -1,59 +1,9 @@
-import { useLocation } from "react-router-dom";
-import { Table, Typography } from "antd";
+import { useParams } from "react-router-dom";
+import { Table, Typography, Row, Col, Space, Button } from "antd";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store";
 
 const { Title } = Typography;
-
-interface RouteData {
-  key: string;
-  orderId: string;
-  address: string;
-  estimatedTime: string;
-}
-
-const mockData: Record<string, RouteData[]> = {
-  dispatcher1: [
-    {
-      key: "1",
-      orderId: "ORD001",
-      address: "123 Main St",
-      estimatedTime: "14:30",
-    },
-    {
-      key: "2",
-      orderId: "ORD002",
-      address: "456 Oak Ave",
-      estimatedTime: "15:00",
-    },
-  ],
-  dispatcher2: [
-    {
-      key: "1",
-      orderId: "ORD003",
-      address: "789 Pine Rd",
-      estimatedTime: "14:45",
-    },
-    {
-      key: "2",
-      orderId: "ORD004",
-      address: "321 Elm St",
-      estimatedTime: "15:15",
-    },
-  ],
-  dispatcher3: [
-    {
-      key: "1",
-      orderId: "ORD005",
-      address: "654 Maple Dr",
-      estimatedTime: "15:00",
-    },
-    {
-      key: "2",
-      orderId: "ORD006",
-      address: "987 Cedar Ln",
-      estimatedTime: "15:30",
-    },
-  ],
-};
 
 const columns = [
   {
@@ -74,10 +24,15 @@ const columns = [
 ];
 
 export default function RouteResults() {
-  const location = useLocation();
-  const dispatcherId = location.hash.replace("#", "");
+  const { id } = useParams();
+  const orders = useSelector((state: RootState) => state.orders);
+  const dispatchers = useSelector((state: RootState) => state.dispatchers);
+  const dispatcher = dispatchers.find(
+    (dispatcher) => dispatcher.id === Number(id)
+  );
+  const name = dispatcher?.name;
 
-  if (!dispatcherId) {
+  if (!id) {
     return (
       <div>
         <Title level={4}>Please select a dispatcher from the sidebar</Title>
@@ -85,9 +40,26 @@ export default function RouteResults() {
     );
   }
 
-  const data = mockData[dispatcherId] || [];
+  if (orders.length === 0) {
+    return (
+      <div>
+        <Title level={4}>No orders found</Title>
+      </div>
+    );
+  }
 
-  return <Table columns={columns} dataSource={data} pagination={false} />;
+  const data = orders.filter((order) => order.dispatcherId === Number(id));
+
+  return (
+    <Row style={{ height: "100%" }}>
+      <Col>
+        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+          <Button type="primary">Download the route of {name}</Button>
+          <Table columns={columns} dataSource={data} pagination={false} />
+        </Space>
+      </Col>
+    </Row>
+  );
 }
 
 RouteResults.needMap = true;
