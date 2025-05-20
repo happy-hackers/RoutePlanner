@@ -4,9 +4,10 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../store";
 import type { MenuProps } from "antd";
 import {
-  PieChartOutlined,
-  FileOutlined,
-  EditOutlined,
+  ShoppingOutlined,
+  UserSwitchOutlined,
+  SettingOutlined,
+  CompassOutlined,
 } from "@ant-design/icons";
 
 type MenuItem = Required<MenuProps>["items"][number];
@@ -37,13 +38,13 @@ export default function Sidebar() {
   });
 
   const menuItems: MenuItem[] = [
-    getItem("View Orders", "/view-orders", <PieChartOutlined />),
-    getItem("Assign Dispatcher", "/assign-dispatcher", <EditOutlined />),
-    getItem("Set Dispatcher", "/set-dispatcher", <EditOutlined />),
+    getItem("View Orders", "/view-orders", <ShoppingOutlined />),
+    getItem("Assign Dispatcher", "/assign-dispatcher", <UserSwitchOutlined />),
+    getItem("Set Dispatcher", "/set-dispatcher", <SettingOutlined />),
     getItem(
       "Route Results",
       "/route-results",
-      <FileOutlined />,
+      <CompassOutlined />,
       dispatchersList
     ),
   ];

@@ -52,7 +52,7 @@ export default function SetDispatcher() {
                   checked={dispatcher.Activeday.includes(day)}
                   onChange={() => handleToggleDay(dispatcher.id, day)}
                 >
-                  {day[0]}
+                  {day.slice(0, 3)}
                 </Checkbox>
               ))}
             </Space>

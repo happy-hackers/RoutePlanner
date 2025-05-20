@@ -13,6 +13,14 @@ export default function ViewOrders() {
   const [date, setDate] = useState(dayjs());
   const orders = useSelector((state: RootState) => state.orders);
 
+  // Filter orders based on selected date and time period
+  const filteredOrders = orders.filter((order) => {
+    const orderDate = dayjs(order.date);
+    const isSameDate = orderDate.isSame(date, "day");
+    const isSameTimePeriod = order.time === timePeriod;
+    return isSameDate && isSameTimePeriod;
+  });
+
   return (
     <Row style={{ height: "100%" }}>
       <Col>
@@ -39,7 +47,7 @@ export default function ViewOrders() {
               Evening
             </Radio.Button>
           </Radio.Group>
-          <Orderform orders={orders} />
+          <Orderform orders={filteredOrders} />
         </Space>
       </Col>
     </Row>
