@@ -8,6 +8,16 @@ import {
 } from "antd";
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
+import { useDispatch } from "react-redux";
+import { addOrder } from "../features/orders";
+import type { Order } from "../features/orders";
+
+interface OrderFormValues {
+  date: dayjs.Dayjs;
+  address: string;
+  postcode: string;
+  deliveryTime: string;
+}
 
 export default function NewOrderModal({
   context,
@@ -16,8 +26,8 @@ export default function NewOrderModal({
 }) {
   const { Date, Time, Address } = context;
   const [open, setOpen] = useState(false);
-  const [form] = AntForm.useForm();
-
+  const [form] = AntForm.useForm<OrderFormValues>();
+  const dispatch = useDispatch();
   useEffect(() => {
     if (open) {
       form.setFieldsValue({
@@ -32,6 +42,24 @@ export default function NewOrderModal({
     setOpen(!open);
   };
 
+  const handleSubmit = (values: OrderFormValues) => {
+    const newOrder: Omit<Order, "id"> = {
+      date: values.date.toISOString(),
+      time: values.deliveryTime,
+      address: values.address,
+      postcode: values.postcode,
+      dispatcherId: 0, // Default to 0, indicating no dispatcher assigned
+    };
+    dispatch(addOrder(newOrder));
+    form.resetFields();
+    setOpen(false);
+  };
+
+  const handleCancel = () => {
+    form.resetFields();
+    setOpen(false);
+  };
+
   return (
     <>
       <Button type="primary" onClick={toggleModal}>
@@ -43,14 +71,7 @@ export default function NewOrderModal({
         onCancel={toggleModal}
         footer={null}
       >
-        <AntForm
-          form={form}
-          layout="vertical"
-          onFinish={(values) => {
-            console.log("Form values:", values);
-            setOpen(false);
-          }}
-        >
+        <AntForm form={form} layout="vertical" onFinish={handleSubmit}>
           <AntForm.Item
             label="Date Picker"
             name="date"
@@ -66,6 +87,13 @@ export default function NewOrderModal({
             <Input placeholder="Address" />
           </AntForm.Item>
           <AntForm.Item
+            label="Postcode"
+            name="postcode"
+            rules={[{ required: true, message: "Please input postcode!" }]}
+          >
+            <Input placeholder="Postcode" />
+          </AntForm.Item>
+          <AntForm.Item
             label="Delivery Time"
             name="deliveryTime"
             rules={[
@@ -78,7 +106,7 @@ export default function NewOrderModal({
             </Select>
           </AntForm.Item>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-            <Button onClick={toggleModal} style={{ marginRight: 8 }}>
+            <Button onClick={handleCancel} style={{ marginRight: 8 }}>
               Cancel
             </Button>
             <Button type="primary" htmlType="submit">

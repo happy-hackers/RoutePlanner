@@ -1,52 +1,24 @@
-import { useState } from "react";
-import {
-  Card,
-  Select,
-  Checkbox,
-  Button,
-  Space,
-  Typography,
-  Row,
-  Col,
-} from "antd";
+import { useSelector, useDispatch } from "react-redux";
+import { Card, Select, Checkbox, Space, Typography, Row, Col } from "antd";
+import { toggleDay, updateArea } from "../features/disparturers";
+import type { RootState } from "../store";
 
 const { Option } = Select;
 const { Text } = Typography;
 
-const days = ["S", "M", "T", "W", "T", "F", "S"];
+const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const areas = ["City", "South East", "West"];
 
-const initialDrivers = [
-  { name: "Amy", days: [1, 2, 3, 4], area: ["City", "South East"] },
-  { name: "Bob", days: [1, 2, 3, 4], area: [] },
-  { name: "Charles", days: [1, 2, 3, 4, 5], area: ["City"] },
-];
-
 export default function SetDispatcher() {
-  const [drivers, setDrivers] = useState(initialDrivers);
+  const dispatch = useDispatch();
+  const dispatchers = useSelector((state: RootState) => state.dispatchers);
 
-  const toggleDay = (driverIndex: number, dayIndex: number) => {
-    const updated = [...drivers];
-    const selectedDays = updated[driverIndex].days;
-    if (selectedDays.includes(dayIndex)) {
-      updated[driverIndex].days = selectedDays.filter((d) => d !== dayIndex);
-    } else {
-      updated[driverIndex].days = [...selectedDays, dayIndex];
-    }
-    setDrivers(updated);
+  const handleToggleDay = (dispatcherId: number, day: string) => {
+    dispatch(toggleDay({ id: dispatcherId, day }));
   };
 
-  const updateArea = (driverIndex: number, value: string[]) => {
-    const updated = [...drivers];
-    updated[driverIndex].area = value;
-    setDrivers(updated);
-  };
-
-  const addDriver = () => {
-    setDrivers([
-      ...drivers,
-      { name: `Driver ${drivers.length + 1}`, days: [], area: [] },
-    ]);
+  const handleUpdateArea = (dispatcherId: number, value: string[]) => {
+    dispatch(updateArea({ id: dispatcherId, areas: value }));
   };
 
   return (
@@ -62,20 +34,25 @@ export default function SetDispatcher() {
           <Text>Responsible Area</Text>
         </Col>
       </Row>
-      {drivers.map((driver, idx) => (
-        <Row key={idx} align="middle" gutter={12} style={{ marginBottom: 12 }}>
+      {dispatchers.map((dispatcher) => (
+        <Row
+          key={dispatcher.id}
+          align="middle"
+          gutter={12}
+          style={{ marginBottom: 12 }}
+        >
           <Col span={3}>
-            <Text>{driver.name}</Text>
+            <Text>{dispatcher.name}</Text>
           </Col>
           <Col span={14}>
             <Space>
-              {days.map((day, dayIdx) => (
+              {days.map((day) => (
                 <Checkbox
-                  key={dayIdx}
-                  checked={driver.days.includes(dayIdx)}
-                  onChange={() => toggleDay(idx, dayIdx)}
+                  key={day}
+                  checked={dispatcher.Activeday.includes(day)}
+                  onChange={() => handleToggleDay(dispatcher.id, day)}
                 >
-                  {day}
+                  {day.slice(0, 3)}
                 </Checkbox>
               ))}
             </Space>
@@ -83,8 +60,8 @@ export default function SetDispatcher() {
           <Col span={7}>
             <Select
               mode="multiple"
-              value={driver.area}
-              onChange={(val) => updateArea(idx, val)}
+              value={dispatcher.responsibleArea}
+              onChange={(val) => handleUpdateArea(dispatcher.id, val)}
               style={{ width: "100%" }}
               placeholder="Select area"
             >
@@ -97,9 +74,6 @@ export default function SetDispatcher() {
           </Col>
         </Row>
       ))}
-      <Button type="primary" onClick={addDriver}>
-        New Driver
-      </Button>
     </Card>
   );
 }
