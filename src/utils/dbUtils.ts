@@ -1,6 +1,11 @@
 import type { Order } from "../features/orders";
+import { createClient } from '@supabase/supabase-js'
 
 const API_BASE_URL = "http://localhost:4000";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export const createOrder = async (
   orderData: Omit<Order, "id">
@@ -34,3 +39,19 @@ export const createOrder = async (
     };
   }
 };
+
+export const getAllOrders = async (
+): Promise<Order[] | undefined> => {
+  const { data, error } = await supabase.from('orders').select('*')
+  if (error) {
+    console.error('Fetch error:', error)
+    return;
+  }
+  else {
+    // Remove create_time from each object since we don't need it currently
+    const cleanedArray = data.map(({ created_time, ...rest }) => ({
+      ...rest
+    }));
+    return cleanedArray;
+  }
+}
