@@ -6,17 +6,19 @@ import ViewOrders from "./pages/view-orders";
 import AssignDispatchers from "./pages/assign-disparture";
 import RouteResults from "./pages/route-results";
 import SetDispatcher from "./pages/set-dispatcher";
+import NavigationMap from "./components/NavigationMap";
+import { useLocation } from "react-router-dom";
 
 const { Content } = Layout;
 const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
 
-/*const pageConfig = {
+const pageConfig = {
   "/view-orders": ViewOrders,
   "/assign-dispatcher": AssignDispatchers,
   "/set-dispatcher": SetDispatcher,
   "/route-results": RouteResults,
   "/route-results/:id": RouteResults,
-};*/
+};
 
 function App() {
   // useJsApiLoader() loads Google Maps API script with API key globally
@@ -27,7 +29,7 @@ function App() {
 }
 
 function AppContent() {
-  /*const location = useLocation();
+  const location = useLocation();
   const matchedPath = Object.keys(pageConfig).find((path) => {
     const pattern = new RegExp("^" + path.replace(/:[^/]+/g, "[^/]+") + "$");
     return pattern.test(location.pathname);
@@ -35,13 +37,13 @@ function AppContent() {
   const PageComponent = matchedPath
     ? pageConfig[matchedPath as keyof typeof pageConfig]
     : undefined;
-  const needMap = PageComponent?.needMap ?? false;*/
+  const needMap = PageComponent?.needMap ?? false;
   return (
     <Layout style={{ minHeight: "100vh", margin: 0, padding: 0 }}>
       <Navigation />
       <Content style={{ flex: 1, padding: "10px" }}>
         <Row style={{ height: "100%", width: "100%" }}>
-          <Col flex="auto">
+          <Col flex={needMap ? "295px" : "auto"}>
             <Routes>
               <Route
                 path="/"
@@ -58,6 +60,11 @@ function AppContent() {
               <Route path="/route-results/:id" element={<RouteResults />} />
             </Routes>
           </Col>
+          {needMap && (
+            <Col flex="auto">
+              <NavigationMap markers={[]} />
+            </Col>
+          )}
         </Row>
       </Content>
     </Layout>

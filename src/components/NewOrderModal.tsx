@@ -6,12 +6,12 @@ import {
   Select,
   Form as AntForm,
 } from "antd";
-import { message } from "antd";
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
 import { useDispatch } from "react-redux";
 import { addOrder } from "../features/orders";
 import type { Order } from "../features/orders";
+import { createOrder } from "../utils/dbUtils";
 
 type OrderTime = "Morning" | "Afternoon" | "Evening";
 
@@ -20,14 +20,16 @@ interface OrderFormValues {
   address: string;
   postcode: number;
   deliveryTime: string;
+  latitude: number;
+  longitude: number;
 }
 
 export default function NewOrderModal({
   context,
 }: {
-  context: { Date?: dayjs.Dayjs; Time?: string; Address?: string };
+  context: { Date?: dayjs.Dayjs; Time?: string };
 }) {
-  const { Date, Time, Address } = context;
+  const { Date, Time } = context;
   const [open, setOpen] = useState(false);
   const [form] = AntForm.useForm<OrderFormValues>();
   const dispatch = useDispatch();
@@ -35,72 +37,65 @@ export default function NewOrderModal({
     if (open) {
       form.setFieldsValue({
         date: Date,
-        address: Address,
         deliveryTime: Time,
       });
     }
-  }, [open, Date, Time, Address, form]);
+  }, [open, Date, Time, form]);
 
   const toggleModal = () => {
     setOpen(!open);
   };
 
   const handleSubmit = async (values: OrderFormValues) => {
-    const location = await getLocationByAddress(values.address);
-    if (!location.lat || !location.lng) {
+    //const location = await getLocationByAddress(values.address);
+    if (!values.latitude || !values.longitude) {
       // Give a error message to user: Please enter a valid address!
       return;
     } else {
       const time: OrderTime = values.deliveryTime as OrderTime;
       const newOrder: Omit<Order, "id"> = {
-        date: values.date.format('YYYY-MM-DD'),
+        date: values.date.format("YYYY-MM-DD"),
         time: time,
         state: "Pending",
         address: values.address,
-        lat: location.lat,
-        lng: location.lng,
-        postcode: values.postcode
+        lat: values.latitude,
+        lng: values.longitude,
+        postcode: values.postcode,
       };
-      try {
-        const response = await fetch('http://localhost:4000/order/create-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newOrder),
-        });
-    
-        const result = await response.json();
-    
-        if (response.ok) {
-          dispatch(addOrder(result.newOrder)); // update redux state manually
-          alert(result.message);
-        } else {
-          console.error('Server error:', result.error);
-        }
-      } catch (error) {
-        console.error('Network error:', error);
+
+      const result = await createOrder(newOrder);
+
+      if (result.success && result.data) {
+        dispatch(addOrder(result.data)); // update redux state manually
+        toggleModal();
+        alert("Order created successfully!");
+      } else {
+        console.error("Failed to create order:", result.error);
+        alert(`Failed to create order: ${result.error}`);
       }
     }
   };
 
-  const getLocationByAddress = async (address: string) => {
-    let location: google.maps.LatLng | null = null;
-  
-    try {
-      const geocoder = new google.maps.Geocoder();
-      const result = await geocoder.geocode({ address });
-  
-      if (result.results[0]) {
-        location = result.results[0].geometry.location;
-        message.success(`Geocode address successfully`);
-      } else {
-        message.error(`Could not find address: ${address}`);
-      }
-    } catch (error) {
-      message.error(`Address parsing failed: ${address}`);
-      console.error("Geocoding error:", error);
-    }
-    return {lat: location?.lat(), lng: location?.lng()};
-  };
+  // Reuse if using geocoding instead of lat and lng
+  // const getLocationByAddress = async (address: string) => {
+  //   let location: google.maps.LatLng | null = null;
+
+  //   try {
+  //     const geocoder = new google.maps.Geocoder();
+  //     const result = await geocoder.geocode({ address });
+
+  //     if (result.results[0]) {
+  //       location = result.results[0].geometry.location;
+  //       message.success(`Geocode address successfully`);
+  //     } else {
+  //       message.error(`Could not find address: ${address}`);
+  //     }
+  //   } catch (error) {
+  //     message.error(`Address parsing failed: ${address}`);
+  //     console.error("Geocoding error:", error);
+  //   }
+  //   return {lat: location?.lat(), lng: location?.lng()};
+  // };
 
   const handleCancel = () => {
     form.resetFields();
@@ -124,19 +119,53 @@ export default function NewOrderModal({
             name="date"
             rules={[{ required: true, message: "Please select a date!" }]}
           >
-            <DatePicker style={{ width: "100%" }}  />
+            <DatePicker style={{ width: "100%" }} />
           </AntForm.Item>
           <AntForm.Item
             label="Address"
             name="address"
-            rules={[{ required: true, message: "Please input address!" }]}
+            rules={[
+              {
+                required: true,
+                message: "Please input the address of the order!",
+              },
+            ]}
           >
             <Input placeholder="Address" />
           </AntForm.Item>
           <AntForm.Item
+            label="Longitude"
+            name="longitude"
+            rules={[
+              {
+                required: true,
+                message: "Please input the longitude of the order!",
+              },
+            ]}
+          >
+            <Input placeholder="Longitude" />
+          </AntForm.Item>
+          <AntForm.Item
+            label="Latitude"
+            name="latitude"
+            rules={[
+              {
+                required: true,
+                message: "Please input the latitude of the order!",
+              },
+            ]}
+          >
+            <Input placeholder="Latitude" />
+          </AntForm.Item>
+          <AntForm.Item
             label="Postcode"
             name="postcode"
-            rules={[{ required: true, message: "Please input postcode!" }]}
+            rules={[
+              {
+                required: true,
+                message: "Please input the postcode of the order!",
+              },
+            ]}
           >
             <Input placeholder="Postcode" />
           </AntForm.Item>
@@ -148,7 +177,7 @@ export default function NewOrderModal({
             ]}
           >
             <Select placeholder="Select delivery time">
-            <Select.Option value="Morning">Morning</Select.Option>
+              <Select.Option value="Morning">Morning</Select.Option>
               <Select.Option value="Afternoon">Afternoon</Select.Option>
               <Select.Option value="Evening">Evening</Select.Option>
             </Select>
