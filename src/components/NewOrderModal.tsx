@@ -6,16 +6,19 @@ import {
   Select,
   Form as AntForm,
 } from "antd";
+import { message } from "antd";
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
 import { useDispatch } from "react-redux";
 import { addOrder } from "../features/orders";
 import type { Order } from "../features/orders";
 
+type OrderTime = "Morning" | "Afternoon" | "Evening";
+
 interface OrderFormValues {
   date: dayjs.Dayjs;
   address: string;
-  postcode: string;
+  postcode: number;
   deliveryTime: string;
 }
 
@@ -42,17 +45,61 @@ export default function NewOrderModal({
     setOpen(!open);
   };
 
-  const handleSubmit = (values: OrderFormValues) => {
-    const newOrder: Omit<Order, "id"> = {
-      date: values.date.toISOString(),
-      time: values.deliveryTime,
-      address: values.address,
-      postcode: values.postcode,
-      dispatcherId: 0, // Default to 0, indicating no dispatcher assigned
-    };
-    dispatch(addOrder(newOrder));
-    form.resetFields();
-    setOpen(false);
+  const handleSubmit = async (values: OrderFormValues) => {
+    const location = await getLocationByAddress(values.address);
+    if (!location.lat || !location.lng) {
+      // Give a error message to user: Please enter a valid address!
+      return;
+    } else {
+      const time: OrderTime = values.deliveryTime as OrderTime;
+      const newOrder: Omit<Order, "id"> = {
+        date: values.date.format('YYYY-MM-DD'),
+        time: time,
+        state: "Pending",
+        address: values.address,
+        lat: location.lat,
+        lng: location.lng,
+        postcode: values.postcode
+      };
+      try {
+        const response = await fetch('http://localhost:4000/order/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newOrder),
+        });
+    
+        const result = await response.json();
+    
+        if (response.ok) {
+          dispatch(addOrder(result.newOrder)); // update redux state manually
+          alert(result.message);
+        } else {
+          console.error('Server error:', result.error);
+        }
+      } catch (error) {
+        console.error('Network error:', error);
+      }
+    }
+  };
+
+  const getLocationByAddress = async (address: string) => {
+    let location: google.maps.LatLng | null = null;
+  
+    try {
+      const geocoder = new google.maps.Geocoder();
+      const result = await geocoder.geocode({ address });
+  
+      if (result.results[0]) {
+        location = result.results[0].geometry.location;
+        message.success(`Geocode address successfully`);
+      } else {
+        message.error(`Could not find address: ${address}`);
+      }
+    } catch (error) {
+      message.error(`Address parsing failed: ${address}`);
+      console.error("Geocoding error:", error);
+    }
+    return {lat: location?.lat(), lng: location?.lng()};
   };
 
   const handleCancel = () => {
@@ -77,7 +124,7 @@ export default function NewOrderModal({
             name="date"
             rules={[{ required: true, message: "Please select a date!" }]}
           >
-            <DatePicker style={{ width: "100%" }} />
+            <DatePicker style={{ width: "100%" }}  />
           </AntForm.Item>
           <AntForm.Item
             label="Address"
@@ -101,8 +148,9 @@ export default function NewOrderModal({
             ]}
           >
             <Select placeholder="Select delivery time">
-              <Select.Option value="afternoon">Afternoon</Select.Option>
-              <Select.Option value="evening">Evening</Select.Option>
+            <Select.Option value="Morning">Morning</Select.Option>
+              <Select.Option value="Afternoon">Afternoon</Select.Option>
+              <Select.Option value="Evening">Evening</Select.Option>
             </Select>
           </AntForm.Item>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>

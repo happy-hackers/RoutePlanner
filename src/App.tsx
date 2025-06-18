@@ -1,24 +1,33 @@
 import { Layout, Row, Col } from "antd";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useJsApiLoader } from "@react-google-maps/api";
 import Navigation from "./components/Navigation";
 import ViewOrders from "./pages/view-orders";
 import AssignDispatchers from "./pages/assign-disparture";
 import RouteResults from "./pages/route-results";
-import NavigationMap from "./components/NavigationMap";
 import SetDispatcher from "./pages/set-dispatcher";
 
 const { Content } = Layout;
+const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
 
-const pageConfig = {
+/*const pageConfig = {
   "/view-orders": ViewOrders,
   "/assign-dispatcher": AssignDispatchers,
   "/set-dispatcher": SetDispatcher,
   "/route-results": RouteResults,
   "/route-results/:id": RouteResults,
-};
+};*/
 
 function App() {
-  const location = useLocation();
+  // useJsApiLoader() loads Google Maps API script with API key globally
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: apiKey || "",
+  });
+  return isLoaded ? <AppContent /> : <div>Loading Map...</div>;
+}
+
+function AppContent() {
+  /*const location = useLocation();
   const matchedPath = Object.keys(pageConfig).find((path) => {
     const pattern = new RegExp("^" + path.replace(/:[^/]+/g, "[^/]+") + "$");
     return pattern.test(location.pathname);
@@ -26,13 +35,13 @@ function App() {
   const PageComponent = matchedPath
     ? pageConfig[matchedPath as keyof typeof pageConfig]
     : undefined;
-  const needMap = PageComponent?.needMap ?? false;
+  const needMap = PageComponent?.needMap ?? false;*/
   return (
     <Layout style={{ minHeight: "100vh", margin: 0, padding: 0 }}>
       <Navigation />
       <Content style={{ flex: 1, padding: "10px" }}>
         <Row style={{ height: "100%", width: "100%" }}>
-          <Col flex={needMap ? "295px" : "auto"}>
+          <Col flex="auto">
             <Routes>
               <Route
                 path="/"
@@ -49,11 +58,6 @@ function App() {
               <Route path="/route-results/:id" element={<RouteResults />} />
             </Routes>
           </Col>
-          {needMap && (
-            <Col flex="auto">
-              <NavigationMap />
-            </Col>
-          )}
         </Row>
       </Content>
     </Layout>

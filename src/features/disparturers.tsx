@@ -2,50 +2,46 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 
 export interface Dispatcher {
-  name: string;
   id: number;
-  Activeday: string[];
+  name: string;
+  activeDay: string[];
   responsibleArea: string[];
-  assignedOrderIds: number[];
 }
 
-const initialState: Dispatcher[] = [
+/*const initialState: Dispatcher[] = [
   {
     name: "Amy",
     id: 1,
-    Activeday: ["Mon"],
+    activeDay: ["Mon"],
     responsibleArea: ["A", "B", "C"],
-    assignedOrderIds: [],
   },
   {
     name: "Bob",
     id: 2,
-    Activeday: ["Tue"],
+    activeDay: ["Tue"],
     responsibleArea: ["A", "B", "C"],
-    assignedOrderIds: [],
   },
   {
     name: "Charles",
     id: 3,
-    Activeday: ["Wed"],
+    activeDay: ["Wed"],
     responsibleArea: ["A", "B", "C"],
-    assignedOrderIds: [],
   },
   {
     name: "Matthew",
     id: 4,
-    Activeday: ["Thu"],
+    activeDay: ["Thu"],
     responsibleArea: ["A", "B", "C"],
-    assignedOrderIds: [],
   },
   {
     name: "Lily",
     id: 5,
-    Activeday: ["Fri"],
+    activeDay: ["Fri"],
     responsibleArea: ["A", "B", "C"],
-    assignedOrderIds: [],
   },
-];
+];*/
+
+const initialState: Dispatcher[] = [];
 
 const dispatchersSlice = createSlice({
   name: "dispatchers",
@@ -54,11 +50,11 @@ const dispatchersSlice = createSlice({
     toggleDay: (state, action: PayloadAction<{ id: number; day: string }>) => {
       const dispatcher = state.find((d) => d.id === action.payload.id);
       if (dispatcher) {
-        const dayIndex = dispatcher.Activeday.indexOf(action.payload.day);
+        const dayIndex = dispatcher.activeDay.indexOf(action.payload.day);
         if (dayIndex === -1) {
-          dispatcher.Activeday.push(action.payload.day);
+          dispatcher.activeDay.push(action.payload.day);
         } else {
-          dispatcher.Activeday.splice(dayIndex, 1);
+          dispatcher.activeDay.splice(dayIndex, 1);
         }
       }
     },
@@ -71,9 +67,15 @@ const dispatchersSlice = createSlice({
         dispatcher.responsibleArea = action.payload.areas;
       }
     },
+    resetDispatchers: (
+      _state,
+      action: PayloadAction<Dispatcher[]>
+    ) => {
+      return action.payload;
+    },
   },
 });
 
-export const { toggleDay, updateArea } = dispatchersSlice.actions;
+export const { toggleDay, updateArea, resetDispatchers } = dispatchersSlice.actions;
 
 export default dispatchersSlice.reducer;

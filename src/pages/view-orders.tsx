@@ -6,20 +6,23 @@ import { useState } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store";
 
-type TimePeriod = "afternoon" | "evening";
+type TimePeriod = "Morning" | "Afternoon" | "Evening";
 
 export default function ViewOrders() {
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>("afternoon");
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("Afternoon");
   const [date, setDate] = useState(dayjs());
   const orders = useSelector((state: RootState) => state.orders);
-
+  let filteredOrders = orders;
   // Filter orders based on selected date and time period
-  const filteredOrders = orders.filter((order) => {
-    const orderDate = dayjs(order.date);
-    const isSameDate = orderDate.isSame(date, "day");
-    const isSameTimePeriod = order.time === timePeriod;
-    return isSameDate && isSameTimePeriod;
-  });
+  if ( date !== null ) {
+    filteredOrders = orders.filter((order) => {
+      const orderDate = dayjs(order.date);
+      const isSameDate = orderDate.isSame(date, "day");
+      const isSameTimePeriod = order.time === timePeriod;
+      return isSameDate && isSameTimePeriod;
+    });
+  }
+  
 
   return (
     <Row style={{ height: "100%" }}>
