@@ -3,9 +3,10 @@ import { Table, Typography, Row, Col, Space, Button } from "antd";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store";
 import NavigationMap from "../components/NavigationMap";
-import type { Order } from "../features/orders";
+import type { Order } from "../types/order.ts";
 import { useEffect, useState } from "react";
-import type { MarkerData } from "../components/type";
+import type { MarkerData } from "../types/markers.ts";
+import { getAllOrders } from "../utils/dbUtils";
 
 const { Title } = Typography;
 
@@ -30,18 +31,30 @@ const columns = [
 export default function RouteResults() {
   const redIcon = {
     url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
-    color: "red"
-  }
+    color: "red",
+  };
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
 
   const { id } = useParams();
-  const orders = useSelector((state: RootState) => state.orders);
   const dispatchers = useSelector((state: RootState) => state.dispatchers);
   const dispatcher = dispatchers.find(
     (dispatcher) => dispatcher.id === Number(id)
   );
   const name = dispatcher?.name;
+
+  // Fetch orders from Supabase
+  useEffect(() => {
+    const fetchOrders = async () => {
+      const ordersData = await getAllOrders();
+      if (ordersData) {
+        setOrders(ordersData);
+      }
+    };
+
+    fetchOrders();
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -69,77 +82,68 @@ export default function RouteResults() {
   const data = orders.filter((order) => order.dispatcherId === Number(id));
 
   const addMarker = (marker: MarkerData) => {
-    setMarkers(prev => [
-      ...prev,
-      marker
-    ]);
+    setMarkers((prev) => [...prev, marker]);
   };
   const removeMarker = (id: number) => {
-    const newMarkers = markers.filter(marker => marker.id !== id);
+    const newMarkers = markers.filter((marker) => marker.id !== id);
     setMarkers(newMarkers);
   };
 
-  const handleRowSelect = (record: Order, selected: boolean, _selectedRows: Order[]) => {
+  const handleRowSelect = (record: Order, selected: boolean) => {
     if (selected) {
-      setSelectedRowIds(prev => [
-        ...prev,
-        record.id
-      ])
+      setSelectedRowIds((prev) => [...prev, record.id]);
       addMarker({
         id: record.id,
-        position: {lat: record.lat, lng: record.lng},
+        position: { lat: record.lat, lng: record.lng },
         address: record.address,
         icon: redIcon,
-        dispatcherId: record.dispatcherId
-      })
+        dispatcherId: record.dispatcherId,
+      });
     } else {
-      setSelectedRowIds(selectedRowIds.filter(id => id !== record.id))
-      removeMarker(record.id)
+      setSelectedRowIds(selectedRowIds.filter((id) => id !== record.id));
+      removeMarker(record.id);
     }
-  }
+  };
 
-  const handleAllRowSelect = (selected: boolean, _selectedRows: Order[], changeRows: Order[]) => {
+  const handleAllRowSelect = (selected: boolean, changeRows: Order[]) => {
     if (selected) {
       changeRows.forEach((record) => {
-        setSelectedRowIds(prev => [
-          ...prev,
-          record.id
-        ])
+        setSelectedRowIds((prev) => [...prev, record.id]);
         addMarker({
           id: record.id,
-          position: {lat: record.lat, lng: record.lng},
+          position: { lat: record.lat, lng: record.lng },
           address: record.address,
           icon: redIcon,
-          dispatcherId: record.dispatcherId
-        })
+          dispatcherId: record.dispatcherId,
+        });
       });
     } else {
       setSelectedRowIds([]);
       setMarkers([]);
     }
-  }
+  };
   const rowSelection = {
     selectedRowKeys: selectedRowIds,
     onSelect: handleRowSelect,
-    onSelectAll: handleAllRowSelect
-  }
+    onSelectAll: handleAllRowSelect,
+  };
 
   return (
     <Row style={{ height: "100%" }}>
       <Col flex="295px">
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
           <Button type="primary">Download the route of {name}</Button>
-          <Table 
+          <Table
             rowKey="id"
-            rowSelection={rowSelection} 
-            columns={columns} 
-            dataSource={data} 
-            pagination={false} 
+            rowSelection={rowSelection}
+            columns={columns}
+            dataSource={data}
+            pagination={false}
           />
         </Space>
       </Col>
       <Col flex="auto">
-        <NavigationMap /*addMarker={addMarker}*/ markers={markers} />
+        <NavigationMap markers={markers} />
       </Col>
     </Row>
   );

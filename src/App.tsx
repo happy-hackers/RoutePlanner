@@ -8,6 +8,8 @@ import RouteResults from "./pages/route-results";
 import SetDispatcher from "./pages/set-dispatcher";
 import NavigationMap from "./components/NavigationMap";
 import { useLocation } from "react-router-dom";
+import { useState } from "react";
+import type { MarkerData } from "./types/markers";
 
 const { Content } = Layout;
 const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
@@ -20,14 +22,6 @@ const pageConfig = {
   "/route-results/:id": RouteResults,
 };
 
-function App() {
-  // useJsApiLoader() loads Google Maps API script with API key globally
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: apiKey || "",
-  });
-  return isLoaded ? <AppContent /> : <div>Loading Map...</div>;
-}
-
 function AppContent() {
   const location = useLocation();
   const matchedPath = Object.keys(pageConfig).find((path) => {
@@ -37,7 +31,30 @@ function AppContent() {
   const PageComponent = matchedPath
     ? pageConfig[matchedPath as keyof typeof pageConfig]
     : undefined;
-  const needMap = PageComponent?.needMap ?? false;
+  const needMap = [
+    "/view-orders",
+    "/set-dispatcher",
+    "/set-dispatcher/:id",
+  ].includes(matchedPath ?? "");
+
+  const [markers, setMarkers] = useState<MarkerData[]>([]);
+
+  const renderPage = () => {
+    switch (matchedPath) {
+      case "/view-orders":
+        return <ViewOrders setMarkers={setMarkers} />;
+      case "/set-dispatcher":
+      case "/set-dispatcher/:id":
+        return <SetDispatcher />;
+      default:
+        return PageComponent ? (
+          <PageComponent setMarkers={setMarkers} />
+        ) : (
+          <div>Page not found</div>
+        );
+    }
+  };
+
   return (
     <Layout style={{ minHeight: "100vh", margin: 0, padding: 0 }}>
       <Navigation />
@@ -49,26 +66,34 @@ function AppContent() {
                 path="/"
                 element={<Navigate to="/view-orders" replace />}
               />
-              <Route path="/view-orders" element={<ViewOrders />} />
+              <Route path="/view-orders" element={renderPage()} />
               <Route
                 path="/assign-dispatcher"
                 element={<AssignDispatchers />}
               />
-              <Route path="/set-dispatcher" element={<SetDispatcher />} />
-              <Route path="/set-dispatcher/:id" element={<SetDispatcher />} />
+              <Route path="/set-dispatcher" element={renderPage()} />
+              <Route path="/set-dispatcher/:id" element={renderPage()} />
               <Route path="/route-results" element={<RouteResults />} />
               <Route path="/route-results/:id" element={<RouteResults />} />
             </Routes>
           </Col>
           {needMap && (
             <Col flex="auto">
-              <NavigationMap markers={[]} />
+              <NavigationMap markers={markers} />
             </Col>
           )}
         </Row>
       </Content>
     </Layout>
   );
+}
+
+function App() {
+  // useJsApiLoader() loads Google Maps API script with API key globally
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: apiKey || "",
+  });
+  return isLoaded ? <AppContent /> : <div>Loading Map...</div>;
 }
 
 export default App;

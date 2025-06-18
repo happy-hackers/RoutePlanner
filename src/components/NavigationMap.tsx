@@ -3,13 +3,13 @@ import { Input, Space, Button } from "antd";
 //import { useLocation, matchPath } from "react-router-dom";
 import { useState, useRef } from "react";
 //import { useSelector } from "react-redux";
-import notification from "../utils/notification"
+import notification from "../utils/notification";
 //import type { RootState } from "../store";
 //import type { Order } from "../features/orders";
-import type { MarkerData } from "./type";
+import type { MarkerData } from "../types/markers";
 
 interface NavigationMapProp {
-  markers: MarkerData[],
+  markers: MarkerData[];
   //addMarker: (marker: MarkerData) => void
 }
 
@@ -17,13 +17,17 @@ const NavigationMap: React.FC<NavigationMapProp> = ({ markers }) => {
   /*const [markers, setMarkers] = useState<
     { lat: number; lng: number; address?: string }[]
   >([]);*/
-  
+
   const [startAddress, setStartAddress] = useState("");
   const [endAddress, setEndAddress] = useState("");
 
   const mapRef = useRef<google.maps.Map>(null);
-  const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
-  const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+  const directionsServiceRef = useRef<google.maps.DirectionsService | null>(
+    null
+  );
+  const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(
+    null
+  );
 
   /*const location = useLocation();
   // Get orders data from Redux store
@@ -59,13 +63,10 @@ const NavigationMap: React.FC<NavigationMapProp> = ({ markers }) => {
       map: mapRef.current,
       polylineOptions: { strokeColor: "blue" },
     });
-  }
+  };
   const calculateRoute = () => {
     if (!startAddress || !endAddress) {
-      notification(
-        "error",
-        "Start location and destination should be entered"
-      );
+      notification("error", "Start location and destination should be entered");
       return;
     }
     if (directionsServiceRef.current) {
@@ -73,10 +74,9 @@ const NavigationMap: React.FC<NavigationMapProp> = ({ markers }) => {
         {
           origin: startAddress,
           destination: endAddress,
-          waypoints: markers?.map(
-            (marker) => ({ 
-              location: {lat: marker.position.lat, lng: marker.position.lng} 
-            })),
+          waypoints: markers?.map((marker) => ({
+            location: { lat: marker.position.lat, lng: marker.position.lng },
+          })),
           optimizeWaypoints: true,
           travelMode: window.google.maps.TravelMode.DRIVING,
         },
@@ -90,7 +90,6 @@ const NavigationMap: React.FC<NavigationMapProp> = ({ markers }) => {
         }
       );
     }
-    
   };
 
   return (
@@ -135,17 +134,17 @@ const NavigationMap: React.FC<NavigationMapProp> = ({ markers }) => {
           </Space>
         </Space>
       </div>
-        <GoogleMap
-          zoom={13}
-          mapContainerStyle={{ width: "100%", height: "100%" }}
-          onLoad={onLoad}
-          center={{ lat: -37.83674422439721, lng: 145.02939105956858 }}
-        >
-          {markers.map((marker, index) => (
-            <Marker key={index} position={marker.position} />
-          ))}
-        </GoogleMap>
+      <GoogleMap
+        zoom={13}
+        mapContainerStyle={{ width: "100%", height: "100%" }}
+        onLoad={onLoad}
+        center={{ lat: -37.83674422439721, lng: 145.02939105956858 }}
+      >
+        {markers.map((marker, index) => (
+          <Marker key={index} position={marker.position} />
+        ))}
+      </GoogleMap>
     </div>
   );
-}
+};
 export default NavigationMap;

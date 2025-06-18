@@ -8,10 +8,8 @@ import {
 } from "antd";
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
-import { useDispatch } from "react-redux";
-import { addOrder } from "../features/orders";
-import type { Order } from "../features/orders";
 import { createOrder } from "../utils/dbUtils";
+import type { Order } from "../types/order";
 
 type OrderTime = "Morning" | "Afternoon" | "Evening";
 
@@ -26,13 +24,15 @@ interface OrderFormValues {
 
 export default function NewOrderModal({
   context,
+  fetchOrders,
 }: {
   context: { Date?: dayjs.Dayjs; Time?: string };
+  fetchOrders: () => void;
 }) {
   const { Date, Time } = context;
   const [open, setOpen] = useState(false);
   const [form] = AntForm.useForm<OrderFormValues>();
-  const dispatch = useDispatch();
+
   useEffect(() => {
     if (open) {
       form.setFieldsValue({
@@ -66,8 +66,8 @@ export default function NewOrderModal({
       const result = await createOrder(newOrder);
 
       if (result.success && result.data) {
-        dispatch(addOrder(result.data)); // update redux state manually
         toggleModal();
+        fetchOrders();
         alert("Order created successfully!");
       } else {
         console.error("Failed to create order:", result.error);

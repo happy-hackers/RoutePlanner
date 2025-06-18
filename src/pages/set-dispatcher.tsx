@@ -1,6 +1,19 @@
 import { useSelector, useDispatch } from "react-redux";
-import { Card, Select, Checkbox, Space, Typography, Row, Col, Button } from "antd";
-import { toggleDay, updateArea, resetDispatchers } from "../features/disparturers";
+import {
+  Card,
+  Select,
+  Checkbox,
+  Space,
+  Typography,
+  Row,
+  Col,
+  Button,
+} from "antd";
+import {
+  toggleDay,
+  updateArea,
+  resetDispatchers,
+} from "../features/disparturers";
 import type { RootState } from "../store";
 import { useEffect, useState } from "react";
 
@@ -14,7 +27,9 @@ export default function SetDispatcher() {
   const dispatch = useDispatch();
   const dispatchers = useSelector((state: RootState) => state.dispatchers);
 
-  const [changedDispatcherIds, setChangedDispatcherIds] = useState<number[]>([]);
+  const [changedDispatcherIds, setChangedDispatcherIds] = useState<number[]>(
+    []
+  );
 
   useEffect(() => {
     // When leaving this page, reset the state of dispatchers based on the data in database, otherwise the state is not consistent to database
@@ -25,10 +40,12 @@ export default function SetDispatcher() {
         dispatch(resetDispatchers(result));
       };
       fetchDispatchers();
-    }
+    };
   }, []);
   const markAsChanged = (id: number) => {
-    setChangedDispatcherIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    setChangedDispatcherIds((prev) =>
+      prev.includes(id) ? prev : [...prev, id]
+    );
   };
   const handleToggleDay = (dispatcherId: number, day: string) => {
     dispatch(toggleDay({ id: dispatcherId, day }));
@@ -43,13 +60,18 @@ export default function SetDispatcher() {
   const handleSaveChanges = async () => {
     try {
       // Get the current dispatcher data based on the changed IDs
-      const changedDispatchers = changedDispatcherIds.map(id => dispatchers.filter(dispatcher => dispatcher.id === id)[0]);
-      const response = await fetch('http://localhost:4000/dispatcher/set-dispatchers', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(changedDispatchers),
-      });
-  
+      const changedDispatchers = changedDispatcherIds.map(
+        (id) => dispatchers.filter((dispatcher) => dispatcher.id === id)[0]
+      );
+      const response = await fetch(
+        "http://localhost:4000/dispatcher/set-dispatchers",
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(changedDispatchers),
+        }
+      );
+
       const result = await response.json();
       if (response.status === 207) {
         console.warn("Partial success:", result.failed);
@@ -61,9 +83,9 @@ export default function SetDispatcher() {
         console.error("Request failed", result.error);
       }
     } catch (error) {
-      console.error('Network error:', error);
+      console.error("Network error:", error);
     }
-  }
+  };
 
   return (
     <Card title="Drivers" style={{ maxWidth: "70%", margin: "0 auto" }}>
