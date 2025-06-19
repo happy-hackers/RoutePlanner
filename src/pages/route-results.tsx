@@ -4,7 +4,7 @@ import NavigationMap from "../components/NavigationMap";
 import type { Order } from "../types/order.ts";
 import { useEffect, useState } from "react";
 import type { MarkerData } from "../types/markers.ts";
-import { getAllOrders } from "../utils/dbUtils";
+import { getAllDispatchers, getAllOrders } from "../utils/dbUtils";
 import type { Dispatcher } from "../types/dispatchers";
 
 const { Title } = Typography;
@@ -38,15 +38,27 @@ export default function RouteResults() {
 
   // 这里的Dispatcher并没有被定义，只是去掉redux之后还没有写获取，如何获取可以参考assign-disparture.tsx
   const [dispatcher, setDispatcher] = useState<Dispatcher | null>(null);
-  setDispatcher(dispatcher);
+  //setDispatcher(dispatcher);
 
   const { id } = useParams();
   const name = dispatcher?.name;
 
-  // Fetch orders from Supabase
+  // Fetch dispatchers from Supabase
   useEffect(() => {
     const fetchOrders = async () => {
-      const ordersData = await getAllOrders();
+      const [ordersData, dispatchersData] = await Promise.all([
+        getAllOrders(),
+        getAllDispatchers(),
+      ]);
+      
+      if (dispatchersData) {
+        const dispatcher = dispatchersData.find(
+          (dispatcher) => dispatcher.id === Number(id)
+        );
+        if (dispatcher) {
+          setDispatcher(dispatcher);
+        }
+      }
       if (ordersData) {
         setOrders(ordersData);
       }
