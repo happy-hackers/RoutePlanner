@@ -46,7 +46,6 @@ export default function AssignDispatchers({
 
         if (dispatchersData) {
           setDispatchers(dispatchersData);
-          console.log("dispatchersData", dispatchersData);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -203,7 +202,7 @@ export default function AssignDispatchers({
                 // Only update markers when selecting, don't auto assign
                 if (id) {
                   const selectedDispatcher = dispatchers.find(
-                    (d) => d.id === id
+                    (dispatcher) => dispatcher.id === id
                   );
                   if (selectedDispatcher) {
                     const responsibleAreas = selectedDispatcher.responsibleArea;
