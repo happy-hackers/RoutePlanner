@@ -6,20 +6,20 @@ const redIcon = {
   color: "red",
 };
 
-// const blueIcon = {
-//   url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-//   color: "blue",
-// };
+const blueIcon = {
+  url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+  color: "blue",
+};
 
-// const greenIcon = {
-//   url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-//   color: "green",
-// };
+const greenIcon = {
+  url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
+  color: "green",
+};
 
-// const orangeIcon = {
-//   url: "http://maps.google.com/mapfiles/ms/icons/orange-dot.png",
-//   color: "orange",
-// };
+const orangeIcon = {
+  url: "http://maps.google.com/mapfiles/ms/icons/orange-dot.png",
+  color: "orange",
+};
 
 const setMarkersList = (orders: Order[]): MarkerData[] => {
   return orders.map((order) => ({
@@ -31,4 +31,21 @@ const setMarkersList = (orders: Order[]): MarkerData[] => {
   }));
 };
 
-export default setMarkersList;
+const addMarkerwithColor = (order: Order, color: string): MarkerData => {
+  return {
+    id: order.id,
+    position: { lat: order.lat, lng: order.lng },
+    address: order.address,
+    icon:
+      color === "red"
+        ? redIcon
+        : color === "blue"
+        ? blueIcon
+        : color === "green"
+        ? greenIcon
+        : orangeIcon,
+    dispatcherId: order.dispatcherId,
+  };
+};
+
+export { addMarkerwithColor, setMarkersList };

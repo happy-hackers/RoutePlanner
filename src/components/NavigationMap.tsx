@@ -14,7 +14,7 @@ interface NavigationMapProp {
 }
 
 const NavigationMap: React.FC<NavigationMapProp> = ({ markers }) => {
-  console.log("markers in map", markers);
+  //console.log("markers in map", markers);
   /*const [markers, setMarkers] = useState<
     { lat: number; lng: number; address?: string }[]
   >([]);*/

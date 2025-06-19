@@ -194,3 +194,40 @@ export const updateDispatchers = async (
     };
   }
 };
+
+export const assignDispatcher = async (
+  orderId: number,
+  dispatcherId: number
+): Promise<{ success: boolean; data?: Order; error?: string }> => {
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .update({ dispatcher_id: dispatcherId })
+      .eq("id", orderId)
+      .select();
+
+    if (error) {
+      console.error("Update error:", error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    } else {
+      // Transform the response to match our Order type
+      const { created_time, dispatcher_id, ...rest } = data[0];
+      const updatedOrder = {
+        ...rest,
+        dispatcherId: dispatcher_id,
+      };
+      return {
+        success: true,
+        data: updatedOrder,
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Network error occurred",
+    };
+  }
+};

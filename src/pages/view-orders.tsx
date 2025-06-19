@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo } from "react";
 import { getAllOrders } from "../utils/dbUtils";
 import type { Order } from "../types/order.ts";
 import type { MarkerData } from "../types/markers";
-import setMarkersList from "../utils/markersUtils.ts";
+import { setMarkersList } from "../utils/markersUtils.ts";
 
 type TimePeriod = "Morning" | "Afternoon" | "Evening";
 
