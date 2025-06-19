@@ -1,6 +1,7 @@
 import type { Dispatcher } from "../types/dispatchers";
 import type { Order } from "../types/order";
 import { createClient } from "@supabase/supabase-js";
+import camelcaseKeys from "camelcase-keys";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -34,14 +35,15 @@ export const createOrder = async (
       };
     } else {
       // Currently not need created_time column and change key name to dispatcherId
-      const { created_time, dispatcher_id, ...rest } = data[0];
+      const { created_time, ...rest } = data[0];
       const newOrder = {
         ...rest,
-        dispatcherId: dispatcher_id,
       };
+      // Change the key name xxx_axx to xxxAxx format
+      const camelData = camelcaseKeys(newOrder);
       return {
         success: true,
-        data: newOrder,
+        data: camelData,
       };
     }
   } catch (error) {
@@ -61,12 +63,13 @@ export const getAllOrders = async (): Promise<Order[] | undefined> => {
     } else {
       // Remove create_time from each object since we don't need it currently
       const cleanedArray = data.map(
-        ({ created_time, dispatcher_id, ...rest }) => ({
+        ({ created_time, ...rest }) => ({
           ...rest,
-          dispatcherId: dispatcher_id,
         })
       );
-      return cleanedArray;
+      // Change the key name xxx_axx to xxxAxx format
+      const camelData = camelcaseKeys(cleanedArray);
+      return camelData;
     }
   } catch (err) {
     console.error("Unexpected error during fetch:", err);
@@ -83,14 +86,15 @@ export const getAllDispatchers = async (): Promise<
       console.error("Fetch error:", error);
       return;
     } else {
-      // Remove create_time from each object and change the key to "activeDay"
+      // Remove create_time from each object
       const cleanedArray = data.map(
-        ({ created_time, active_day, ...rest }) => ({
+        ({ created_time, ...rest }) => ({
           ...rest,
-          activeDay: active_day,
         })
       );
-      return cleanedArray;
+      // Change the key name xxx_axx to xxxAxx format
+      const camelData = camelcaseKeys(cleanedArray);
+      return camelData;
     }
   } catch (err) {
     console.error("Unexpected error during fetch:", err);
@@ -120,15 +124,15 @@ export const addDispatcher = async (
       };
     } else {
       // Currently not need created_time column and change key names
-      const { created_time, active_day, responsible_area, ...rest } = data[0];
+      const { created_time, ...rest } = data[0];
       const newDispatcher = {
         ...rest,
-        activeDay: active_day,
-        responsibleArea: responsible_area,
       };
+      // Change the key name xxx_axx to xxxAxx format
+      const camelData = camelcaseKeys(newDispatcher);
       return {
         success: true,
-        data: newDispatcher || "Failed to create order",
+        data: camelData || "Failed to create order",
       };
     }
   } catch (error) {
@@ -160,7 +164,7 @@ export const updateDispatchers = async (
         responsible_area: responsibleArea,
       })
     );
-    const results = [];
+    const results: any[] = [];
     const errors = [];
     for (const item of cleanedUpdates) {
       const { id, ...fieldsToUpdate } = item;
@@ -184,6 +188,7 @@ export const updateDispatchers = async (
       console.log("All updates successful");
       return {
         success: true,
+        data: results,
         error: errors,
       };
     }
