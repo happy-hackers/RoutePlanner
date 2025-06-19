@@ -14,6 +14,7 @@ interface NavigationMapProp {
 }
 
 const NavigationMap: React.FC<NavigationMapProp> = ({ markers }) => {
+  console.log("markers in map", markers);
   /*const [markers, setMarkers] = useState<
     { lat: number; lng: number; address?: string }[]
   >([]);*/
@@ -141,7 +142,11 @@ const NavigationMap: React.FC<NavigationMapProp> = ({ markers }) => {
         center={{ lat: -37.83674422439721, lng: 145.02939105956858 }}
       >
         {markers.map((marker, index) => (
-          <Marker key={index} position={marker.position} />
+          <Marker
+            key={index}
+            position={marker.position}
+            icon={marker.icon?.url}
+          />
         ))}
       </GoogleMap>
     </div>

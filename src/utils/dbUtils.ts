@@ -1,47 +1,47 @@
-import type { Dispatcher } from "../features/disparturers";
+import type { Dispatcher } from "../types/dispatchers";
 import type { Order } from "../types/order";
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export const createOrder = async (
   orderData: Omit<Order, "id">
 ): Promise<{ success: boolean; data?: Order; error?: string }> => {
   try {
     const { data, error } = await supabase
-    .from('orders')
-    .insert([
-      {
-        date: orderData.date,
-        time: orderData.time,
-        state: orderData.state,
-        address: orderData.address,
-        lat: orderData.lat,
-        lng: orderData.lng,
-        postcode: orderData.postcode,
-        dispatcher_id: orderData.dispatcherId
-      }
-    ])
-    .select();
+      .from("orders")
+      .insert([
+        {
+          date: orderData.date,
+          time: orderData.time,
+          state: orderData.state,
+          address: orderData.address,
+          lat: orderData.lat,
+          lng: orderData.lng,
+          postcode: orderData.postcode,
+          dispatcher_id: orderData.dispatcherId,
+        },
+      ])
+      .select();
     if (error) {
-      console.error('Insert error:', error)
+      console.error("Insert error:", error);
       return {
         success: false,
-        error: error.message
-      }
+        error: error.message,
+      };
     } else {
       // Currently not need created_time column and change key name to dispatcherId
       const { created_time, dispatcher_id, ...rest } = data[0];
       const newOrder = {
         ...rest,
         dispatcherId: dispatcher_id,
-      }
+      };
       return {
         success: true,
-        data: newOrder || "Failed to create order",
+        data: newOrder,
       };
     }
   } catch (error) {
@@ -52,77 +52,80 @@ export const createOrder = async (
   }
 };
 
-export const getAllOrders = async (
-): Promise<Order[] | undefined> => {
+export const getAllOrders = async (): Promise<Order[] | undefined> => {
   try {
-    const { data, error } = await supabase.from('orders').select('*')
+    const { data, error } = await supabase.from("orders").select("*");
     if (error) {
-      console.error('Fetch error:', error)
+      console.error("Fetch error:", error);
       return;
-    }
-    else {
+    } else {
       // Remove create_time from each object since we don't need it currently
-      const cleanedArray = data.map(({ created_time, ...rest }) => ({
-        ...rest
-      }));
+      const cleanedArray = data.map(
+        ({ created_time, dispatcher_id, ...rest }) => ({
+          ...rest,
+          dispatcherId: dispatcher_id,
+        })
+      );
       return cleanedArray;
     }
   } catch (err) {
-    console.error('Unexpected error during fetch:', err);
+    console.error("Unexpected error during fetch:", err);
     return;
   }
-}
+};
 
-export const getAllDispatchers = async (
-): Promise<Dispatcher[] | undefined> => {
+export const getAllDispatchers = async (): Promise<
+  Dispatcher[] | undefined
+> => {
   try {
-    const { data, error } = await supabase.from('dispatchers').select('*')
+    const { data, error } = await supabase.from("dispatchers").select("*");
     if (error) {
-      console.error('Fetch error:', error)
+      console.error("Fetch error:", error);
       return;
-    }
-    else {
+    } else {
       // Remove create_time from each object and change the key to "activeDay"
-      const cleanedArray = data.map(({ created_time, active_day, ...rest }) => ({
-        ...rest,
-        activeDay: active_day,
-      }));
+      const cleanedArray = data.map(
+        ({ created_time, active_day, ...rest }) => ({
+          ...rest,
+          activeDay: active_day,
+        })
+      );
       return cleanedArray;
     }
   } catch (err) {
-    console.error('Unexpected error during fetch:', err);
+    console.error("Unexpected error during fetch:", err);
     return;
   }
-}
+};
 
 export const addDispatcher = async (
   dispatcherData: Omit<Dispatcher, "id">
 ): Promise<{ success: boolean; data?: Order; error?: string }> => {
   try {
     const { data, error } = await supabase
-    .from('dispatchers')
-    .insert([
-      {
-        name: dispatcherData.name,
-        active_day: dispatcherData.activeDay,
-        responsible_area: dispatcherData.responsibleArea
-      }
-    ])
-    .select();
+      .from("dispatchers")
+      .insert([
+        {
+          name: dispatcherData.name,
+          active_day: dispatcherData.activeDay,
+          responsible_area: dispatcherData.responsibleArea,
+        },
+      ])
+      .select();
     if (error) {
-      console.error('Insert error:', error)
+      console.error("Insert error:", error);
       return {
         success: false,
-        error: error.message
-      }
+        error: error.message,
+      };
     } else {
       // Currently not need created_time column and change key names
       const { created_time, active_day, responsible_area, ...rest } = data[0];
       const newDispatcher = {
         ...rest,
         activeDay: active_day,
-        responsibleArea: responsible_area
-      }
+        responsibleArea: responsible_area,
+      };
       return {
         success: true,
         data: newDispatcher || "Failed to create order",
@@ -134,35 +137,40 @@ export const addDispatcher = async (
       error: error instanceof Error ? error.message : "Network error occurred",
     };
   }
-}
+};
 
 export const updateDispatchers = async (
   dispatcherData: Dispatcher[]
-): Promise<{ 
-  success: boolean; 
+): Promise<{
+  success: boolean;
   data?: Dispatcher[];
-  error?: {
-    id: number;
-    error: string;
-}[] | string }> => {
+  error?:
+    | {
+        id: number;
+        error: string;
+      }[]
+    | string;
+}> => {
   try {
     // Change the key name to match the column name in database
-    const cleanedUpdates = dispatcherData.map(({ activeDay, responsibleArea, ...rest }) => ({
-      ...rest,
-      active_day: activeDay,
-      responsible_area: responsibleArea
-    }));
+    const cleanedUpdates = dispatcherData.map(
+      ({ activeDay, responsibleArea, ...rest }) => ({
+        ...rest,
+        active_day: activeDay,
+        responsible_area: responsibleArea,
+      })
+    );
     const results = [];
     const errors = [];
     for (const item of cleanedUpdates) {
-      const {id, ...fieldsToUpdate } = item;
+      const { id, ...fieldsToUpdate } = item;
       const { data, error } = await supabase
-        .from('dispatchers')
+        .from("dispatchers")
         .update(fieldsToUpdate)
-        .eq('id', id);
+        .eq("id", id);
       if (error) {
-        console.error('Error updating ID:', `${id}: ${error.message}`);
-        errors.push({ id, error: error.message })
+        console.error("Error updating ID:", `${id}: ${error.message}`);
+        errors.push({ id, error: error.message });
       } else {
         results.push(data);
       }
@@ -170,14 +178,14 @@ export const updateDispatchers = async (
     if (errors.length > 0) {
       return {
         success: false,
-        error: errors
-      }
+        error: errors,
+      };
     } else {
-      console.log('All updates successful');
+      console.log("All updates successful");
       return {
         success: true,
-        error: errors
-      }
+        error: errors,
+      };
     }
   } catch (error) {
     return {
@@ -185,4 +193,4 @@ export const updateDispatchers = async (
       error: error instanceof Error ? error.message : "Network error occurred",
     };
   }
-}
+};

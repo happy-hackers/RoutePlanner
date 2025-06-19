@@ -1,7 +1,5 @@
 import { Layout, Menu } from "antd";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useSelector } from "react-redux";
-import type { RootState } from "../store";
 import type { MenuProps } from "antd";
 import {
   ShoppingOutlined,
@@ -29,24 +27,14 @@ function getItem(
 }
 
 export default function Sidebar() {
-  const dispatchers = useSelector((state: RootState) => state.dispatchers);
   const navigate = useNavigate();
   const location = useLocation();
-
-  const dispatchersList = dispatchers.map((dispatchers) => {
-    return getItem(dispatchers.name, `/route-results/${dispatchers.id}`);
-  });
 
   const menuItems: MenuItem[] = [
     getItem("View Orders", "/view-orders", <ShoppingOutlined />),
     getItem("Assign Dispatcher", "/assign-dispatcher", <UserSwitchOutlined />),
     getItem("Set Dispatcher", "/set-dispatcher", <SettingOutlined />),
-    getItem(
-      "Route Results",
-      "/route-results",
-      <CompassOutlined />,
-      dispatchersList
-    ),
+    getItem("Route Results", "/route-results", <CompassOutlined />),
   ];
 
   const handleMenuClick = (e: { key: string }) => {

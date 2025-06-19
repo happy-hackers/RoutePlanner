@@ -1,12 +1,11 @@
 import { useParams } from "react-router-dom";
 import { Table, Typography, Row, Col, Space, Button } from "antd";
-import { useSelector } from "react-redux";
-import type { RootState } from "../store";
 import NavigationMap from "../components/NavigationMap";
 import type { Order } from "../types/order.ts";
 import { useEffect, useState } from "react";
 import type { MarkerData } from "../types/markers.ts";
 import { getAllOrders } from "../utils/dbUtils";
+import type { Dispatcher } from "../types/dispatchers";
 
 const { Title } = Typography;
 
@@ -37,11 +36,11 @@ export default function RouteResults() {
   const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
 
+  // 这里的Dispatcher并没有被定义，只是去掉redux之后还没有写获取，如何获取可以参考assign-disparture.tsx
+  const [dispatcher, setDispatcher] = useState<Dispatcher | null>(null);
+  setDispatcher(dispatcher);
+
   const { id } = useParams();
-  const dispatchers = useSelector((state: RootState) => state.dispatchers);
-  const dispatcher = dispatchers.find(
-    (dispatcher) => dispatcher.id === Number(id)
-  );
   const name = dispatcher?.name;
 
   // Fetch orders from Supabase

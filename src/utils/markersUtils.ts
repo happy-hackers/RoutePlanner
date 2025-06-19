@@ -6,6 +6,21 @@ const redIcon = {
   color: "red",
 };
 
+// const blueIcon = {
+//   url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+//   color: "blue",
+// };
+
+// const greenIcon = {
+//   url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
+//   color: "green",
+// };
+
+// const orangeIcon = {
+//   url: "http://maps.google.com/mapfiles/ms/icons/orange-dot.png",
+//   color: "orange",
+// };
+
 const setMarkersList = (orders: Order[]): MarkerData[] => {
   return orders.map((order) => ({
     id: order.id,
