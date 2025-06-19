@@ -1,12 +1,16 @@
 import { Layout, Menu } from "antd";
 import { useNavigate, useLocation } from "react-router-dom";
 import type { MenuProps } from "antd";
+import { useEffect, useState } from "react";
 import {
   ShoppingOutlined,
   UserSwitchOutlined,
   SettingOutlined,
   CompassOutlined,
 } from "@ant-design/icons";
+import { getAllDispatchers } from "../utils/dbUtils";
+import { message } from "antd";
+import type { Dispatcher } from "../types/dispatchers";
 
 type MenuItem = Required<MenuProps>["items"][number];
 
@@ -29,12 +33,44 @@ function getItem(
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch orders and dispatchers in parallel
+        const [dispatchersData] = await Promise.all([getAllDispatchers()]);
+
+        if (dispatchersData) {
+          setDispatchers(dispatchersData);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        message.error("Failed to load data. Please try again.");
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const dispatcherItems = dispatchers.map((dispatcher) =>
+    getItem(
+      dispatcher.id,
+      `/route-results/${dispatcher.id}`,
+      <UserSwitchOutlined />
+    )
+  );
 
   const menuItems: MenuItem[] = [
     getItem("View Orders", "/view-orders", <ShoppingOutlined />),
     getItem("Assign Dispatcher", "/assign-dispatcher", <UserSwitchOutlined />),
     getItem("Set Dispatcher", "/set-dispatcher", <SettingOutlined />),
-    getItem("Route Results", "/route-results", <CompassOutlined />),
+    getItem(
+      "Route Results",
+      "/route-results",
+      <CompassOutlined />,
+      dispatcherItems
+    ),
   ];
 
   const handleMenuClick = (e: { key: string }) => {

@@ -35,8 +35,6 @@ export default function RouteResults() {
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-
-  // 这里的Dispatcher并没有被定义，只是去掉redux之后还没有写获取，如何获取可以参考assign-disparture.tsx
   const [dispatcher, setDispatcher] = useState<Dispatcher | null>(null);
   setDispatcher(dispatcher);
 

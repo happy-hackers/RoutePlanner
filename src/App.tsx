@@ -43,7 +43,6 @@ function AppContent() {
                 element={<AssignDispatchers setMarkers={setMarkers} />}
               />
               <Route path="/set-dispatcher" element={<SetDispatcher />} />
-              <Route path="/set-dispatcher/:id" element={<SetDispatcher />} />
               <Route path="/route-results" element={<RouteResults />} />
               <Route path="/route-results/:id" element={<RouteResults />} />
               <Route path="*" element={<div>Page not found</div>} />
