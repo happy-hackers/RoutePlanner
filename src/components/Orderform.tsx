@@ -1,5 +1,5 @@
 import { Table } from "antd";
-import type { Order } from "../features/orders";
+import type { Order } from "../types/order";
 import dayjs from "dayjs";
 
 const columns = [

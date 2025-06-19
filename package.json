@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@googlemaps/markerclusterer": "^2.5.1",
+    "@react-google-maps/api": "^2.20.6",
     "@reduxjs/toolkit": "^2.8.2",
+    "@supabase/supabase-js": "^2.49.9",
     "@vis.gl/react-google-maps": "latest",
-    "antd": "^5.25.0",
+    "antd": "^5.26.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-redux": "^9.2.0",
