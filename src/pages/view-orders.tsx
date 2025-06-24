@@ -1,12 +1,13 @@
 import Orderform from "../components/Orderform";
 import NewOrderModal from "../components/NewOrderModal";
-import { Button, DatePicker, Radio, Row, Col, Space } from "antd";
+import { DatePicker, Radio, Row, Col, Space } from "antd";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo } from "react";
 import { getAllOrders } from "../utils/dbUtils";
 import type { Order } from "../types/order.ts";
 import type { MarkerData } from "../types/markers";
 import { setMarkersList } from "../utils/markersUtils.ts";
+import Upload from "../components/UploadModal.tsx";
 
 type TimePeriod = "Morning" | "Afternoon" | "Evening";
 
@@ -56,7 +57,7 @@ export default function ViewOrders({
               context={{ Date: date, Time: timePeriod }}
               fetchOrders={fetchOrders}
             />
-            <Button type="default">Upload</Button>
+            <Upload />
           </Space>
           <DatePicker
             defaultValue={dayjs()}

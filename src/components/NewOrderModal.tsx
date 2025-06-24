@@ -42,6 +42,12 @@ export default function NewOrderModal({
     }
   }, [open, Date, Time, form]);
 
+  useEffect(() => {
+    if (!open) {
+      form.resetFields();
+    }
+  }, [open, form]);
+
   const toggleModal = () => {
     setOpen(!open);
   };
