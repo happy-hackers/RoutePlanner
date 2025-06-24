@@ -17,16 +17,16 @@ interface TableDataType {
 
 const columns = [
   {
-    title: "Order ID",
+    title: "ID",
     dataIndex: "id",
     key: "id",
-    width: 70,
+    width: 30,
   },
   {
     title: "Postcode",
     dataIndex: "postcode",
     key: "postcode",
-    width: 70,
+    width: 60,
   },
   {
     title: "Address",

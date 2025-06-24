@@ -62,11 +62,9 @@ export const getAllOrders = async (): Promise<Order[] | undefined> => {
       return;
     } else {
       // Remove create_time from each object since we don't need it currently
-      const cleanedArray = data.map(
-        ({ created_time, ...rest }) => ({
-          ...rest,
-        })
-      );
+      const cleanedArray = data.map(({ created_time, ...rest }) => ({
+        ...rest,
+      }));
       // Change the key name xxx_axx to xxxAxx format
       const camelData = camelcaseKeys(cleanedArray);
       return camelData;
@@ -87,11 +85,9 @@ export const getAllDispatchers = async (): Promise<
       return;
     } else {
       // Remove create_time from each object
-      const cleanedArray = data.map(
-        ({ created_time, ...rest }) => ({
-          ...rest,
-        })
-      );
+      const cleanedArray = data.map(({ created_time, ...rest }) => ({
+        ...rest,
+      }));
       // Change the key name xxx_axx to xxxAxx format
       const camelData = camelcaseKeys(cleanedArray);
       return camelData;
@@ -104,7 +100,7 @@ export const getAllDispatchers = async (): Promise<
 
 export const addDispatcher = async (
   dispatcherData: Omit<Dispatcher, "id">
-): Promise<{ success: boolean; data?: Order; error?: string }> => {
+): Promise<{ success: boolean; data?: Dispatcher; error?: string }> => {
   try {
     const { data, error } = await supabase
       .from("dispatchers")
@@ -132,7 +128,7 @@ export const addDispatcher = async (
       const camelData = camelcaseKeys(newDispatcher);
       return {
         success: true,
-        data: camelData || "Failed to create order",
+        data: camelData,
       };
     }
   } catch (error) {
