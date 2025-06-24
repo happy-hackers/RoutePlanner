@@ -11,6 +11,9 @@ import type { MarkerData } from "../types/markers";
 import type { Order } from "../types/order";
 import { getRegionByPostcode } from "../utils/regionUtils";
 import { addMarkerwithColor } from "../utils/markersUtils";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store";
+import dayjs from "dayjs";
 
 // Color mapping for different regions
 const REGION_COLORS: Record<string, string> = {
@@ -25,36 +28,53 @@ export default function AssignDispatchers({
 }: {
   setMarkers: (markers: MarkerData[]) => void;
 }) {
+  const date = useSelector((state: RootState) => state.time.date);
+  const timePeriod = useSelector((state: RootState) => state.time.timePeriod);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
 
-  // Combined useEffect to fetch both orders and dispatchers
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchDispatchers = async () => {
       try {
-        // Fetch orders and dispatchers in parallel
-        const [ordersData, dispatchersData] = await Promise.all([
-          getAllOrders(),
-          getAllDispatchers(),
-        ]);
-
-        if (ordersData) {
-          setOrders(ordersData);
-        }
-
+        const dispatchersData = await getAllDispatchers();
         if (dispatchersData) {
           setDispatchers(dispatchersData);
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
-        message.error("Failed to load data. Please try again.");
+        console.error("Error fetching dispatchers:", error);
+        message.error("Failed to load dispatchers.");
       }
     };
 
-    fetchData();
+    fetchDispatchers();
   }, []);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const ordersData = await getAllOrders();
+        if (ordersData) {
+          const filteredOrders = date
+            ? ordersData.filter((order) => {
+                const orderDate = dayjs(order.date);
+                return (
+                  orderDate.isSame(date, "day") && order.time === timePeriod
+                );
+              })
+            : ordersData;
+
+          setOrders(filteredOrders);
+        }
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+        message.error("Failed to load orders.");
+      }
+    };
+
+    fetchOrders();
+  }, [date, timePeriod]); // 👈 依赖 date 和 timePeriod 自动重新加载
 
   const dispatchersOption = [
     { value: null, label: "All Dispatchers" },
@@ -165,15 +185,7 @@ export default function AssignDispatchers({
         console.error("Failed assignments:", failedAssignments);
       }
 
-      // Refresh orders data to get updated assignments
-      const updatedOrders = await getAllOrders();
-      if (updatedOrders) {
-        setOrders(updatedOrders);
-      }
-
-      // Create markers for all orders with their assigned colors
-      const ordersToShow = updatedOrders || orders;
-      const allMarkers = ordersToShow
+      const allMarkers = orders
         .map((order) => {
           const region = getRegionByPostcode(order.postcode);
           const color = REGION_COLORS[region] || "red";

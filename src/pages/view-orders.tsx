@@ -8,16 +8,18 @@ import type { Order } from "../types/order.ts";
 import type { MarkerData } from "../types/markers";
 import { setMarkersList } from "../utils/markersUtils.ts";
 import Upload from "../components/UploadModal.tsx";
-
-type TimePeriod = "Morning" | "Afternoon" | "Evening";
+import { useSelector, useDispatch } from "react-redux";
+import { setDate, setTimePeriod } from "../store/timeSlice";
+import type { RootState } from "../store";
 
 export default function ViewOrders({
   setMarkers,
 }: {
   setMarkers: (markers: MarkerData[]) => void;
 }) {
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>("Afternoon");
-  const [date, setDate] = useState(dayjs());
+  const dispatch = useDispatch();
+  const date = useSelector((state: RootState) => state.time.date);
+  const timePeriod = useSelector((state: RootState) => state.time.timePeriod);
   const [orders, setOrders] = useState<Order[]>([]);
 
   const fetchOrders = async () => {
@@ -61,12 +63,12 @@ export default function ViewOrders({
           </Space>
           <DatePicker
             defaultValue={dayjs()}
-            onChange={(value) => setDate(value)}
+            onChange={(value) => dispatch(setDate(value))}
             style={{ width: "100%" }}
           />
           <Radio.Group
             value={timePeriod}
-            onChange={(e) => setTimePeriod(e.target.value)}
+            onChange={(e) => dispatch(setTimePeriod(e.target.value))}
             optionType="button"
             style={{ width: "100%" }}
           >
