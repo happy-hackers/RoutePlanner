@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Modal, Button, message, Upload } from "antd";
+import { Modal, Button, Upload, App } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
 import type { UploadProps } from "antd";
 import { createOrder } from "../utils/dbUtils";
@@ -8,6 +8,7 @@ import type { Order } from "../types/order";
 const { Dragger } = Upload;
 
 const JsonUploadModal: React.FC = () => {
+  const { message } = App.useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -48,7 +49,7 @@ const JsonUploadModal: React.FC = () => {
       const isJson =
         file.type === "application/json" || file.name.endsWith(".json");
       if (!isJson) {
-        alert("Only JSON files are allowed");
+        message.error("Only JSON files are allowed");
         return Upload.LIST_IGNORE;
       }
 

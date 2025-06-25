@@ -1,14 +1,5 @@
 import { useEffect } from "react";
-import {
-  Modal,
-  Form,
-  Input,
-  Select,
-  Checkbox,
-  Button,
-  Space,
-  message,
-} from "antd";
+import { Modal, Form, Input, Select, Checkbox, Button, Space, App } from "antd";
 import { addDispatcher, updateDispatchers } from "../utils/dbUtils";
 import type { Dispatcher } from "../types/dispatchers";
 
@@ -26,7 +17,7 @@ interface DispatcherModalProps {
   visible: boolean;
   onCancel: () => void;
   onSuccess: () => void;
-  dispatcher?: Dispatcher; // 如果是编辑模式，传入dispatcher数据
+  dispatcher?: Dispatcher;
   mode: "add" | "edit";
 }
 
@@ -38,6 +29,7 @@ export default function DispatcherModal({
   mode,
 }: DispatcherModalProps) {
   const [form] = Form.useForm();
+  const { message } = App.useApp();
 
   useEffect(() => {
     if (visible) {

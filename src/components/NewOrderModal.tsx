@@ -5,6 +5,7 @@ import {
   Input,
   Select,
   Form as AntForm,
+  App,
 } from "antd";
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
@@ -29,6 +30,7 @@ export default function NewOrderModal({
   context: { Date?: dayjs.Dayjs; Time?: string };
   fetchOrders: () => void;
 }) {
+  const { message } = App.useApp();
   const { Date, Time } = context;
   const [open, setOpen] = useState(false);
   const [form] = AntForm.useForm<OrderFormValues>();
@@ -56,6 +58,7 @@ export default function NewOrderModal({
     //const location = await getLocationByAddress(values.address);
     if (!values.latitude || !values.longitude) {
       // Give a error message to user: Please enter a valid address!
+      message.error("Please enter a valid address!");
       return;
     } else {
       const time: OrderTime = values.deliveryTime as OrderTime;
@@ -74,10 +77,10 @@ export default function NewOrderModal({
       if (result.success && result.data) {
         toggleModal();
         fetchOrders();
-        alert("Order created successfully!");
+        message.success("Order created successfully!");
       } else {
         console.error("Failed to create order:", result.error);
-        alert(`Failed to create order: ${result.error}`);
+        message.error(`Failed to create order: ${result.error}`);
       }
     }
   };

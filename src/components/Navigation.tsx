@@ -1,4 +1,4 @@
-import { Layout, Menu } from "antd";
+import { Layout, Menu, App } from "antd";
 import { useNavigate, useLocation } from "react-router-dom";
 import type { MenuProps } from "antd";
 import { useEffect, useState } from "react";
@@ -9,7 +9,6 @@ import {
   CompassOutlined,
 } from "@ant-design/icons";
 import { getAllDispatchers } from "../utils/dbUtils";
-import { message } from "antd";
 import type { Dispatcher } from "../types/dispatchers";
 
 type MenuItem = Required<MenuProps>["items"][number];
@@ -31,6 +30,7 @@ function getItem(
 }
 
 export default function Sidebar() {
+  const { message } = App.useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);

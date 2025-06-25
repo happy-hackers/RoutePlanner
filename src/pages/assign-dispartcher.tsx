@@ -1,4 +1,4 @@
-import { Select, Button, Row, Col, Space, message } from "antd";
+import { Select, Button, Row, Col, Space, App } from "antd";
 import { useState, useEffect } from "react";
 import Dispatcherform from "../components/Dispatcherform";
 import type { Dispatcher } from "../types/dispatchers";
@@ -28,6 +28,7 @@ export default function AssignDispatchers({
 }: {
   setMarkers: (markers: MarkerData[]) => void;
 }) {
+  const { message } = App.useApp();
   const date = useSelector((state: RootState) => state.time.date);
   const timePeriod = useSelector((state: RootState) => state.time.timePeriod);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -74,7 +75,7 @@ export default function AssignDispatchers({
     };
 
     fetchOrders();
-  }, [date, timePeriod]); // 👈 依赖 date 和 timePeriod 自动重新加载
+  }, [date, timePeriod]);
 
   const dispatchersOption = [
     { value: null, label: "All Dispatchers" },
