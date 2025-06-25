@@ -156,28 +156,10 @@ export default function AssignDispatchers({
       const successfulAssignments = results.filter((r) => r.success);
       const failedAssignments = results.filter((r) => !r.success);
 
-      // Group successful assignments by dispatcher for better reporting
-      const assignmentsByDispatcher = successfulAssignments.reduce(
-        (acc, item) => {
-          const dispatcherName =
-            dispatchers.find((d) => d.id === item.dispatcherId)?.name ||
-            "Unknown";
-          if (!acc[dispatcherName]) {
-            acc[dispatcherName] = [];
-          }
-          acc[dispatcherName].push(item);
-          return acc;
-        },
-        {} as Record<string, typeof successfulAssignments>
-      );
-
       // Show detailed results
       if (successfulAssignments.length > 0) {
-        const summary = Object.entries(assignmentsByDispatcher)
-          .map(([name, items]) => `${name}: ${items.length} orders`)
-          .join(", ");
         message.success(
-          `Successfully assigned ${successfulAssignments.length} orders: ${summary}`
+          `Successfully assigned ${successfulAssignments.length} orders.`
         );
       }
 
