@@ -34,14 +34,14 @@ export default function DispatcherModal({
   useEffect(() => {
     if (visible) {
       if (mode === "edit" && dispatcher) {
-        // 编辑模式：填充现有数据
+        // edit mode: fill existing data
         form.setFieldsValue({
           name: dispatcher.name,
           activeDay: dispatcher.activeDay,
           responsibleArea: dispatcher.responsibleArea,
         });
       } else {
-        // 添加模式：清空表单
+        // add mode: clear form
         form.resetFields();
       }
     }

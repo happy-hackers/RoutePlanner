@@ -65,6 +65,7 @@ export default function ViewOrders({
             defaultValue={dayjs()}
             onChange={(value) => dispatch(setDate(value))}
             style={{ width: "100%" }}
+            format="YYYY-MM-DD"
           />
           <Radio.Group
             value={timePeriod}

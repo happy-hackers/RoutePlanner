@@ -55,7 +55,7 @@ export default function Sidebar() {
 
   const dispatcherItems = dispatchers.map((dispatcher) =>
     getItem(
-      dispatcher.id,
+      dispatcher.name,
       `/route-results/${dispatcher.id}`,
       <UserSwitchOutlined />
     )

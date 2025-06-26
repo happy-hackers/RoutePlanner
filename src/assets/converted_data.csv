@@ -1,5 +1,5 @@
 id,date,time,state,address,lat,lng,postcode
-1,2025-06-25,Evening,Pending,"123 Swanston St, Melbourne VIC",-37.814825,144.965945,3000
-2,2025-06-25,Evening,Pending,"456 St Kilda Rd, Melbourne VIC",-37.839678,144.976319,3005
-3,2025-06-25,Evening,Pending,"789 Whitehorse Rd, Balwyn VIC",-37.812676,145.07974,3103
-5,2025-06-25,Evening,Pending,"202 High St, Thomastown VIC",-37.680389,145.014016,3077
+1,2025-06-26,Evening,Pending,"123 Swanston St, Melbourne VIC",-37.814825,144.965945,3000
+2,2025-06-26,Evening,Pending,"456 St Kilda Rd, Melbourne VIC",-37.839678,144.976319,3005
+3,2025-06-26,Evening,Pending,"789 Whitehorse Rd, Balwyn VIC",-37.812676,145.07974,3103
+5,2025-06-26,Evening,Pending,"202 High St, Thomastown VIC",-37.680389,145.014016,3077

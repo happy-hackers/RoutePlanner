@@ -168,6 +168,18 @@ export default function AssignDispatchers({
         console.error("Failed assignments:", failedAssignments);
       }
 
+      // 刷新订单数据以获取最新的调度员分配信息
+      const ordersData = await getAllOrders();
+      if (ordersData) {
+        const filteredOrders = date
+          ? ordersData.filter((order) => {
+              const orderDate = dayjs(order.date);
+              return orderDate.isSame(date, "day") && order.time === timePeriod;
+            })
+          : ordersData;
+        setOrders(filteredOrders);
+      }
+
       const allMarkers = orders
         .map((order) => {
           const region = getRegionByPostcode(order.postcode);
@@ -246,6 +258,7 @@ export default function AssignDispatchers({
                 : null
             }
             orders={orders}
+            dispatchers={dispatchers}
           />
         </Space>
       </Col>
