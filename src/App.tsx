@@ -6,7 +6,7 @@ import ViewOrders from "./pages/view-orders";
 import AssignDispatchers from "./pages/assign-disparture";
 import RouteResults from "./pages/route-results";
 import SetDispatcher from "./pages/set-dispatcher";
-import NavigationMap from "./components/NavigationMap";
+import OpenStreetMap from "./components/OpenStreetMap";
 import { useLocation } from "react-router-dom";
 import { useState } from "react";
 import type { MarkerData } from "./types/markers";
@@ -51,7 +51,7 @@ function AppContent() {
           </Col>
           {needMap && (
             <Col flex="auto">
-              <NavigationMap markers={markers} />
+              <OpenStreetMap markers={markers} />
             </Col>
           )}
         </Row>

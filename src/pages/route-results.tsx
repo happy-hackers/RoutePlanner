@@ -1,11 +1,10 @@
-import { useParams } from "react-router-dom";
-import { Table, Typography, Row, Col, Space, Button } from "antd";
-import NavigationMap from "../components/NavigationMap";
+import { Select, Table, Typography, Row, Col, Space, Button } from "antd";
 import type { Order } from "../types/order.ts";
 import { useEffect, useState } from "react";
 import type { MarkerData } from "../types/markers.ts";
-import { getAllOrders } from "../utils/dbUtils";
+import { getAllDispatchers, getAllOrders } from "../utils/dbUtils";
 import type { Dispatcher } from "../types/dispatchers";
+import OpenStreetMap from "../components/OpenStreetMap";
 
 const { Title } = Typography;
 
@@ -37,21 +36,34 @@ export default function RouteResults() {
   const [orders, setOrders] = useState<Order[]>([]);
 
   // 这里的Dispatcher并没有被定义，只是去掉redux之后还没有写获取，如何获取可以参考assign-disparture.tsx
-  const [dispatcher, setDispatcher] = useState<Dispatcher | null>(null);
-  setDispatcher(dispatcher);
+  const [selectedDispatcher, setSelectedDispatcher] =
+    useState<Dispatcher | null>(null);
+  const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
+  //setDispatcher(dispatcher);
 
-  const { id } = useParams();
-  const name = dispatcher?.name;
+  const dispatchersOption = [
+    { value: null, label: "Please select dispatcher" },
+    ...dispatchers.map((dispatcher) => ({
+      value: dispatcher.id,
+      label: dispatcher.name,
+    })),
+  ];
 
-  // Fetch orders from Supabase
+  // Fetch dispatchers from Supabase
   useEffect(() => {
     const fetchOrders = async () => {
-      const ordersData = await getAllOrders();
+      const [ordersData, dispatchersData] = await Promise.all([
+        getAllOrders(),
+        getAllDispatchers(),
+      ]);
+
       if (ordersData) {
         setOrders(ordersData);
       }
+      if (dispatchersData) {
+        setDispatchers(dispatchersData);
+      }
     };
-
     fetchOrders();
   }, []);
 
@@ -60,15 +72,7 @@ export default function RouteResults() {
       setSelectedRowIds([]);
       setMarkers([]);
     };
-  }, [id]);
-
-  if (!id) {
-    return (
-      <div>
-        <Title level={4}>Please select a dispatcher from the sidebar</Title>
-      </div>
-    );
-  }
+  }, [selectedDispatcher]);
 
   if (orders.length === 0) {
     return (
@@ -78,7 +82,9 @@ export default function RouteResults() {
     );
   }
 
-  const data = orders.filter((order) => order.dispatcherId === Number(id));
+  const data = orders.filter(
+    (order) => order.dispatcherId === selectedDispatcher?.id
+  );
 
   const addMarker = (marker: MarkerData) => {
     setMarkers((prev) => [...prev, marker]);
@@ -131,18 +137,41 @@ export default function RouteResults() {
     <Row style={{ height: "100%" }}>
       <Col flex="295px">
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-          <Button type="primary">Download the route of {name}</Button>
-          <Table
-            rowKey="id"
-            rowSelection={rowSelection}
-            columns={columns}
-            dataSource={data}
-            pagination={false}
+          <Select
+            defaultValue={null}
+            onChange={(id: number) => {
+              if (id) {
+                const selectedDispatcher = dispatchers.find((d) => d.id === id);
+                setSelectedDispatcher(selectedDispatcher ?? null);
+              } else {
+                setSelectedDispatcher(null);
+              }
+            }}
+            options={dispatchersOption}
           />
+
+          {selectedDispatcher ? (
+            <>
+              <Button type="primary">
+                Download the route of {selectedDispatcher.name}
+              </Button>
+              <Table
+                rowKey="id"
+                rowSelection={rowSelection}
+                columns={columns}
+                dataSource={data}
+                pagination={false}
+              />
+            </>
+          ) : (
+            <div>
+              <Title level={4}>Please select a dispatcher</Title>
+            </div>
+          )}
         </Space>
       </Col>
       <Col flex="auto">
-        <NavigationMap markers={markers} />
+        <OpenStreetMap markers={markers} />
       </Col>
     </Row>
   );
