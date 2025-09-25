@@ -1,19 +1,24 @@
 import { GoogleMap, Marker } from "@react-google-maps/api";
-import { Input, Space, Button } from "antd";
+import { Input, Space, Button, App } from "antd";
 //import { useLocation, matchPath } from "react-router-dom";
 import { useState, useRef } from "react";
 //import { useSelector } from "react-redux";
-import notification from "../utils/notification";
 //import type { RootState } from "../store";
 //import type { Order } from "../features/orders";
 import type { MarkerData } from "../types/markers";
 
 interface NavigationMapProp {
   markers: MarkerData[];
-  //addMarker: (marker: MarkerData) => void
+  onRouteGenerated?: (routeUrl: string) => void;
+  setMarkers?: (markers: MarkerData[]) => void;
 }
 
-const NavigationMap: React.FC<NavigationMapProp> = ({ markers }) => {
+const NavigationMap: React.FC<NavigationMapProp> = ({
+  markers,
+  onRouteGenerated,
+  setMarkers,
+}) => {
+  const { message } = App.useApp();
   //console.log("markers in map", markers);
   /*const [markers, setMarkers] = useState<
     { lat: number; lng: number; address?: string }[]
@@ -65,9 +70,10 @@ const NavigationMap: React.FC<NavigationMapProp> = ({ markers }) => {
       polylineOptions: { strokeColor: "blue" },
     });
   };
+
   const calculateRoute = () => {
     if (!startAddress || !endAddress) {
-      notification("error", "Start location and destination should be entered");
+      message.error("Start location and destination should be entered");
       return;
     }
     if (directionsServiceRef.current) {
@@ -84,7 +90,29 @@ const NavigationMap: React.FC<NavigationMapProp> = ({ markers }) => {
         (result, status) => {
           if (status === "OK") {
             directionsRendererRef.current?.setDirections(result);
+            if (setMarkers) {
+              setMarkers([]);
+            }
             console.log("Route calculated and rendered.");
+
+            // Generate Google Maps URL with proper waypoint format
+            let routeUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
+              startAddress
+            )}&destination=${encodeURIComponent(endAddress)}`;
+
+            if (markers && markers.length > 0) {
+              const waypoints = markers
+                .map(
+                  (marker) => `${marker.position.lat},${marker.position.lng}`
+                )
+                .join("|");
+              routeUrl += `&waypoints=${encodeURIComponent(waypoints)}`;
+            }
+
+            // Notify parent component
+            if (onRouteGenerated) {
+              onRouteGenerated(routeUrl);
+            }
           } else {
             console.error("Route calculation failed: " + status);
           }

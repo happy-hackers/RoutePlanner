@@ -1,22 +1,25 @@
 import Orderform from "../components/Orderform";
 import NewOrderModal from "../components/NewOrderModal";
-import { Button, DatePicker, Radio, Row, Col, Space } from "antd";
+import { DatePicker, Radio, Row, Col, Space } from "antd";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo } from "react";
 import { getAllOrders } from "../utils/dbUtils";
 import type { Order } from "../types/order.ts";
 import type { MarkerData } from "../types/markers";
 import { setMarkersList } from "../utils/markersUtils.ts";
-
-type TimePeriod = "Morning" | "Afternoon" | "Evening";
+import Upload from "../components/UploadModal.tsx";
+import { useSelector, useDispatch } from "react-redux";
+import { setDate, setTimePeriod } from "../store/timeSlice";
+import type { RootState } from "../store";
 
 export default function ViewOrders({
   setMarkers,
 }: {
   setMarkers: (markers: MarkerData[]) => void;
 }) {
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>("Afternoon");
-  const [date, setDate] = useState(dayjs());
+  const dispatch = useDispatch();
+  const date = useSelector((state: RootState) => state.time.date);
+  const timePeriod = useSelector((state: RootState) => state.time.timePeriod);
   const [orders, setOrders] = useState<Order[]>([]);
 
   const fetchOrders = async () => {
@@ -56,16 +59,17 @@ export default function ViewOrders({
               context={{ Date: date, Time: timePeriod }}
               fetchOrders={fetchOrders}
             />
-            <Button type="default">Upload</Button>
+            <Upload />
           </Space>
           <DatePicker
             defaultValue={dayjs()}
-            onChange={(value) => setDate(value)}
+            onChange={(value) => dispatch(setDate(value))}
             style={{ width: "100%" }}
+            format="YYYY-MM-DD"
           />
           <Radio.Group
             value={timePeriod}
-            onChange={(e) => setTimePeriod(e.target.value)}
+            onChange={(e) => dispatch(setTimePeriod(e.target.value))}
             optionType="button"
             style={{ width: "100%" }}
           >
