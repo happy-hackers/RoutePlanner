@@ -1,5 +1,6 @@
 import type { Dispatcher } from "../types/dispatchers";
 import type { Order } from "../types/order";
+import type { Customer } from "../types/customer";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -71,6 +72,50 @@ export const getAllOrders = async (): Promise<Order[] | undefined> => {
   } catch (err) {
     console.error("Unexpected error during fetch:", err);
     return;
+  }
+};
+
+export const createCustomer = async (
+  customerData: Omit<Customer, "id">
+): Promise<{ success: boolean; data?: Customer; error?: string }> => {
+  try {
+    const { data, error } = await supabase
+      .from("customers")
+      .insert([
+        {
+          name: customerData.name,
+          openTime: customerData.openTime,
+          closeTime: customerData.closeTime,
+          address: customerData.address,
+          lat: customerData.lat,
+          lng: customerData.lng,
+          postcode: customerData.postcode,
+        },
+      ])
+      .select();
+    if (error) {
+      console.error("Insert error:", error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    } else {
+      const { created_time, ...rest } = data[0];
+      const newOrder = {
+        ...rest,
+      };
+      // Change the key name xxx_axx to xxxAxx format
+      const camelData = camelcaseKeys(newOrder);
+      return {
+        success: true,
+        data: camelData,
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Network error occurred",
+    };
   }
 };
 

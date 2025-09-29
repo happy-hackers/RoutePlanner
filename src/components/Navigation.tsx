@@ -34,7 +34,8 @@ export default function Sidebar() {
     getItem("View Orders", "/view-orders", <ShoppingOutlined />),
     getItem("Assign Dispatcher", "/assign-dispatcher", <UserSwitchOutlined />),
     getItem("Set Dispatcher", "/set-dispatcher", <SettingOutlined />),
-    getItem("Route Results", "/route-results", <CompassOutlined />),
+    getItem("Route Results", "/route-results", <CompassOutlined />,),
+    getItem("View Customers", "/view-customers", <CompassOutlined />),
   ];
 
   const handleMenuClick = (e: { key: string }) => {
