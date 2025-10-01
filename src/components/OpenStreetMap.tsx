@@ -1,46 +1,178 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input, Space, Button } from "antd";
 import { MapContainer, TileLayer, Marker, Polyline, Popup } from "react-leaflet";
 import L, { type LatLngExpression } from "leaflet";
 import notification from "../utils/notification";
 import type { MarkerData } from "../types/markers";
+import orderedMarkerImg from "../assets/icons/orderedMarker.png";
+import startMarkerImg from "../assets/icons/startMarker.png";
+import endMarkerImg from "../assets/icons/endMarker.png";
 
 interface NavigationMapProp {
-  markers: MarkerData[];
+  orderMarkers: MarkerData[];
+  setOrderMarkers: (markers: MarkerData[]) => void;
 }
 
-const OpenStreetMap: React.FC<NavigationMapProp> = ({ markers }) => {
+function loadGoogleMapsScript(apiKey: string) {
+  return new Promise((resolve) => {
+    // If script already exists, just resolve
+    if (document.querySelector(`script[src*="maps.googleapis.com/maps/api/js"]`)) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve(true);
+    document.head.appendChild(script);
+  });
+}
+
+function createNumberIcon(number: number) {
+  return L.divIcon({
+    className: "custom-marker",
+    html: `<div style="position: relative; width: 40px; height: 56px;">
+        <img src="${orderedMarkerImg}" style="width: 40px; height: 56px;" />
+        <div style="
+          position: absolute;
+          top: 8px;
+          left: 8px;
+          width: 30px;
+          text-align: center;
+          font-weight: bold;
+          color: white;
+          text-shadow: 0 0 2px black;
+        ">
+          ${number}
+        </div>
+      </div>`,
+    iconAnchor: [12, 52],
+  });
+}
+
+const startIcon = new L.Icon({
+  iconUrl: startMarkerImg,
+  iconSize: [40, 56],
+  iconAnchor: [20, 56],
+});
+
+const endIcon = new L.Icon({
+  iconUrl: endMarkerImg,
+  iconSize: [40, 56],
+  iconAnchor: [20, 56],
+});
+
+const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMarkers }) => {
   const [startAddress, setStartAddress] = useState("");
   const [endAddress, setEndAddress] = useState("");
   const [route, setRoute] = useState<LatLngExpression[]>([]);
+  const [startMarker, setStartMarker] = useState<Omit<MarkerData, "id">>();
+  const [endMarker, setEndMarker] = useState<Omit<MarkerData, "id">>();
+  const [orderedMarkers, setOrderedMarkers] = useState<(MarkerData & { order: number })[]>([]);
+  const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
+  //const MAPBOX_ACCESS_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
-const defaultIcon = new L.Icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+  const defaultIcon = new L.Icon({
+    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  });
 
-const MAPBOX_ACCESS_TOKEN = "pk.eyJ1IjoiYnJ1Y2UteWFuIiwiYSI6ImNseThnY3pneTBmY3kya285cnhxcTVjanIifQ.6_RSrQcF0PWDM__UyliMVw";
+  
 
-const geocodeAddress = async (address: string) => {
-  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-    address
-  )}.json?access_token=${MAPBOX_ACCESS_TOKEN}&limit=1`;
+  useEffect(() => {
+    (async () => {
+      await loadGoogleMapsScript(GOOGLE_API_KEY);
+    })();
+  }, [GOOGLE_API_KEY]);
+  
+  /*const geocodeAddress = async (address: string) => {
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+      address
+    )}.json?access_token=${MAPBOX_ACCESS_TOKEN}&limit=1`;
 
-  const res = await fetch(url);
-  const data = await res.json();
+    const res = await fetch(url);
+    const data = await res.json();
 
-  if (data && data.features && data.features.length > 0) {
-    return {
-      lng: data.features[0].center[0], // [lng, lat]
-      lat: data.features[0].center[1],
+    if (data && data.features && data.features.length > 0) {
+      return {
+        lng: data.features[0].center[0], // [lng, lat]
+        lat: data.features[0].center[1],
+      };
+    }
+
+    throw new Error("Geocoding failed for " + address);
+  };*/
+
+  type OptimizedRouteResult = {
+    order: number[];
+    //beforeOrder: number[];
+    startCoord: {
+      lat: number;
+      lng: number;
     };
-  }
+      endCoord: {
+        lat: number;
+        lng: number;
+    };
+  };
 
-  throw new Error("Geocoding failed for " + address);
-};
+  async function getOptimizedWaypointOrder(
+    startAddress: string,
+    endAddress: string,
+    waypoints: { lat: number; lng: number }[]
+  ) :  Promise<OptimizedRouteResult> {
+    const service = new google.maps.DirectionsService();
+    //const beforeOrder = [9, 6, 1, 3, 8, 2, 0, 4, 7, 5];
+    //const orderedWaypoints = beforeOrder.map(i => waypoints[i]);
+    return new Promise((resolve, reject) => {
+      service.route(
+        {
+          origin: startAddress,
+          destination: endAddress,
+          waypoints: waypoints.map((wp) => ({ location: wp })),
+          //waypoints: orderedWaypoints.map((wp) => ({ location: wp })),
+          optimizeWaypoints: true,
+          //optimizeWaypoints: false,
+          travelMode: google.maps.TravelMode.DRIVING,
+        },
+        (result, status) => {
+          if (status === google.maps.DirectionsStatus.OK && result) {
+            const route = result.routes[0];
+            const legs = route.legs;
+            const startCoord = { // start address coordination
+              lat: legs[0].start_location.lat(),
+              lng: legs[0].start_location.lng(),
+            };
+            const endCoord = { // end address coordination
+              lat: legs[legs.length - 1].end_location.lat(),
+              lng: legs[legs.length - 1].end_location.lng(),
+            };
+            const order = result.routes[0].waypoint_order; // optimized order of indexes
+            // ✅ Sum distances and durations
+            let totalDistance = 0;
+            let totalDuration = 0;
+
+            for (const leg of legs) {
+              console.log("Distance", leg.distance?.value ?? 0)
+              console.log("Duration", leg.distance?.value ?? 0)
+              totalDistance += leg.distance?.value ?? 0; // in meters
+              totalDuration += leg.duration?.value ?? 0; // in seconds
+            }
+            console.log("totalDistance", totalDistance)
+            console.log("totalDuration", totalDuration)
+            resolve({ order, startCoord, endCoord });
+            //resolve({ beforeOrder, startCoord, endCoord });
+          } else {
+            reject(status);
+          }
+        }
+      );
+    });
+  }
 
   const calculateRoute = async () => {
     if (!startAddress || !endAddress) {
@@ -49,16 +181,27 @@ const geocodeAddress = async (address: string) => {
     }
 
     try {
-      const start = await geocodeAddress(startAddress);
-      const end = await geocodeAddress(endAddress);
-      const waypoints = markers.map(
-        (m) => `${m.position.lng},${m.position.lat}`
-      );
-      const url = `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${waypoints.join(
-        ";"
-      )};${end.lng},${end.lat}?overview=full&geometries=geojson`;
+      //const start = await geocodeAddress(startAddress);
+      //const end = await geocodeAddress(endAddress);
+      const optimizedRouteResult = await getOptimizedWaypointOrder(startAddress, endAddress, orderMarkers.map((m) => m.position));
+      const { order, startCoord, endCoord } = optimizedRouteResult
+      //const { beforeOrder, startCoord, endCoord } = optimizedRouteResult
+      const orderedMarkers = order.map((i, idx) => ({
+      //const orderedMarkers = beforeOrder.map((i, idx) => ({
+        ...orderMarkers[i],
+        order: idx + 1,
+      }));
+      setStartMarker({position: startCoord, address: startAddress});
+      setEndMarker({position: endCoord, address: endAddress});
+      setOrderedMarkers(orderedMarkers);
+      setOrderMarkers([]);
+      const orderedWaypoints = order.map((i) => orderMarkers[i].position);
+      //const orderedWaypoints = beforeOrder.map((i) => markers[i].position);
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startCoord.lng},${startCoord.lat};${orderedWaypoints
+        .map((wp) => `${wp.lng},${wp.lat}`)
+        .join(";")};${endCoord.lng},${endCoord.lat}?overview=full&geometries=geojson`;
 
-      const response = await fetch(url);
+      const response = await fetch(osrmUrl);
       const data = await response.json();
 
       if (data.routes && data.routes.length > 0) {
@@ -130,8 +273,8 @@ const geocodeAddress = async (address: string) => {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
 
-        {/* Markers */}
-        {markers.map((marker, index) => (
+        {/* Order Markers */}
+        {orderMarkers.map((marker, index) => (
           <Marker
             key={index}
             position={[marker.position.lat, marker.position.lng]}
@@ -140,6 +283,30 @@ const geocodeAddress = async (address: string) => {
           <Popup>{marker.address}</Popup>
           </Marker>
         ))}
+
+        {orderedMarkers.map((marker) => (
+          <Marker
+            key={marker.order}
+            position={[marker.position.lat, marker.position.lng]}
+            icon={createNumberIcon(marker.order)}
+          >
+            <Popup>
+              Stop {marker.order}: {marker.address}
+            </Popup>
+          </Marker>
+        ))}
+
+        {startMarker ? (
+          <Marker position={[startMarker.position.lat, startMarker.position.lng]} icon={startIcon}>
+            <Popup>Start: {startAddress}</Popup>
+          </Marker>
+        ) : null}
+        
+        {endMarker ? (
+          <Marker position={[endMarker.position.lat, endMarker.position.lng]} icon={endIcon}>
+            <Popup>End: {endAddress}</Popup>
+          </Marker>
+        ) : null}
 
         {/* Route polyline */}
         {route.length > 0 && <Polyline positions={route} color="blue" />}

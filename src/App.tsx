@@ -51,7 +51,7 @@ function AppContent() {
           </Col>
           {needMap && (
             <Col flex="auto">
-              <OpenStreetMap markers={markers} />
+              <OpenStreetMap orderMarkers={markers} setOrderMarkers={setMarkers} />
             </Col>
           )}
         </Row>
