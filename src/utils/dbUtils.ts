@@ -2,6 +2,8 @@ import type { Dispatcher } from "../types/dispatchers";
 import type { Order } from "../types/order";
 import type { Customer } from "../types/customer";
 import { createClient } from "@supabase/supabase-js";
+import camelcaseKeys from "camelcase-keys";
+import snakecaseKeys from "snakecase-keys";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -75,23 +77,37 @@ export const getAllOrders = async (): Promise<Order[] | undefined> => {
   }
 };
 
-export const createCustomer = async (
+export const getAllCustomers = async (): Promise<
+  Customer[] | undefined
+> => {
+  try {
+    const { data, error } = await supabase.from("customers").select("*");
+    if (error) {
+      console.error("Fetch error:", error);
+      return;
+    } else {
+      // Remove create_time from each object
+      const cleanedArray = data.map(({ created_time, ...rest }) => ({
+        ...rest,
+      }));
+      // Change the key name xxx_axx to xxxAxx format
+      const camelData = camelcaseKeys(cleanedArray);
+      return camelData;
+    }
+  } catch (err) {
+    console.error("Unexpected error during fetch:", err);
+    return;
+  }
+};
+
+export const addCustomer = async (
   customerData: Omit<Customer, "id">
 ): Promise<{ success: boolean; data?: Customer; error?: string }> => {
   try {
+    snakecaseKeys(customerData)
     const { data, error } = await supabase
       .from("customers")
-      .insert([
-        {
-          name: customerData.name,
-          openTime: customerData.openTime,
-          closeTime: customerData.closeTime,
-          address: customerData.address,
-          lat: customerData.lat,
-          lng: customerData.lng,
-          postcode: customerData.postcode,
-        },
-      ])
+      .insert(snakecaseKeys(customerData))
       .select();
     if (error) {
       console.error("Insert error:", error);
@@ -117,6 +133,34 @@ export const createCustomer = async (
       error: error instanceof Error ? error.message : "Network error occurred",
     };
   }
+};
+
+export const updateCustomer = async (
+  customerData: Customer
+) => {
+  try {
+    const { id, ...fieldsToUpdate } = customerData;
+    const { data, error } = await supabase
+      .from("customers")
+      .update(snakecaseKeys(fieldsToUpdate))
+      .eq("id", id);
+    if (error) {
+        console.error("Error updating ID:", `${id}: ${error.message}`);
+        return {
+          success: false,
+          error: error
+        }
+    } else {
+      return {
+        success: true
+      }
+    }  
+  } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Network error occurred",
+      };
+    }
 };
 
 export const getAllDispatchers = async (): Promise<

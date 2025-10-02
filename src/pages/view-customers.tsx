@@ -1,121 +1,123 @@
-import Orderform from "../components/Orderform";
-import NewCustomerModal from "../components/NewCustomerModal";
-import { Button, DatePicker, Radio, Row, Col, Space } from "antd";
-import dayjs from "dayjs";
-import { useState, useEffect, useMemo } from "react";
-import { getAllOrders } from "../utils/dbUtils";
-import type { Order } from "../types/order.ts";
-import type { MarkerData } from "../types/markers";
-import { setMarkersList } from "../utils/markersUtils.ts";
+import { Card, Typography, Row, Col, Button } from "antd";
+import { useEffect, useState } from "react";
+import { getAllCustomers } from "../utils/dbUtils";
+import type { Customer } from "../types/customer.ts";
+import CustomerModal from "../components/CustomerModal";
 
-type TimePeriod = "Morning" | "Afternoon" | "Evening";
+const { Text } = Typography;
 
-export default function ViewCustomers({
-  setMarkers,
-}: {
-  setMarkers: (markers: MarkerData[]) => void;
-}) {
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>("Afternoon");
-  const [date, setDate] = useState(dayjs());
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+export default function ViewCustomers() {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalMode, setModalMode] = useState<"add" | "edit">("add");
+  const [selectedCustomer, setSelectedCustomer] = useState<
+    Customer | undefined
+  >();
 
-  const columns = [
-    {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-    },
-    {
-      title: "Name",
-      dataIndex: "name",
-      key: "name",
-      render: (time: string, record: Order) => {
-        const date = dayjs(record.date).format("YYYY-MM-DD");
-        const timeDisplay = time.charAt(0).toUpperCase() + time.slice(1);
-        return `${date} ${timeDisplay}`;
-      },
-    },
-    {
-      title: "Postcode",
-      dataIndex: "postcode",
-      key: "postcode",
-    },
-  ];
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
 
-  const fetchOrders = async () => {
-    const ordersData = await getAllOrders();
-    if (ordersData) {
-      setOrders(ordersData);
+  const fetchCustomers = async () => {
+    const customers = await getAllCustomers();
+    if (customers) {
+      customers.sort((a, b) => a.name.localeCompare(b.name));
+      setCustomers(customers);
     }
   };
 
-  // Fetch orders from Supabase
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  const handleAddCustomer = () => {
+    setModalMode("add");
+    setSelectedCustomer(undefined);
+    setModalVisible(true);
+  };
 
-  // Use useMemo to cache filtered orders and prevent infinite re-renders
-  const filteredOrders = useMemo(() => {
-    if (date === null) return orders;
+  const handleEditCustomer = (customer: Customer) => {
+    setModalMode("edit");
+    setSelectedCustomer(customer);
+    setModalVisible(true);
+  };
 
-    return orders.filter((order) => {
-      const orderDate = dayjs(order.date);
-      const isSameDate = orderDate.isSame(date, "day");
-      const isSameTimePeriod = order.time === timePeriod;
-      return isSameDate && isSameTimePeriod;
-    });
-  }, [orders, date, timePeriod]);
+  const handleModalCancel = () => {
+    setModalVisible(false);
+    setSelectedCustomer(undefined);
+  };
 
-  useEffect(() => {
-    setMarkers(setMarkersList(filteredOrders));
-  }, [filteredOrders, setMarkers]);
+  const handleModalSuccess = () => {
+    fetchCustomers(); // refresh customers
+  };
 
   return (
-    <Row style={{ height: "100%" }}>
-      <Col>
-        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-          <Space direction="horizontal" size="middle">
-            <Button type="primary" onClick={() => setShowNewCustomerModal(true)}>
-              Add a new customer
+    <Card title="Customers" style={{ maxWidth: "70%", margin: "0 auto" }}>
+      <Row gutter={12} style={{ marginBottom: 12 }}>
+        <Col span={5}>
+          <Text strong>Name</Text>
+        </Col>
+        <Col span={10}>
+          <Text strong>Address</Text>
+        </Col>
+        <Col span={3}>
+          <Text strong>Open Time</Text>
+        </Col>
+        <Col span={3}>
+          <Text strong>Close Time</Text>
+        </Col>
+        <Col span={3}>
+          <Text strong>Action</Text>
+        </Col>
+      </Row>
+
+      {customers.map((customer) => (
+        <Row
+          key={customer.id}
+          align="middle"
+          gutter={12}
+          style={{
+            marginBottom: 12,
+            padding: "8px 0",
+            borderBottom: "1px solid #f0f0f0",
+          }}
+        >
+          <Col span={5}>
+            <Text>{customer.name}</Text>
+          </Col>
+          <Col span={10}>
+            <Text>{customer.address}</Text>
+          </Col>
+          <Col span={3}>
+            <Text>{customer.openTime}</Text>
+          </Col>
+          <Col span={3}>
+            <Text>{customer.closeTime}</Text>
+          </Col>
+          <Col span={3}>
+            <Button
+              type="link"
+              size="small"
+              onClick={() => handleEditCustomer(customer)}
+            >
+              Edit
             </Button>
-            {showNewCustomerModal ? (
-              <NewCustomerModal
-                isVisible={showNewCustomerModal}
-                onConfirm={() =>
-                  setShowNewCustomerModal(false)
-                }
-                onCancel={() =>
-                  setShowNewCustomerModal(false)
-                }
-              />
-            ) : null}
-          </Space>
-          <DatePicker
-            defaultValue={dayjs()}
-            onChange={(value) => setDate(value)}
-            style={{ width: "100%" }}
-          />
-          <Radio.Group
-            value={timePeriod}
-            onChange={(e) => setTimePeriod(e.target.value)}
-            optionType="button"
-            style={{ width: "100%" }}
-          >
-            <Radio.Button value="Morning" style={{ width: "33.33%" }}>
-              Morning
-            </Radio.Button>
-            <Radio.Button value="Afternoon" style={{ width: "33.33%" }}>
-              Afternoon
-            </Radio.Button>
-            <Radio.Button value="Evening" style={{ width: "33.33%" }}>
-              Evening
-            </Radio.Button>
-          </Radio.Group>
-          <Orderform orders={filteredOrders} />
-        </Space>
-      </Col>
-    </Row>
+          </Col>
+        </Row>
+      ))}
+
+      <Row style={{ marginTop: 16 }}>
+        <Col>
+          <Button type="primary" onClick={handleAddCustomer}>
+            Add Customer
+          </Button>
+        </Col>
+      </Row>
+
+      <CustomerModal
+        visible={modalVisible}
+        mode={modalMode}
+        customer={selectedCustomer}
+        onCancel={handleModalCancel}
+        onSuccess={handleModalSuccess}
+      />
+    </Card>
   );
 }
 
