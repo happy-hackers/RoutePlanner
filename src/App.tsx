@@ -5,6 +5,7 @@ import Navigation from "./components/Navigation";
 import ViewOrders from "./pages/view-orders";
 import AssignDispatchers from "./pages/assign-disparture";
 import RouteResults from "./pages/route-results";
+import ViewCustomers from "./pages/view-customers";
 import SetDispatcher from "./pages/set-dispatcher";
 import OpenStreetMap from "./components/OpenStreetMap";
 import { useLocation } from "react-router-dom";
@@ -28,7 +29,7 @@ function AppContent() {
       <Navigation />
       <Content style={{ flex: 1, padding: "10px" }}>
         <Row style={{ height: "100%", width: "100%" }}>
-          <Col flex={needMap ? "295px" : "auto"}>
+          <Col flex={needMap ? "650px" : "auto"} style={{ marginRight: "10px" }}>
             <Routes>
               <Route
                 path="/"
@@ -46,6 +47,7 @@ function AppContent() {
               <Route path="/set-dispatcher/:id" element={<SetDispatcher />} />
               <Route path="/route-results" element={<RouteResults />} />
               <Route path="/route-results/:id" element={<RouteResults />} />
+              <Route path="/view-customers" element={<ViewCustomers />} />
               <Route path="*" element={<div>Page not found</div>} />
             </Routes>
           </Col>

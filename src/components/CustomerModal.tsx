@@ -1,0 +1,211 @@
+import { useEffect } from "react";
+import {
+  Modal,
+  Form as AntForm,
+  Input,
+  Button,
+  TimePicker,
+  message,
+} from "antd";
+import { addCustomer, updateCustomer } from "../utils/dbUtils";
+import type { Customer } from "../types/customer.ts";
+import dayjs from "dayjs";
+
+interface CustomerModalProps {
+  visible: boolean;
+  onCancel: () => void;
+  onSuccess: () => void;
+  customer?: Customer;
+  mode: "add" | "edit";
+}
+
+export default function CustomerModal({
+  visible,
+  onCancel,
+  onSuccess,
+  customer,
+  mode,
+}: CustomerModalProps) {
+  const [form] = AntForm.useForm();
+
+  useEffect(() => {
+    if (visible) {
+      if (mode === "edit" && customer) {
+        console.log("customer", customer)
+        // edit mode: fill existing data
+        form.setFieldsValue({
+          name: customer.name,
+          address: customer.address,
+          openTime: dayjs(customer.openTime, "HH:mm:ss"),
+          closeTime: dayjs(customer.closeTime, "HH:mm:ss"),
+          lat: customer.lat,
+          lng: customer.lng,
+          postcode: customer.postcode ?? "",
+        });
+      } else if (mode === "add") {
+        form.resetFields(); // add mode: clear form
+      }
+    }
+  }, [visible, mode, customer, form]);
+
+  interface CustomerFormValues {
+    name: string;
+    openTime: dayjs.Dayjs;
+    closeTime: dayjs.Dayjs;
+    address: string;
+    postcode: number;
+    latitude: number;
+    longitude: number;
+  }
+  const handleSubmit = async (values: CustomerFormValues) => {
+    try {
+      if (mode === "add") {
+        const newCustomer: Omit<Customer, "id"> = {
+          name: values.name,
+          openTime: values.openTime.format("HH:mm:ss"),
+          closeTime: values.closeTime.format("HH:mm:ss"),
+          address: values.address,
+          lat: values.latitude,
+          lng: values.longitude,
+          postcode: values.postcode,
+        };
+        const result = await addCustomer(newCustomer);
+
+        if (result.success && result.data) {
+          alert("Customer created successfully!");
+          //message.success("Customer added successfully!");
+          onSuccess();
+          onCancel();
+        } else {
+          message.error(`Failed to add customer: ${result.error}`);
+        }
+      } else if (mode === "edit") {
+        if (!customer) return;
+
+        const updatedCustomer: Customer = {
+          ...customer,
+          name: values.name,
+          openTime: values.openTime.format("HH:mm:ss"),
+          closeTime: values.closeTime.format("HH:mm:ss"),
+          address: values.address,
+          lat: values.latitude,
+          lng: values.longitude,
+          postcode: values.postcode,
+        };
+
+        const result = await updateCustomer(updatedCustomer);
+        if (result.success) {
+          alert("Customer updated successfully!");
+          //message.success("Customer updated successfully!");
+          onSuccess();
+          onCancel();
+        } else {
+          message.error(`Failed to update customer: ${result.error}`);
+        }
+      }
+    } catch (error) {
+      console.error("Network error:", error);
+      message.error("Network error occurred");
+    }
+  };
+
+  const handleCancel = () => {
+    form.resetFields();
+    onCancel();
+  };
+
+  return (
+    <Modal
+      title={mode === "add" ? "Add New Customer" : "Edit Customer"}
+      open={visible}
+      onCancel={handleCancel}
+      footer={null}
+      width={500}
+    >
+      <AntForm form={form} layout="vertical" onFinish={handleSubmit}>
+        <AntForm.Item
+          label="Name"
+          name="name"
+          rules={[
+            {
+              required: true,
+              message: "Please input the name of the customer!",
+            },
+          ]}
+        >
+          <Input placeholder="Address" />
+        </AntForm.Item>
+        <AntForm.Item
+          label="Open Time"
+          name="openTime"
+          rules={[{ required: true, message: "Please select a time!" }]}
+        >
+          <TimePicker style={{ width: "100%" }} />
+        </AntForm.Item>
+        <AntForm.Item
+          label="Close Time"
+          name="closeTime"
+          rules={[{ required: true, message: "Please select a time!" }]}
+        >
+          <TimePicker style={{ width: "100%" }} />
+        </AntForm.Item>
+        <AntForm.Item
+          label="Address"
+          name="address"
+          rules={[
+            {
+              required: true,
+              message: "Please input the address of the customer!",
+            },
+          ]}
+        >
+          <Input placeholder="Address" />
+        </AntForm.Item>
+        <AntForm.Item
+          label="Longitude"
+          name="lng"
+          rules={[
+            {
+              required: true,
+              message: "Please input the longitude of the customer!",
+            },
+          ]}
+        >
+          <Input placeholder="Longitude" />
+        </AntForm.Item>
+        <AntForm.Item
+          label="Latitude"
+          name="lat"
+          rules={[
+            {
+              required: true,
+              message: "Please input the latitude of the customer!",
+            },
+          ]}
+        >
+          <Input placeholder="Latitude" />
+        </AntForm.Item>
+        <AntForm.Item
+          label="Postcode"
+          name="postcode"
+          rules={[
+            {
+              required: true,
+              message: "Please input the postcode of the customer!",
+            },
+          ]}
+        >
+          <Input placeholder="Postcode" />
+        </AntForm.Item>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <Button onClick={onCancel} style={{ marginRight: 8 }}>
+            Cancel
+          </Button>
+          <Button type="primary" htmlType="submit">
+            {mode === "add" ? "Add Customer" : "Update Customer"}
+          </Button>
+        </div>
+      </AntForm>
+    </Modal>
+  );
+}
