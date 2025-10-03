@@ -77,6 +77,34 @@ export const getAllOrders = async (): Promise<Order[] | undefined> => {
   }
 };
 
+export const updateOrder = async (
+  orderData: Order
+) => {
+  try {
+    const { id, ...fieldsToUpdate } = orderData;
+    const { error } = await supabase
+      .from("orders")
+      .update(snakecaseKeys(fieldsToUpdate))
+      .eq("id", id);
+    if (error) {
+        console.error("Error updating ID:", `${id}: ${error.message}`);
+        return {
+          success: false,
+          error: error
+        }
+    } else {
+      return {
+        success: true
+      }
+    }  
+  } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Network error occurred",
+      };
+    }
+};
+
 export const getAllCustomers = async (): Promise<
   Customer[] | undefined
 > => {
@@ -140,7 +168,7 @@ export const updateCustomer = async (
 ) => {
   try {
     const { id, ...fieldsToUpdate } = customerData;
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("customers")
       .update(snakecaseKeys(fieldsToUpdate))
       .eq("id", id);

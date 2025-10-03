@@ -23,24 +23,22 @@ interface OrderFormValues {
 }
 
 export default function NewOrderModal({
-  context,
+  date,
   fetchOrders,
 }: {
-  context: { Date?: dayjs.Dayjs; Time?: string };
+  date?: dayjs.Dayjs;
   fetchOrders: () => void;
 }) {
-  const { Date, Time } = context;
   const [open, setOpen] = useState(false);
   const [form] = AntForm.useForm<OrderFormValues>();
 
   useEffect(() => {
     if (open) {
       form.setFieldsValue({
-        date: Date,
-        deliveryTime: Time,
+        date: date,
       });
     }
-  }, [open, Date, Time, form]);
+  }, [open, date, form]);
 
   const toggleModal = () => {
     setOpen(!open);

@@ -29,7 +29,7 @@ function AppContent() {
       <Navigation />
       <Content style={{ flex: 1, padding: "10px" }}>
         <Row style={{ height: "100%", width: "100%" }}>
-          <Col flex={needMap ? "295px" : "auto"}>
+          <Col flex={needMap ? "650px" : "auto"} style={{ marginRight: "10px" }}>
             <Routes>
               <Route
                 path="/"

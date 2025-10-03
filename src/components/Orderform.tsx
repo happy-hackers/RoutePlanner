@@ -1,30 +1,87 @@
-import { Table } from "antd";
+import { Button, Table } from "antd";
 import type { Order } from "../types/order";
 import dayjs from "dayjs";
+import { useState } from "react";
+import ActionConfirmModal from "./ActionConfirmModal";
+import { updateOrder } from "../utils/dbUtils";
 
-const columns = [
-  {
-    title: "ID",
-    dataIndex: "id",
-    key: "id",
-  },
-  {
-    title: "Delivery Time",
-    dataIndex: "time",
-    key: "deliveryTime",
-    render: (time: string, record: Order) => {
-      const date = dayjs(record.date).format("YYYY-MM-DD");
-      const timeDisplay = time.charAt(0).toUpperCase() + time.slice(1);
-      return `${date} ${timeDisplay}`;
+interface Props {
+  orders: Order[]
+  onOrderRefetch: () => void
+}
+
+export default function Orderform({ orders, onOrderRefetch }: Props) {
+  const [isDeliverConfirmMoal, setIsDeliverConfirmMoal] = useState<boolean>(false)
+  const [selectedOrder, setSelectedOrder] = useState<Order>()
+
+  const columns = [
+    {
+      title: "ID",
+      dataIndex: "id",
+      key: "id",
+      width: "15%",
     },
-  },
-  {
-    title: "Postcode",
-    dataIndex: "postcode",
-    key: "postcode",
-  },
-];
-
-export default function Orderform({ orders }: { orders: Order[] }) {
-  return <Table columns={columns} dataSource={orders} rowKey="id" />;
+    {
+      title: "Delivery Time",
+      dataIndex: "time",
+      key: "deliveryTime",
+      width: "20%",
+      render: (time: string, record: Order) => {
+        const date = dayjs(record.date).format("YYYY-MM-DD");
+        const timeDisplay = time.charAt(0).toUpperCase() + time.slice(1);
+        return `${date} ${timeDisplay}`;
+      },
+    },
+    {
+      title: "Address",
+      dataIndex: "address",
+      key: "address",
+      width: "25%",
+    },
+    {
+      title: "State",
+      dataIndex: "state",
+      key: "state",
+      render: (state: string) => {
+        let color = "";
+        if (state === "In Progress") color = "orange";
+        else if (state === "Delivered") color = "#53CC3F";
+  
+        return <span style={{ color }}>{state}</span>;
+      },
+      width: "20%",
+    },
+    {
+      title: "Action",
+      dataIndex: "action",
+      key: "action",
+      render: (_: any, record: Order) => {
+        if (record.state === "In Progress")
+          return (
+            <Button color="green" variant="solid" onClick={() => {
+              setSelectedOrder(record);
+              setIsDeliverConfirmMoal(true);
+              }}>
+              Delivered
+            </Button>
+          );
+      },
+    },
+  ];
+  async function orderDelivered() {
+    if (selectedOrder) {
+      const updatedOrder: Order = {...selectedOrder, state : "Delivered"};
+      await updateOrder(updatedOrder);
+      onOrderRefetch();
+    }
+    setIsDeliverConfirmMoal(false);
+    
+  }
+  return (
+  <>
+  <Table columns={columns} dataSource={orders} rowKey="id" />
+  <ActionConfirmModal isOpen={isDeliverConfirmMoal} description={"Have you delivered this order?"} onConfirm={orderDelivered} onCancel={() => setIsDeliverConfirmMoal(false)} actionText={"Delivered"} cancelText={"Cancel"} />
+  </>
+  
+);
 }
