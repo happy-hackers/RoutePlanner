@@ -172,7 +172,7 @@ export default function RouteResults() {
         </Space>
       </Col>
       <Col flex="auto">
-        <OpenStreetMap markers={markers} />
+        <OpenStreetMap orderMarkers={markers} setOrderMarkers={setMarkers} setSelectedRowId={setSelectedRowIds} />
       </Col>
     </Row>
   );

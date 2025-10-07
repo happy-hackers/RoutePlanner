@@ -7,7 +7,7 @@ import notification from "../utils/notification";
 //import type { RootState } from "../store";
 //import type { Order } from "../features/orders";
 import type { MarkerData } from "../types/markers";
-import { supabase } from "../utils/dbUtils";
+//import { supabase } from "../utils/dbUtils";
 
 interface NavigationMapProp {
   markers: MarkerData[];
@@ -40,7 +40,7 @@ const NavigationMap: React.FC<NavigationMapProp> = ({ markers }) => {
       polylineOptions: { strokeColor: "blue" },
     });
   };
-  const sendToSupabase = async (addresses: (string | undefined)[]) => {
+  /*const sendToSupabase = async (addresses: (string | undefined)[]) => {
     try {
       const { data, error } = await supabase.functions.invoke("route-optimizer/optimize", {
         body: { name: 'Functions', start_address: startAddress, waypoints: addresses, end_address: endAddress },
@@ -52,7 +52,7 @@ const NavigationMap: React.FC<NavigationMapProp> = ({ markers }) => {
     } catch (err) {
       console.error("Failed to send to Supabase", err);
     }
-  };
+  };*/
   
   const calculateRoute = () => {
     if (!startAddress || !endAddress) {
@@ -78,7 +78,7 @@ const NavigationMap: React.FC<NavigationMapProp> = ({ markers }) => {
             const orderedAddresses = order.map((i) => markers[i].address);
             console.log("Google optimized order:", orderedAddresses);
             // Send to Supabase for secondary optimization
-            sendToSupabase(orderedAddresses);
+            //sendToSupabase(orderedAddresses);
             console.log("Route calculated and rendered.");
           } else {
             console.error("Route calculation failed: " + status);
