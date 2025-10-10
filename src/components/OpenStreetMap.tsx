@@ -60,7 +60,7 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
   const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
-  //const MAPBOX_ACCESS_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+  const SERVER_URL = import.meta.env.VITE_SERVER_URL;
   
   const defaultIcon = new L.Icon({
     iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -78,7 +78,7 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
       geocoderRef.current = new google.maps.Geocoder(); 
     })();
   }, []);
-  
+
   async function geocodeAddress(address: string): Promise<{ lat: number; lng: number }> {
     return new Promise((resolve, reject) => {
       geocoderRef.current?.geocode({ address }, (results, status) => {
@@ -165,7 +165,7 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
       endPoint
     };
     console.log("payload: ", payload)
-    const response = await fetch("http://127.0.0.1:8000/optimize-route", {
+    const response = await fetch(`${SERVER_URL}/optimize-route`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -229,8 +229,6 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
     }
 
     try {
-      const start = await geocodeAddress(startAddress);
-      const end = await geocodeAddress(endAddress);
       const optimizedRouteResult = await getOptimizedWaypointOrder(startAddress, endAddress, orderMarkers.map((m) => m.position));
       const { order, startCoord, endCoord } = optimizedRouteResult
       const orderedMarkers = order.map((i, idx) => ({
