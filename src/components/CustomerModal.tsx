@@ -54,8 +54,8 @@ export default function CustomerModal({
     closeTime: dayjs.Dayjs;
     address: string;
     postcode: number;
-    latitude: number;
-    longitude: number;
+    lat: number;
+    lng: number;
   }
   const handleSubmit = async (values: CustomerFormValues) => {
     try {
@@ -65,8 +65,8 @@ export default function CustomerModal({
           openTime: values.openTime.format("HH:mm:ss"),
           closeTime: values.closeTime.format("HH:mm:ss"),
           address: values.address,
-          lat: values.latitude,
-          lng: values.longitude,
+          lat: values.lat,
+          lng: values.lng,
           postcode: values.postcode,
         };
         const result = await addCustomer(newCustomer);
@@ -88,8 +88,8 @@ export default function CustomerModal({
           openTime: values.openTime.format("HH:mm:ss"),
           closeTime: values.closeTime.format("HH:mm:ss"),
           address: values.address,
-          lat: values.latitude,
-          lng: values.longitude,
+          lat: values.lat,
+          lng: values.lng,
           postcode: values.postcode,
         };
 
@@ -133,7 +133,7 @@ export default function CustomerModal({
             },
           ]}
         >
-          <Input placeholder="Address" />
+          <Input placeholder="Name" />
         </AntForm.Item>
         <AntForm.Item
           label="Open Time"

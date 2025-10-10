@@ -1,3 +1,5 @@
+import type { Customer } from "./customer";
+
 export interface Order {
   id: number;
   date: string;
@@ -8,4 +10,6 @@ export interface Order {
   lng: number;
   postcode: number;
   dispatcherId?: number;
+  customerId: number; // Foreign key
+  customer?: Customer;
 }

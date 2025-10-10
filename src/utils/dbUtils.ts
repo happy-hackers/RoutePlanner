@@ -16,18 +16,7 @@ export const createOrder = async (
   try {
     const { data, error } = await supabase
       .from("orders")
-      .insert([
-        {
-          date: orderData.date,
-          time: orderData.time,
-          state: orderData.state,
-          address: orderData.address,
-          lat: orderData.lat,
-          lng: orderData.lng,
-          postcode: orderData.postcode,
-          dispatcher_id: orderData.dispatcherId,
-        },
-      ])
+      .insert(snakecaseKeys(orderData))
       .select();
     if (error) {
       console.error("Insert error:", error);
@@ -57,19 +46,24 @@ export const createOrder = async (
 
 export const getAllOrders = async (): Promise<Order[] | undefined> => {
   try {
-    const { data, error } = await supabase.from("orders").select("*");
+    const { data, error } = await supabase
+    .from("orders")
+    .select(`
+      *, 
+      customer:customers(*)
+      `);
     if (error) {
       console.error("Fetch error:", error);
       return;
     } else {
       // Remove create_time from each object since we don't need it currently
       const cleanedArray = data.map(
-        ({ created_time, dispatcher_id, ...rest }) => ({
+        ({ created_time, ...rest }) => ({
           ...rest,
-          dispatcherId: dispatcher_id,
         })
       );
-      return cleanedArray;
+      const camelData = camelcaseKeys(cleanedArray, { deep: true });
+      return camelData;
     }
   } catch (err) {
     console.error("Unexpected error during fetch:", err);
@@ -119,7 +113,7 @@ export const getAllCustomers = async (): Promise<
         ...rest,
       }));
       // Change the key name xxx_axx to xxxAxx format
-      const camelData = camelcaseKeys(cleanedArray);
+      const camelData = camelcaseKeys(cleanedArray, { deep: true });
       return camelData;
     }
   } catch (err) {
@@ -132,7 +126,6 @@ export const addCustomer = async (
   customerData: Omit<Customer, "id">
 ): Promise<{ success: boolean; data?: Customer; error?: string }> => {
   try {
-    snakecaseKeys(customerData)
     const { data, error } = await supabase
       .from("customers")
       .insert(snakecaseKeys(customerData))

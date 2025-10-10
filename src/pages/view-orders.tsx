@@ -3,10 +3,11 @@ import NewOrderModal from "../components/NewOrderModal";
 import { Button, DatePicker, Row, Col, Space, Checkbox, Typography } from "antd";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo } from "react";
-import { getAllOrders } from "../utils/dbUtils";
+import { getAllCustomers, getAllOrders } from "../utils/dbUtils";
 import type { Order } from "../types/order.ts";
 import type { MarkerData } from "../types/markers";
 import { setMarkersList } from "../utils/markersUtils.ts";
+import type { Customer } from "../types/customer.ts";
 
 type TimePeriod = "Morning" | "Afternoon" | "Evening";
 type OrderState = "Pending" | "Assigned" | "In Progress" | "Delivered" | "Cancelled";
@@ -22,6 +23,7 @@ export default function ViewOrders({
   const [orderState, setOrderState] = useState<OrderState[]>(["In Progress"]);
   const [date, setDate] = useState(dayjs());
   const [orders, setOrders] = useState<Order[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
   const fetchOrders = async () => {
     const ordersData = await getAllOrders();
@@ -29,12 +31,19 @@ export default function ViewOrders({
       setOrders(ordersData);
     }
   };
+  const fetchCustomers = async () => {
+    const customersData = await getAllCustomers();
+    if (customersData) {
+      setCustomers(customersData);
+    }
+  };
   const timeOptions: TimePeriod[] = ["Morning", "Afternoon", "Evening"]
   const stateOptions: OrderState[] = ["In Progress", "Delivered"];
 
-  // Fetch orders from Supabase
+  // Fetch orders and customers from Supabase
   useEffect(() => {
     fetchOrders();
+    fetchCustomers();
   }, []);
 
   // Use useMemo to cache filtered orders and prevent infinite re-renders
@@ -66,6 +75,7 @@ export default function ViewOrders({
           <Space direction="horizontal" size="middle">
             <NewOrderModal
               date={date}
+              customers={customers}
               fetchOrders={fetchOrders}
             />
             <Button type="default">Upload</Button>

@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import dayjs from "dayjs";
 import { createOrder } from "../utils/dbUtils";
 import type { Order } from "../types/order";
+import type { Customer } from "../types/customer";
 
 type OrderTime = "Morning" | "Afternoon" | "Evening";
 
@@ -20,13 +21,16 @@ interface OrderFormValues {
   deliveryTime: string;
   latitude: number;
   longitude: number;
+  customerId: number;
 }
 
 export default function NewOrderModal({
   date,
+  customers,
   fetchOrders,
 }: {
   date?: dayjs.Dayjs;
+  customers: Customer[];
   fetchOrders: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -59,6 +63,7 @@ export default function NewOrderModal({
         lat: values.latitude,
         lng: values.longitude,
         postcode: values.postcode,
+        customerId: values.customerId
       };
 
       const result = await createOrder(newOrder);
@@ -118,6 +123,21 @@ export default function NewOrderModal({
             rules={[{ required: true, message: "Please select a date!" }]}
           >
             <DatePicker style={{ width: "100%" }} />
+          </AntForm.Item>
+          <AntForm.Item
+            label="Customer"
+            name="customerId"
+            rules={[
+              { required: true, message: "Please select customer!" },
+            ]}
+          >
+            <Select placeholder="Select customer">
+              {customers?.map((customer) => (
+                <Select.Option key={customer.id} value={customer.id}>
+                  {customer.name}
+                </Select.Option>
+              ))}
+            </Select>
           </AntForm.Item>
           <AntForm.Item
             label="Address"
