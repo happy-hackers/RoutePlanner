@@ -24,3 +24,10 @@ package-lock.json
 *.njsproj
 *.sln
 *.sw?
+
+# Ignore backend virtual environment
+/backend/.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]

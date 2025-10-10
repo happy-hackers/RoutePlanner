@@ -104,6 +104,7 @@ export default function RouteResults() {
         address: record.address,
         icon: redIcon,
         dispatcherId: record.dispatcherId,
+        customer: record.customer
       });
     } else {
       setSelectedRowIds(selectedRowIds.filter((id) => id !== record.id));
@@ -121,6 +122,7 @@ export default function RouteResults() {
           address: record.address,
           icon: redIcon,
           dispatcherId: record.dispatcherId,
+          customer: record.customer
         });
       });
     } else {

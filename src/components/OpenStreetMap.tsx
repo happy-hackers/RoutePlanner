@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Input, Space, Button } from "antd";
+import { Input, Space, Button, Select } from "antd";
 import { MapContainer, TileLayer, Marker, Polyline, Popup } from "react-leaflet";
 import L, { type LatLngExpression } from "leaflet";
 import notification from "../utils/notification";
@@ -52,11 +52,13 @@ const endIcon = new L.Icon({
 const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMarkers, setSelectedRowId }) => {
   const [startAddress, setStartAddress] = useState("");
   const [endAddress, setEndAddress] = useState("");
+  const [searchOptions, setSearchOptions] = useState("normal");
   const [route, setRoute] = useState<LatLngExpression[]>([]);
   const [startMarker, setStartMarker] = useState<Omit<MarkerData, "id">>();
   const [endMarker, setEndMarker] = useState<Omit<MarkerData, "id">>();
   const [orderedMarkers, setOrderedMarkers] = useState<(MarkerData & { order: number })[]>([]);
   const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
   //const MAPBOX_ACCESS_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
   
@@ -73,26 +75,25 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
     (async () => {
       await importLibrary("routes");
       directionsServiceRef.current = new google.maps.DirectionsService();
+      geocoderRef.current = new google.maps.Geocoder(); 
     })();
   }, []);
-
-  /*const geocodeAddress = async (address: string) => {
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-      address
-    )}.json?access_token=${MAPBOX_ACCESS_TOKEN}&limit=1`;
-
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (data && data.features && data.features.length > 0) {
-      return {
-        lng: data.features[0].center[0], // [lng, lat]
-        lat: data.features[0].center[1],
-      };
-    }
-
-    throw new Error("Geocoding failed for " + address);
-  };*/
+  
+  async function geocodeAddress(address: string): Promise<{ lat: number; lng: number }> {
+    return new Promise((resolve, reject) => {
+      geocoderRef.current?.geocode({ address }, (results, status) => {
+        if (status === google.maps.GeocoderStatus.OK && results && results.length > 0) {
+          const loc = results[0].geometry.location;
+          resolve({
+            lat: loc.lat(),
+            lng: loc.lng(),
+          });
+        } else {
+          reject(`Geocode failed for "${address}" with status: ${status}`);
+        }
+      });
+    });
+  }
 
   type OptimizedRouteResult = {
     order: number[];
@@ -101,9 +102,9 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
       lat: number;
       lng: number;
     };
-      endCoord: {
-        lat: number;
-        lng: number;
+    endCoord: {
+      lat: number;
+      lng: number;
     };
   };
 
@@ -153,6 +154,74 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
     });
   }
 
+  async function getOptimizedWaypointOrderByTime(
+    startPoint: { lat: number; lng: number },
+    endPoint: { lat: number; lng: number },
+    waypoints: { lat: number; lng: number, open: string | null, close: string | null }[]
+  ) :  Promise<number[]> {
+    const payload = {
+      startPoint,
+      waypoints,
+      endPoint
+    };
+    console.log("payload: ", payload)
+    const response = await fetch("http://127.0.0.1:8000/optimize-route", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (result.error) 
+      alert(result.error);
+    return result;
+  }
+  const calculateRoutebyTime = async () => {
+    if (!startAddress || !endAddress) {
+      notification("error", "Start location and destination should be entered");
+      return;
+    }
+
+    try {
+      const startCoord = await geocodeAddress(startAddress);
+      const endCoord = await geocodeAddress(endAddress);
+      const waypointsWithTimes = orderMarkers.map(m => ({
+        lat: m.position.lat,
+        lng: m.position.lng,
+        open: m.customer?.openTime ?? null,
+        close: m.customer?.closeTime ?? null
+      }));
+      console.log("waypointsWithTimes", waypointsWithTimes)
+      const order = await getOptimizedWaypointOrderByTime(startCoord, endCoord, waypointsWithTimes);
+      const orderedMarkers = order.map((i, idx) => ({
+        ...orderMarkers[i],
+        order: idx + 1,
+      }));
+      setStartMarker({position: startCoord, address: startAddress});
+      setEndMarker({position: endCoord, address: endAddress});
+      setOrderedMarkers(orderedMarkers);
+      setOrderMarkers([]);
+      setSelectedRowId?.([]);
+      const orderedWaypoints = order.map((i) => orderMarkers[i].position);
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startCoord.lng},${startCoord.lat};${orderedWaypoints
+        .map((wp) => `${wp.lng},${wp.lat}`)
+        .join(";")};${endCoord.lng},${endCoord.lat}?overview=full&geometries=geojson`;
+
+      const response = await fetch(osrmUrl);
+      const data = await response.json();
+
+      if (data.routes && data.routes.length > 0) {
+        const coordinates = data.routes[0].geometry.coordinates.map(
+          (c: [number, number]) => [c[1], c[0]] // flip lng,lat → lat,lng
+        );
+        setRoute(coordinates);
+      } else {
+        notification("error", "No route found");
+      }
+    } catch (error) {
+      console.error("Routing error:", error);
+      notification("error", "Route calculation failed");
+    }
+  };
   const calculateRoute = async () => {
     if (!startAddress || !endAddress) {
       notification("error", "Start location and destination should be entered");
@@ -160,8 +229,8 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
     }
 
     try {
-      //const start = await geocodeAddress(startAddress);
-      //const end = await geocodeAddress(endAddress);
+      const start = await geocodeAddress(startAddress);
+      const end = await geocodeAddress(endAddress);
       const optimizedRouteResult = await getOptimizedWaypointOrder(startAddress, endAddress, orderMarkers.map((m) => m.position));
       const { order, startCoord, endCoord } = optimizedRouteResult
       const orderedMarkers = order.map((i, idx) => ({
@@ -207,7 +276,7 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
         }}
       >
         <Space direction="horizontal" size="middle" style={{ width: "800px" }}>
-          <Space direction="vertical" style={{ width: "800px" }}>
+          <Space direction="vertical" style={{ width: "600px" }}>
             <Input
               placeholder="Input Start (lng,lat)"
               value={startAddress}
@@ -219,6 +288,15 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
               onChange={(e) => setEndAddress(e.target.value)}
             />
           </Space>
+          <Select
+            placeholder="Select Option"
+            value={searchOptions}
+            onChange={(value) => setSearchOptions(value)}
+            style={{ width: "100px" }}
+          >
+            <Select.Option value="normal">Normal</Select.Option>
+            <Select.Option value="byTime">By Time</Select.Option>
+          </Select>
           <Space>
             <Button
               type="primary"
@@ -230,7 +308,7 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
                 alignItems: "center",
                 justifyContent: "center",
               }}
-              onClick={calculateRoute}
+              onClick={ searchOptions === "normal"?  calculateRoute : calculateRoutebyTime}
             >
               Search
             </Button>
