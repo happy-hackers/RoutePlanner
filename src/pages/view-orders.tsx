@@ -1,27 +1,31 @@
 import Orderform from "../components/Orderform";
 import NewOrderModal from "../components/NewOrderModal";
-import { Button, DatePicker, Row, Col, Space, Checkbox, Typography } from "antd";
+import { DatePicker, Row, Col, Space, Checkbox, Typography } from "antd";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo } from "react";
 import { getAllCustomers, getAllOrders } from "../utils/dbUtils";
-import type { Order } from "../types/order.ts";
+import type { Order, OrderStatus } from "../types/order.ts";
 import type { MarkerData } from "../types/markers";
 import { setMarkersList } from "../utils/markersUtils.ts";
 import type { Customer } from "../types/customer.ts";
 
 type TimePeriod = "Morning" | "Afternoon" | "Evening";
-type OrderState = "Pending" | "Assigned" | "In Progress" | "Delivered" | "Cancelled";
 
 const { Text } = Typography;
+import Upload from "../components/UploadModal.tsx";
+import { useSelector, useDispatch } from "react-redux";
+import { setDate, setTimePeriod, setStatus } from "../store/orderSlice.ts";
+import type { RootState } from "../store";
 
 export default function ViewOrders({
   setMarkers,
 }: {
   setMarkers: (markers: MarkerData[]) => void;
 }) {
-  const [timePeriod, setTimePeriod] = useState<TimePeriod[]>(["Morning", "Afternoon", "Evening"]);
-  const [orderState, setOrderState] = useState<OrderState[]>(["In Progress"]);
-  const [date, setDate] = useState(dayjs());
+  const dispatch = useDispatch();
+  const date = useSelector((state: RootState) => state.order.date);
+  const timePeriod = useSelector((state: RootState) => state.order.timePeriod);
+  const status = useSelector((state: RootState) => state.order.status);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
 
@@ -38,7 +42,7 @@ export default function ViewOrders({
     }
   };
   const timeOptions: TimePeriod[] = ["Morning", "Afternoon", "Evening"]
-  const stateOptions: OrderState[] = ["In Progress", "Delivered"];
+  const stateOptions: OrderStatus[] = ["Pending", "In Progress", "Delivered"];
 
   // Fetch orders and customers from Supabase
   useEffect(() => {
@@ -51,18 +55,18 @@ export default function ViewOrders({
     if (date === null) 
       return orders.filter((order) => {
       const isSameTimePeriod = timePeriod.includes(order.time);
-      const isSameState = orderState.includes(order.state);
-      return isSameTimePeriod && isSameState;
+      const isSameStatus = status.includes(order.status);
+      return isSameTimePeriod && isSameStatus;
     });
     else 
       return orders.filter((order) => {
         const orderDate = dayjs(order.date);
         const isSameDate = orderDate.isSame(date, "day");
         const isSameTimePeriod = timePeriod.includes(order.time);
-        const isSameState = orderState.includes(order.state);
-        return isSameDate && isSameTimePeriod && isSameState;
+        const isSameStatus = status.includes(order.status);
+        return isSameDate && isSameTimePeriod && isSameStatus;
       });
-  }, [orders, date, timePeriod, orderState]);
+  }, [orders, date, timePeriod, status]);
 
   useEffect(() => {
     setMarkers(setMarkersList(filteredOrders));
@@ -78,20 +82,21 @@ export default function ViewOrders({
               customers={customers}
               fetchOrders={fetchOrders}
             />
-            <Button type="default">Upload</Button>
+            <Upload />
           </Space>
           <DatePicker
-            defaultValue={dayjs()}
-            onChange={(value) => setDate(value)}
+            defaultValue={date}
+            onChange={(value) => dispatch(setDate(value))}
             style={{ width: "300px" }}
+            format="YYYY-MM-DD"
           />
           <Row>
             <Text strong style={{ marginRight: "20px" }}>Time:</Text>
-            <Checkbox.Group options={timeOptions} defaultValue={["Morning", "Afternoon", "Evening"]} onChange={(values: TimePeriod[]) => setTimePeriod(values)} />
+            <Checkbox.Group options={timeOptions} defaultValue={timePeriod} onChange={(values: TimePeriod[]) => dispatch(setTimePeriod(values))} />
           </Row>
           <Row>
-            <Text strong style={{ marginRight: "20px" }}>State:</Text>
-            <Checkbox.Group options={stateOptions} defaultValue={["In Progress"]} onChange={(values: OrderState[]) => setOrderState(values)} />
+            <Text strong style={{ marginRight: "20px" }}>Status:</Text>
+            <Checkbox.Group options={stateOptions} defaultValue={status} onChange={(values: OrderStatus[]) => dispatch(setStatus(values))} />
           </Row>
           <Orderform orders={filteredOrders} onOrderRefetch={fetchOrders} />
         </Space>

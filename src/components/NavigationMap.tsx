@@ -1,24 +1,15 @@
 import { GoogleMap, Marker, InfoWindow  } from "@react-google-maps/api";
 import { Input, Space, Button } from "antd";
-//import { useLocation, matchPath } from "react-router-dom";
 import { useState, useRef } from "react";
-//import { useSelector } from "react-redux";
 import notification from "../utils/notification";
-//import type { RootState } from "../store";
-//import type { Order } from "../features/orders";
 import type { MarkerData } from "../types/markers";
 //import { supabase } from "../utils/dbUtils";
 
 interface NavigationMapProp {
   markers: MarkerData[];
-  //addMarker: (marker: MarkerData) => void
 }
 
 const NavigationMap: React.FC<NavigationMapProp> = ({ markers }) => {
-  //console.log("markers in map", markers);
-  /*const [markers, setMarkers] = useState<
-    { lat: number; lng: number; address?: string }[]
-  >([]);*/
 
   const [startAddress, setStartAddress] = useState("");
   const [endAddress, setEndAddress] = useState("");

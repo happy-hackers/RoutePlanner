@@ -5,7 +5,7 @@ import {
   Input,
   Button,
   TimePicker,
-  message,
+  App
 } from "antd";
 import { addCustomer, updateCustomer } from "../utils/dbUtils";
 import type { Customer } from "../types/customer.ts";
@@ -27,6 +27,7 @@ export default function CustomerModal({
   mode,
 }: CustomerModalProps) {
   const [form] = AntForm.useForm();
+  const { message } = App.useApp();
 
   useEffect(() => {
     if (visible) {
@@ -72,7 +73,7 @@ export default function CustomerModal({
         const result = await addCustomer(newCustomer);
 
         if (result.success && result.data) {
-          alert("Customer created successfully!");
+          message.success("Customer created successfully!");
           //message.success("Customer added successfully!");
           onSuccess();
           onCancel();
@@ -95,8 +96,7 @@ export default function CustomerModal({
 
         const result = await updateCustomer(updatedCustomer);
         if (result.success) {
-          alert("Customer updated successfully!");
-          //message.success("Customer updated successfully!");
+          message.success("Customer updated successfully!");
           onSuccess();
           onCancel();
         } else {

@@ -58,7 +58,7 @@ export default function RouteResults() {
       ]);
 
       if (ordersData) {
-        const filteredOrders = ordersData.filter(order => order.state === "In Progress")
+        const filteredOrders = ordersData.filter(order => order.status === "In Progress")
         setOrders(filteredOrders);
       }
       if (dispatchersData) {

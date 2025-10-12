@@ -39,15 +39,15 @@ export default function Orderform({ orders, onOrderRefetch }: Props) {
       width: "25%",
     },
     {
-      title: "State",
-      dataIndex: "state",
-      key: "state",
-      render: (state: string) => {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      render: (status: string) => {
         let color = "";
-        if (state === "In Progress") color = "orange";
-        else if (state === "Delivered") color = "#53CC3F";
+        if (status === "In Progress") color = "orange";
+        else if (status === "Delivered") color = "#53CC3F";
   
-        return <span style={{ color }}>{state}</span>;
+        return <span style={{ color }}>{status}</span>;
       },
       width: "20%",
     },
@@ -56,7 +56,7 @@ export default function Orderform({ orders, onOrderRefetch }: Props) {
       dataIndex: "action",
       key: "action",
       render: (_: any, record: Order) => {
-        if (record.state === "In Progress")
+        if (record.status === "In Progress")
           return (
             <Button color="green" variant="solid" onClick={() => {
               setSelectedOrder(record);
@@ -70,7 +70,7 @@ export default function Orderform({ orders, onOrderRefetch }: Props) {
   ];
   async function orderDelivered() {
     if (selectedOrder) {
-      const updatedOrder: Order = {...selectedOrder, state : "Delivered"};
+      const updatedOrder: Order = {...selectedOrder, status : "Delivered"};
       await updateOrder(updatedOrder);
       onOrderRefetch();
     }
