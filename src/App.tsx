@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useJsApiLoader } from "@react-google-maps/api";
 import Navigation from "./components/Navigation";
 import ViewOrders from "./pages/view-orders";
-import AssignDispatchers from "./pages/assign-dispartcher";
+import AssignDispatchers from "./pages/assign-dispatcher";
 import RouteResults from "./pages/route-results";
 import ViewCustomers from "./pages/view-customers";
 import SetDispatcher from "./pages/set-dispatcher";
