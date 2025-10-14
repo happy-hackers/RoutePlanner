@@ -5,6 +5,9 @@ import type { MarkerData } from "../types/markers.ts";
 import { getAllDispatchers, getAllOrders } from "../utils/dbUtils";
 import type { Dispatcher } from "../types/dispatchers";
 import OpenStreetMap from "../components/OpenStreetMap";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store/index.ts";
+import dayjs from "dayjs";
 
 const { Title } = Typography;
 
@@ -34,12 +37,15 @@ export default function RouteResults() {
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [isRouteMode, setIsRouteMode] = useState<boolean>(false);
+  const [sortedOrder, setSortedOrder] = useState<Order[]>([]);
 
   // 这里的Dispatcher并没有被定义，只是去掉redux之后还没有写获取，如何获取可以参考assign-disparture.tsx
   const [selectedDispatcher, setSelectedDispatcher] =
     useState<Dispatcher | null>(null);
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
-  //setDispatcher(dispatcher);
+  const date = useSelector((state: RootState) => state.order.date);
+  const timePeriod = useSelector((state: RootState) => state.order.timePeriod);
 
   const dispatchersOption = [
     { value: null, label: "Please select dispatcher" },
@@ -48,6 +54,26 @@ export default function RouteResults() {
       label: dispatcher.name,
     })),
   ];
+
+  const getFilteredOrders = (ordersData: Order[]): Order[] => {
+    let filteredOrders: Order[]
+    if (date === null) {
+      filteredOrders = ordersData.filter((order) => {
+        const isSameTimePeriod = timePeriod.includes(order.time);
+        const isInProgress = order.status === "In Progress";
+        return isSameTimePeriod && isInProgress;
+      })
+    } else {
+      filteredOrders = ordersData.filter((order) => {
+        const orderDate = dayjs(order.date);
+        const isSameDate = orderDate.isSame(date, "day");
+        const isSameTimePeriod = timePeriod.includes(order.time);
+        const isInProgress = order.status === "In Progress";
+        return isSameDate && isSameTimePeriod && isInProgress;
+      });
+    }
+    return filteredOrders;
+  }
 
   // Fetch dispatchers from Supabase
   useEffect(() => {
@@ -58,7 +84,7 @@ export default function RouteResults() {
       ]);
 
       if (ordersData) {
-        const filteredOrders = ordersData.filter(order => order.status === "In Progress")
+        const filteredOrders = getFilteredOrders(ordersData)
         setOrders(filteredOrders);
       }
       if (dispatchersData) {
@@ -138,43 +164,61 @@ export default function RouteResults() {
 
   return (
     <Row style={{ height: "100%" }}>
-      <Col flex="295px">
-        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-          <Select
-            defaultValue={null}
-            onChange={(id: number) => {
-              if (id) {
-                const selectedDispatcher = dispatchers.find((d) => d.id === id);
-                setSelectedDispatcher(selectedDispatcher ?? null);
-              } else {
-                setSelectedDispatcher(null);
-              }
-            }}
-            options={dispatchersOption}
-          />
+      <Col flex="500px">
+        {isRouteMode ? (
+          <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+            <h1>Sorted Order:</h1>
+            <Table
+              rowKey="id"
+              columns={columns}
+              dataSource={sortedOrder}
+              pagination={false}
+            />
+          </Space>
+        ) : (
+          <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+            <Select
+              defaultValue={null}
+              onChange={(id: number) => {
+                if (id) {
+                  const selectedDispatcher = dispatchers.find(
+                    (d) => d.id === id
+                  );
+                  setSelectedDispatcher(selectedDispatcher ?? null);
+                } else {
+                  setSelectedDispatcher(null);
+                }
+              }}
+              options={dispatchersOption}
+            />
 
-          {selectedDispatcher ? (
-            <>
-              <Button type="primary">
-                Download the route of {selectedDispatcher.name}
-              </Button>
-              <Table
-                rowKey="id"
-                rowSelection={rowSelection}
-                columns={columns}
-                dataSource={data}
-                pagination={false}
-              />
-            </>
-          ) : (
-            <div>
-              <Title level={4}>Please select a dispatcher</Title>
-            </div>
-          )}
-        </Space>
+            {selectedDispatcher ? (
+              <>
+                <Button type="primary">
+                  Download the route of {selectedDispatcher.name}
+                </Button>
+                <Table
+                  rowKey="id"
+                  rowSelection={rowSelection}
+                  columns={columns}
+                  dataSource={data}
+                  pagination={false}
+                />
+              </>
+            ) : (
+              <div>
+                <Title level={4}>Please select a dispatcher</Title>
+              </div>
+            )}
+          </Space>
+        )}
       </Col>
       <Col flex="auto">
-        <OpenStreetMap orderMarkers={markers} setOrderMarkers={setMarkers} setSelectedRowId={setSelectedRowIds} />
+        <OpenStreetMap
+          orderMarkers={markers}
+          setOrderMarkers={setMarkers}
+          setSelectedRowId={setSelectedRowIds}
+        />
       </Col>
     </Row>
   );
