@@ -61,6 +61,8 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
   const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
   const SERVER_URL = import.meta.env.VITE_SERVER_URL;
   const { message } = App.useApp();
+  const settingInfo: any = localStorage.getItem("setting");
+  
   
   const defaultIcon = new L.Icon({
     iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -78,6 +80,17 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
       geocoderRef.current = new google.maps.Geocoder(); 
     })();
   }, []);
+
+  useEffect(() => {
+    if (settingInfo) {
+      const settingJson = JSON.parse(settingInfo);
+      if (settingJson.useDefaultAddress) {
+        setStartAddress(settingJson.startAddress);
+        setEndAddress(settingJson.endAddress);
+      }
+    }
+  }, [settingInfo]);
+  
 
   async function geocodeAddress(address: string): Promise<{ lat: number; lng: number }> {
     return new Promise((resolve, reject) => {
