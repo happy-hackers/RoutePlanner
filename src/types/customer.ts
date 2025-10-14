@@ -6,5 +6,5 @@ export interface Customer {
     address: string;
     lat: number;
     lng: number;
-    postcode: number;
+    postcode?: number;
 }

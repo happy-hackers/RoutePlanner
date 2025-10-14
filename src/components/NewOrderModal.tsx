@@ -18,7 +18,6 @@ type OrderTime = "Morning" | "Afternoon" | "Evening";
 interface OrderFormValues {
   date: dayjs.Dayjs;
   address: string;
-  postcode: number;
   deliveryTime: string;
   latitude: number;
   longitude: number;
@@ -46,27 +45,22 @@ export default function NewOrderModal({
     }
   }, [open, date, form]);
 
-  const toggleModal = () => {
-    setOpen(!open);
-  };
-
   const handleSubmit = async (values: OrderFormValues) => {
     const time: OrderTime = values.deliveryTime as OrderTime;
     const newOrder: Omit<Order, "id"> = {
       date: values.date.format("YYYY-MM-DD"),
       time: time,
-      state: "Pending",
+      status: "Pending",
       address: values.address,
       lat: values.latitude,
       lng: values.longitude,
-      postcode: values.postcode,
       customerId: values.customerId
     };
 
     const result = await createOrder(newOrder);
 
     if (result.success && result.data) {
-      toggleModal();
+      handleCancel();
       fetchOrders();
       message.success("Order created successfully!");
     } else {
@@ -82,13 +76,13 @@ export default function NewOrderModal({
 
   return (
     <>
-      <Button type="primary" onClick={toggleModal}>
+      <Button type="primary" onClick={() => setOpen(true)}>
         Add a new order
       </Button>
       <Modal
         title="New order form"
         open={open}
-        onCancel={toggleModal}
+        onCancel={handleCancel}
         footer={null}
       >
         <AntForm form={form} layout="vertical" onFinish={handleSubmit}>
@@ -102,11 +96,20 @@ export default function NewOrderModal({
           <AntForm.Item
             label="Customer"
             name="customerId"
-            rules={[
-              { required: true, message: "Please select customer!" },
-            ]}
+            rules={[{ required: true, message: "Please select customer!" }]}
           >
-            <Select placeholder="Select customer">
+            <Select
+              placeholder="Select customer"
+              onChange={(value) => {
+                const selectedCustomer = customers.find(customer => customer.id === value)
+                if (selectedCustomer) 
+                  form.setFieldsValue({
+                    address: selectedCustomer.address,
+                    longitude: selectedCustomer.lng,
+                    latitude: selectedCustomer.lat
+                  })
+              }}
+            >
               {customers?.map((customer) => (
                 <Select.Option key={customer.id} value={customer.id}>
                   {customer.name}
@@ -149,18 +152,6 @@ export default function NewOrderModal({
             ]}
           >
             <Input placeholder="Latitude" />
-          </AntForm.Item>
-          <AntForm.Item
-            label="Postcode"
-            name="postcode"
-            rules={[
-              {
-                required: true,
-                message: "Please input the postcode of the order!",
-              },
-            ]}
-          >
-            <Input placeholder="Postcode" />
           </AntForm.Item>
           <AntForm.Item
             label="Delivery Time"

@@ -8,7 +8,7 @@ export interface Order {
   address: string;
   lat: number;
   lng: number;
-  postcode: number;
+  postcode?: number;
   dispatcherId?: number;
   customerId: number; // Foreign key
   customer?: Customer;
