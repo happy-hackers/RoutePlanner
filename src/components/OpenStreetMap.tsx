@@ -12,6 +12,10 @@ interface NavigationMapProp {
   orderMarkers: MarkerData[];
   setOrderMarkers: (markers: MarkerData[]) => void;
   setSelectedRowId?: (rowIds: number[]) => void;
+  sortedMarkers?: (MarkerData & { travelTime: number })[];
+  setSortedMarkers?: (markers: (MarkerData & { travelTime: number })[]) => void;
+  setIsRouteMode?: (routeMode: boolean) => void;
+  isRouteMode?: boolean;
 }
 
 function createNumberIcon(number: number) {
@@ -48,20 +52,20 @@ const endIcon = new L.Icon({
   iconAnchor: [20, 56],
 });
 
-const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMarkers, setSelectedRowId }) => {
+const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMarkers, setSelectedRowId, sortedMarkers, setSortedMarkers, setIsRouteMode, isRouteMode }) => {
   const [startAddress, setStartAddress] = useState("");
   const [endAddress, setEndAddress] = useState("");
   const [searchOptions, setSearchOptions] = useState("normal");
   const [route, setRoute] = useState<LatLngExpression[]>([]);
   const [startMarker, setStartMarker] = useState<Omit<MarkerData, "id">>();
   const [endMarker, setEndMarker] = useState<Omit<MarkerData, "id">>();
-  const [orderedMarkers, setOrderedMarkers] = useState<(MarkerData & { order: number })[]>([]);
   const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
   const SERVER_URL = import.meta.env.VITE_SERVER_URL;
   const { message } = App.useApp();
   const settingInfo: any = localStorage.getItem("setting");
+  console.log("sortedMarkers1", sortedMarkers)
   
   
   const defaultIcon = new L.Icon({
@@ -90,6 +94,15 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
       }
     }
   }, [settingInfo]);
+
+  useEffect(() => {
+    if (!isRouteMode) {
+      setRoute([]);
+      setSortedMarkers?.([]);
+      setStartMarker(undefined);
+      setEndMarker(undefined);
+    }
+  }, [isRouteMode]);
   
 
   async function geocodeAddress(address: string): Promise<{ lat: number; lng: number }> {
@@ -119,6 +132,7 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
       lat: number;
       lng: number;
     };
+    segmentTimes: number[]
   };
 
   async function getOptimizedWaypointOrder(
@@ -151,14 +165,16 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
             // Sum up distance and duration between points
             let totalDistance = 0;
             let totalDuration = 0;
-
+            const segmentTimes = legs.map(
+              (leg) => Math.round((leg.duration?.value ?? 0) / 60)
+            );
             for (const leg of legs) {
               totalDistance += leg.distance?.value ?? 0; // in meters
               totalDuration += leg.duration?.value ?? 0; // in seconds
             }
             console.log("totalDistance", totalDistance)
             console.log("totalDuration", totalDuration)
-            resolve({ order, startCoord, endCoord });
+            resolve({ order, startCoord, endCoord, segmentTimes });
           } else {
             reject(status);
           }
@@ -171,7 +187,7 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
     startPoint: { lat: number; lng: number },
     endPoint: { lat: number; lng: number },
     waypoints: { lat: number; lng: number, open: string | null, close: string | null }[]
-  ) :  Promise<number[]> {
+  ) :  Promise<any> {
     const payload = {
       startPoint,
       waypoints,
@@ -203,18 +219,21 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
         open: m.customer?.openTime ?? null,
         close: m.customer?.closeTime ?? null
       }));
-      console.log("waypointsWithTimes", waypointsWithTimes)
-      const order = await getOptimizedWaypointOrderByTime(startCoord, endCoord, waypointsWithTimes);
-      const orderedMarkers = order.map((i, idx) => ({
+      const optimizedRouteResult = await getOptimizedWaypointOrderByTime(startCoord, endCoord, waypointsWithTimes);
+      const { order, segment_times, total_time } = optimizedRouteResult
+      const sortedMarkers = order.map((i: number, idx: number) => ({
         ...orderMarkers[i],
-        order: idx + 1,
+        travelTime: segment_times[idx],
       }));
+
       setStartMarker({position: startCoord, address: startAddress});
       setEndMarker({position: endCoord, address: endAddress});
-      setOrderedMarkers(orderedMarkers);
+      setSortedMarkers?.(sortedMarkers);
+      setIsRouteMode?.(true)
       setOrderMarkers([]);
       setSelectedRowId?.([]);
-      const orderedWaypoints = order.map((i) => orderMarkers[i].position);
+
+      const orderedWaypoints: { lat: number; lng: number }[] = order.map((i: number) => orderMarkers[i].position);
       const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startCoord.lng},${startCoord.lat};${orderedWaypoints
         .map((wp) => `${wp.lng},${wp.lat}`)
         .join(";")};${endCoord.lng},${endCoord.lat}?overview=full&geometries=geojson`;
@@ -243,16 +262,19 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
 
     try {
       const optimizedRouteResult = await getOptimizedWaypointOrder(startAddress, endAddress, orderMarkers.map((m) => m.position));
-      const { order, startCoord, endCoord } = optimizedRouteResult
-      const orderedMarkers = order.map((i, idx) => ({
+      const { order, startCoord, endCoord, segmentTimes } = optimizedRouteResult
+      const sortedMarkers = order.map((i: number, idx: number) => ({
         ...orderMarkers[i],
-        order: idx + 1,
+        travelTime: segmentTimes[idx],
       }));
+
       setStartMarker({position: startCoord, address: startAddress});
       setEndMarker({position: endCoord, address: endAddress});
-      setOrderedMarkers(orderedMarkers);
+      setSortedMarkers?.(sortedMarkers);
+      setIsRouteMode?.(true)
       setOrderMarkers([]);
       setSelectedRowId?.([]);
+
       const orderedWaypoints = order.map((i) => orderMarkers[i].position);
       const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startCoord.lng},${startCoord.lat};${orderedWaypoints
         .map((wp) => `${wp.lng},${wp.lat}`)
@@ -318,7 +340,9 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                backgroundColor: isRouteMode ? "#E6E6E6" : undefined,
               }}
+              disabled={isRouteMode}
               onClick={ searchOptions === "normal"?  calculateRoute : calculateRoutebyTime}
             >
               Search
@@ -350,14 +374,14 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
           </Marker>
         ))}
 
-        {orderedMarkers.map((marker) => (
+        {sortedMarkers?.map((marker, i) => (
           <Marker
-            key={marker.order}
+            key={i}
             position={[marker.position.lat, marker.position.lng]}
-            icon={createNumberIcon(marker.order)}
+            icon={createNumberIcon(i + 1)}
           >
             <Popup>
-              Stop {marker.order}: {marker.address}
+              Stop {i + 1}: {marker.address}
             </Popup>
           </Marker>
         ))}

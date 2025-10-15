@@ -8,6 +8,7 @@ import OpenStreetMap from "../components/OpenStreetMap";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store/index.ts";
 import dayjs from "dayjs";
+import { ArrowLeftOutlined } from "@ant-design/icons";
 
 const { Title } = Typography;
 
@@ -22,10 +23,32 @@ const columns = [
     dataIndex: "address",
     key: "address",
   },
+];
+
+const routeModeColumns = [
   {
-    title: "Estimated Time",
-    dataIndex: "estimatedTime",
-    key: "estimatedTime",
+    title: "Order ID",
+    dataIndex: "id",
+    key: "orderId",
+  },
+  {
+    title: "Address",
+    dataIndex: "address",
+    key: "address",
+  },
+  {
+    title: "Travel Time",
+    dataIndex: "travelTime",
+    key: "travelTime",
+    render: (time: number) => {
+      let color = "inherit";
+
+      if (time <= 10) color = "green";
+      else if (time <= 30) color = "orange";
+      else color = "red";
+
+      return <span style={{ color, fontWeight: 600 }}>{time} mins</span>;
+    }
   },
 ];
 
@@ -38,7 +61,7 @@ export default function RouteResults() {
   const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isRouteMode, setIsRouteMode] = useState<boolean>(false);
-  const [sortedOrder, setSortedOrder] = useState<Order[]>([]);
+  const [sortedMarkers, setSortedMarkers] = useState<(MarkerData & { travelTime: number })[]>([]);
 
   // 这里的Dispatcher并没有被定义，只是去掉redux之后还没有写获取，如何获取可以参考assign-disparture.tsx
   const [selectedDispatcher, setSelectedDispatcher] =
@@ -167,11 +190,24 @@ export default function RouteResults() {
       <Col flex="500px">
         {isRouteMode ? (
           <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-            <h1>Sorted Order:</h1>
+            <Row justify="space-between" align="middle">
+              <Col>
+                <h3>Sorted Order:</h3>
+              </Col>
+              <Col>
+                <Button
+                  type="default"
+                  icon={<ArrowLeftOutlined />}
+                  onClick={() => setIsRouteMode(false)} // example back action
+                >
+                  Back
+                </Button>
+              </Col>
+            </Row>
             <Table
               rowKey="id"
-              columns={columns}
-              dataSource={sortedOrder}
+              columns={routeModeColumns}
+              dataSource={sortedMarkers}
               pagination={false}
             />
           </Space>
@@ -179,6 +215,7 @@ export default function RouteResults() {
           <Space direction="vertical" size="middle" style={{ width: "100%" }}>
             <Select
               defaultValue={null}
+              value={selectedDispatcher ? selectedDispatcher.id : null}
               onChange={(id: number) => {
                 if (id) {
                   const selectedDispatcher = dispatchers.find(
@@ -218,6 +255,10 @@ export default function RouteResults() {
           orderMarkers={markers}
           setOrderMarkers={setMarkers}
           setSelectedRowId={setSelectedRowIds}
+          sortedMarkers={sortedMarkers}
+          setSortedMarkers={setSortedMarkers}
+          setIsRouteMode={setIsRouteMode}
+          isRouteMode={isRouteMode}
         />
       </Col>
     </Row>
