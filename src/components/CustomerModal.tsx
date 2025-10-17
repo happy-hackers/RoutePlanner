@@ -201,8 +201,6 @@ export default function CustomerModal({
               <Select
                 placeholder="Select District"
                 disabled={!selectedArea}
-                onChange={(value) => {
-                }}
               >
                 {districts.map((district) => (
                   <Select.Option key={district} value={district}>

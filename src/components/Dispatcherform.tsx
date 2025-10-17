@@ -1,5 +1,4 @@
 import { Card, Space, Table, Tag, Typography } from "antd";
-import type { TableProps } from "antd";
 import type { Order } from "../types/order";
 import type { Dispatcher } from "../types/dispatchers";
 import { useSelector } from "react-redux";

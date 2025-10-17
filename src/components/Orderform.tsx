@@ -1,18 +1,12 @@
-import { Button, Table } from "antd";
+import { Table } from "antd";
 import type { Order } from "../types/order";
 import dayjs from "dayjs";
-import { useState } from "react";
-import ActionConfirmModal from "./ActionConfirmModal";
-import { updateOrder } from "../utils/dbUtils";
 
 interface Props {
   orders: Order[]
-  onOrderRefetch: () => void
 }
 
-export default function Orderform({ orders, onOrderRefetch }: Props) {
-  const [isDeliverConfirmMoal, setIsDeliverConfirmMoal] = useState<boolean>(false)
-  const [selectedOrder, setSelectedOrder] = useState<Order>()
+export default function Orderform({ orders }: Props) {
 
   const columns = [
     {
@@ -54,37 +48,8 @@ export default function Orderform({ orders, onOrderRefetch }: Props) {
       },
       width: "20%",
     },
-    /*{
-      title: "Action",
-      dataIndex: "action",
-      key: "action",
-      render: (_: any, record: Order) => {
-        if (record.status === "In Progress")
-          return (
-            <Button color="green" variant="solid" onClick={() => {
-              setSelectedOrder(record);
-              setIsDeliverConfirmMoal(true);
-              }}>
-              Delivered
-            </Button>
-          );
-      },
-    },*/
   ];
-  async function orderDelivered() {
-    if (selectedOrder) {
-      const updatedOrder: Order = {...selectedOrder, status : "Delivered"};
-      await updateOrder(updatedOrder);
-      onOrderRefetch();
-    }
-    setIsDeliverConfirmMoal(false);
-    
-  }
   return (
-  <>
-  <Table columns={columns} dataSource={orders} rowKey="id" />
-  <ActionConfirmModal isOpen={isDeliverConfirmMoal} description={"Have you delivered this order?"} onConfirm={orderDelivered} onCancel={() => setIsDeliverConfirmMoal(false)} actionText={"Delivered"} cancelText={"Cancel"} />
-  </>
-  
-);
+    <Table columns={columns} dataSource={orders} rowKey="id" />
+  );
 }

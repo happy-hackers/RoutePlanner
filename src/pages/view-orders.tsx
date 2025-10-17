@@ -102,7 +102,7 @@ export default function ViewOrders({
             <Text strong style={{ marginRight: "20px" }}>Status:</Text>
             <Checkbox.Group options={stateOptions} defaultValue={status} onChange={(values: OrderStatus[]) => dispatch(setStatus(values))} />
           </Row>
-          <Orderform orders={filteredOrders} onOrderRefetch={fetchOrders} />
+          <Orderform orders={filteredOrders} />
         </Space>
       </Col>
     </Row>

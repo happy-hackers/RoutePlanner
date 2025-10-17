@@ -57,10 +57,6 @@ const routeModeColumns = [
 ];
 
 export default function RouteResults() {
-  const redIcon = {
-    url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
-    color: "red",
-  };
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
