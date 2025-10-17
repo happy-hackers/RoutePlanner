@@ -1,9 +1,9 @@
-import { Layout, Row, Col } from "antd";
+import { Layout, Row, Col, App as AntApp } from "antd";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useJsApiLoader } from "@react-google-maps/api";
 import Navigation from "./components/Navigation";
 import ViewOrders from "./pages/view-orders";
-import AssignDispatchers from "./pages/assign-disparture";
+import AssignDispatchers from "./pages/assign-dispatcher";
 import RouteResults from "./pages/route-results";
 import ViewCustomers from "./pages/view-customers";
 import SetDispatcher from "./pages/set-dispatcher";
@@ -44,7 +44,6 @@ function AppContent() {
                 element={<AssignDispatchers setMarkers={setMarkers} />}
               />
               <Route path="/set-dispatcher" element={<SetDispatcher />} />
-              <Route path="/set-dispatcher/:id" element={<SetDispatcher />} />
               <Route path="/route-results" element={<RouteResults />} />
               <Route path="/route-results/:id" element={<RouteResults />} />
               <Route path="/view-customers" element={<ViewCustomers />} />
@@ -67,7 +66,9 @@ function App() {
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: apiKey || "",
   });
-  return isLoaded ? <AppContent /> : <div>Loading Map...</div>;
+  return (
+    <AntApp>{isLoaded ? <AppContent /> : <div>Loading Map...</div>}</AntApp>
+  );
 }
 
 export default App;

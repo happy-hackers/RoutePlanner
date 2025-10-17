@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Input, Space, Button, Select } from "antd";
+import { Input, Space, Button, Select, App } from "antd";
 import { MapContainer, TileLayer, Marker, Polyline, Popup } from "react-leaflet";
 import L, { type LatLngExpression } from "leaflet";
-import notification from "../utils/notification";
 import type { MarkerData } from "../types/markers";
 import orderedMarkerImg from "../assets/icons/orderedMarker.png";
 import startMarkerImg from "../assets/icons/startMarker.png";
@@ -61,6 +60,7 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
   const SERVER_URL = import.meta.env.VITE_SERVER_URL;
+  const { message } = App.useApp();
   
   const defaultIcon = new L.Icon({
     iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -172,12 +172,12 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
     });
     const result = await response.json();
     if (result.error) 
-      alert(result.error);
+      message.error(result.error);
     return result;
   }
   const calculateRoutebyTime = async () => {
     if (!startAddress || !endAddress) {
-      notification("error", "Start location and destination should be entered");
+      message.error("Start location and destination should be entered");
       return;
     }
 
@@ -215,16 +215,16 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
         );
         setRoute(coordinates);
       } else {
-        notification("error", "No route found");
+        message.error("No route found");
       }
     } catch (error) {
       console.error("Routing error:", error);
-      notification("error", "Route calculation failed");
+      message.error("Route calculation failed");
     }
   };
   const calculateRoute = async () => {
     if (!startAddress || !endAddress) {
-      notification("error", "Start location and destination should be entered");
+      message.error("Start location and destination should be entered");
       return;
     }
 
@@ -254,11 +254,11 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
         );
         setRoute(coordinates);
       } else {
-        notification("error", "No route found");
+        message.error("No route found");
       }
     } catch (error) {
       console.error("Routing error:", error);
-      notification("error", "Route calculation failed");
+      message.error("Route calculation failed");
     }
   };
 

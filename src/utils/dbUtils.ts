@@ -26,14 +26,15 @@ export const createOrder = async (
       };
     } else {
       // Currently not need created_time column and change key name to dispatcherId
-      const { created_time, dispatcher_id, ...rest } = data[0];
+      const { created_time, ...rest } = data[0];
       const newOrder = {
         ...rest,
-        dispatcherId: dispatcher_id,
       };
+      // Change the key name xxx_axx to xxxAxx format
+      const camelData = camelcaseKeys(newOrder);
       return {
         success: true,
-        data: newOrder,
+        data: camelData,
       };
     }
   } catch (error) {
@@ -193,14 +194,13 @@ export const getAllDispatchers = async (): Promise<
       console.error("Fetch error:", error);
       return;
     } else {
-      // Remove create_time from each object and change the key to "activeDay"
-      const cleanedArray = data.map(
-        ({ created_time, active_day, ...rest }) => ({
-          ...rest,
-          activeDay: active_day,
-        })
-      );
-      return cleanedArray;
+      // Remove create_time from each object
+      const cleanedArray = data.map(({ created_time, ...rest }) => ({
+        ...rest,
+      }));
+      // Change the key name xxx_axx to xxxAxx format
+      const camelData = camelcaseKeys(cleanedArray);
+      return camelData;
     }
   } catch (err) {
     console.error("Unexpected error during fetch:", err);
@@ -210,7 +210,7 @@ export const getAllDispatchers = async (): Promise<
 
 export const addDispatcher = async (
   dispatcherData: Omit<Dispatcher, "id">
-): Promise<{ success: boolean; data?: Order; error?: string }> => {
+): Promise<{ success: boolean; data?: Dispatcher; error?: string }> => {
   try {
     const { data, error } = await supabase
       .from("dispatchers")
@@ -230,15 +230,15 @@ export const addDispatcher = async (
       };
     } else {
       // Currently not need created_time column and change key names
-      const { created_time, active_day, responsible_area, ...rest } = data[0];
+      const { created_time, ...rest } = data[0];
       const newDispatcher = {
         ...rest,
-        activeDay: active_day,
-        responsibleArea: responsible_area,
       };
+      // Change the key name xxx_axx to xxxAxx format
+      const camelData = camelcaseKeys(newDispatcher);
       return {
         success: true,
-        data: newDispatcher || "Failed to create order",
+        data: camelData,
       };
     }
   } catch (error) {
@@ -270,7 +270,7 @@ export const updateDispatchers = async (
         responsible_area: responsibleArea,
       })
     );
-    const results = [];
+    const results: any[] = [];
     const errors = [];
     for (const item of cleanedUpdates) {
       const { id, ...fieldsToUpdate } = item;
@@ -294,6 +294,7 @@ export const updateDispatchers = async (
       console.log("All updates successful");
       return {
         success: true,
+        data: results,
         error: errors,
       };
     }

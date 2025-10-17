@@ -1,4 +1,4 @@
-import { Select, Button, Row, Col, Space, message } from "antd";
+import { Select, Button, Row, Col, Space, App } from "antd";
 import { useState, useEffect } from "react";
 import Dispatcherform from "../components/Dispatcherform";
 import type { Dispatcher } from "../types/dispatchers";
@@ -11,6 +11,9 @@ import type { MarkerData } from "../types/markers";
 import type { Order } from "../types/order";
 import { getRegionByPostcode } from "../utils/regionUtils";
 import { addMarkerwithColor } from "../utils/markersUtils";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store";
+import dayjs from "dayjs";
 
 // Color mapping for different regions
 const REGION_COLORS: Record<string, string> = {
@@ -25,37 +28,67 @@ export default function AssignDispatchers({
 }: {
   setMarkers: (markers: MarkerData[]) => void;
 }) {
+  const { message } = App.useApp();
+  const date = useSelector((state: RootState) => state.order.date);
+  const timePeriod = useSelector((state: RootState) => state.order.timePeriod);
+  const status = useSelector((state: RootState) => state.order.status);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
 
-  // Combined useEffect to fetch both orders and dispatchers
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchDispatchers = async () => {
       try {
-        // Fetch orders and dispatchers in parallel
-        const [ordersData, dispatchersData] = await Promise.all([
-          getAllOrders(),
-          getAllDispatchers(),
-        ]);
-
-        if (ordersData) {
-          setOrders(ordersData);
-        }
-
+        const dispatchersData = await getAllDispatchers();
         if (dispatchersData) {
           setDispatchers(dispatchersData);
-          console.log("dispatchersData", dispatchersData);
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
-        message.error("Failed to load data. Please try again.");
+        console.error("Error fetching dispatchers:", error);
+        message.error("Failed to load dispatchers.");
       }
     };
 
-    fetchData();
+    fetchDispatchers();
   }, []);
+
+  const getFilteredOrders = (ordersData: Order[]): Order[] => {
+    let filteredOrders: Order[]
+    if (date === null) {
+      filteredOrders = ordersData.filter((order) => {
+        const isSameTimePeriod = timePeriod.includes(order.time);
+        const isSameStatus = status.includes(order.status);
+        return isSameTimePeriod && isSameStatus;
+      })
+    } else {
+      filteredOrders = ordersData.filter((order) => {
+        const orderDate = dayjs(order.date);
+        const isSameDate = orderDate.isSame(date, "day");
+        const isSameTimePeriod = timePeriod.includes(order.time);
+        const isSameStatus = status.includes(order.status);
+        return isSameDate && isSameTimePeriod && isSameStatus;
+      });
+    }
+    return filteredOrders;
+  }
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const ordersData = await getAllOrders();
+        if (ordersData) {
+          const filteredOrders = getFilteredOrders(ordersData);
+          setOrders(filteredOrders);
+        }
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+        message.error("Failed to load orders.");
+      }
+    };
+
+    fetchOrders();
+  }, [date, timePeriod]);
 
   const dispatchersOption = [
     { value: null, label: "All Dispatchers" },
@@ -136,28 +169,10 @@ export default function AssignDispatchers({
       const successfulAssignments = results.filter((r) => r.success);
       const failedAssignments = results.filter((r) => !r.success);
 
-      // Group successful assignments by dispatcher for better reporting
-      const assignmentsByDispatcher = successfulAssignments.reduce(
-        (acc, item) => {
-          const dispatcherName =
-            dispatchers.find((d) => d.id === item.dispatcherId)?.name ||
-            "Unknown";
-          if (!acc[dispatcherName]) {
-            acc[dispatcherName] = [];
-          }
-          acc[dispatcherName].push(item);
-          return acc;
-        },
-        {} as Record<string, typeof successfulAssignments>
-      );
-
       // Show detailed results
       if (successfulAssignments.length > 0) {
-        const summary = Object.entries(assignmentsByDispatcher)
-          .map(([name, items]) => `${name}: ${items.length} orders`)
-          .join(", ");
         message.success(
-          `Successfully assigned ${successfulAssignments.length} orders: ${summary}`
+          `Successfully assigned ${successfulAssignments.length} orders.`
         );
       }
 
@@ -166,15 +181,14 @@ export default function AssignDispatchers({
         console.error("Failed assignments:", failedAssignments);
       }
 
-      // Refresh orders data to get updated assignments
-      const updatedOrders = await getAllOrders();
-      if (updatedOrders) {
-        setOrders(updatedOrders);
+      // 刷新订单数据以获取最新的调度员分配信息
+      const ordersData = await getAllOrders();
+      if (ordersData) {
+        const filteredOrders = getFilteredOrders(ordersData);
+        setOrders(filteredOrders);
       }
 
-      // Create markers for all orders with their assigned colors
-      const ordersToShow = updatedOrders || orders;
-      const allMarkers = ordersToShow
+      const allMarkers = orders
         .map((order) => {
           const region = getRegionByPostcode(order.postcode);
           const color = REGION_COLORS[region] || "red";
@@ -203,7 +217,7 @@ export default function AssignDispatchers({
                 // Only update markers when selecting, don't auto assign
                 if (id) {
                   const selectedDispatcher = dispatchers.find(
-                    (d) => d.id === id
+                    (dispatcher) => dispatcher.id === id
                   );
                   if (selectedDispatcher) {
                     const responsibleAreas = selectedDispatcher.responsibleArea;
@@ -252,6 +266,7 @@ export default function AssignDispatchers({
                 : null
             }
             orders={orders}
+            dispatchers={dispatchers}
           />
         </Space>
       </Col>

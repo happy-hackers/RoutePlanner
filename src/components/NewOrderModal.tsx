@@ -5,6 +5,7 @@ import {
   Input,
   Select,
   Form as AntForm,
+  App
 } from "antd";
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
@@ -35,6 +36,7 @@ export default function NewOrderModal({
 }) {
   const [open, setOpen] = useState(false);
   const [form] = AntForm.useForm<OrderFormValues>();
+  const { message } = App.useApp();
 
   useEffect(() => {
     if (open) {
@@ -49,56 +51,29 @@ export default function NewOrderModal({
   };
 
   const handleSubmit = async (values: OrderFormValues) => {
-    //const location = await getLocationByAddress(values.address);
-    if (!values.latitude || !values.longitude) {
-      // Give a error message to user: Please enter a valid address!
-      return;
+    const time: OrderTime = values.deliveryTime as OrderTime;
+    const newOrder: Omit<Order, "id"> = {
+      date: values.date.format("YYYY-MM-DD"),
+      time: time,
+      state: "Pending",
+      address: values.address,
+      lat: values.latitude,
+      lng: values.longitude,
+      postcode: values.postcode,
+      customerId: values.customerId
+    };
+
+    const result = await createOrder(newOrder);
+
+    if (result.success && result.data) {
+      toggleModal();
+      fetchOrders();
+      message.success("Order created successfully!");
     } else {
-      const time: OrderTime = values.deliveryTime as OrderTime;
-      const newOrder: Omit<Order, "id"> = {
-        date: values.date.format("YYYY-MM-DD"),
-        time: time,
-        state: "Pending",
-        address: values.address,
-        lat: values.latitude,
-        lng: values.longitude,
-        postcode: values.postcode,
-        customerId: values.customerId
-      };
-
-      const result = await createOrder(newOrder);
-
-      if (result.success && result.data) {
-        toggleModal();
-        fetchOrders();
-        alert("Order created successfully!");
-      } else {
-        console.error("Failed to create order:", result.error);
-        alert(`Failed to create order: ${result.error}`);
-      }
+      console.error("Failed to create order:", result.error);
+      message.error(`Failed to create order: ${result.error}`);
     }
   };
-
-  // Reuse if using geocoding instead of lat and lng
-  // const getLocationByAddress = async (address: string) => {
-  //   let location: google.maps.LatLng | null = null;
-
-  //   try {
-  //     const geocoder = new google.maps.Geocoder();
-  //     const result = await geocoder.geocode({ address });
-
-  //     if (result.results[0]) {
-  //       location = result.results[0].geometry.location;
-  //       message.success(`Geocode address successfully`);
-  //     } else {
-  //       message.error(`Could not find address: ${address}`);
-  //     }
-  //   } catch (error) {
-  //     message.error(`Address parsing failed: ${address}`);
-  //     console.error("Geocoding error:", error);
-  //   }
-  //   return {lat: location?.lat(), lng: location?.lng()};
-  // };
 
   const handleCancel = () => {
     form.resetFields();
