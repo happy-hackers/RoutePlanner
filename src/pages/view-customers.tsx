@@ -82,7 +82,7 @@ export default function ViewCustomers() {
             <Text>{customer.name}</Text>
           </Col>
           <Col span={10}>
-            <Text>{customer.address}</Text>
+            <Text>{customer.detailedAddress}, {customer.area}</Text>
           </Col>
           <Col span={3}>
             <Text>{customer.openTime}</Text>

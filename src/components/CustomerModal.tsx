@@ -1,15 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Modal,
   Form as AntForm,
   Input,
   Button,
   TimePicker,
-  App
+  App,
+  Select,
+  Row,
+  Col
 } from "antd";
 import { addCustomer, updateCustomer } from "../utils/dbUtils";
 import type { Customer } from "../types/customer.ts";
 import dayjs from "dayjs";
+import areaData from "../hong_kong_areas.json"
 
 interface CustomerModalProps {
   visible: boolean;
@@ -26,6 +30,13 @@ export default function CustomerModal({
   customer,
   mode,
 }: CustomerModalProps) {
+  type Area = keyof typeof areaData;
+  
+  const [selectedArea, setSelectedArea] = useState<Area | null>(null);
+
+  const areas = Object.keys(areaData);
+  const districts = selectedArea ? Object.keys(areaData[selectedArea]) : [];
+  
   const [form] = AntForm.useForm();
   const { message } = App.useApp();
 
@@ -36,13 +47,16 @@ export default function CustomerModal({
         // edit mode: fill existing data
         form.setFieldsValue({
           name: customer.name,
-          address: customer.address,
+          detailedAddress: customer.detailedAddress,
+          area: customer.area,
+          district: customer.district,
           openTime: dayjs(customer.openTime, "HH:mm:ss"),
           closeTime: dayjs(customer.closeTime, "HH:mm:ss"),
           lat: customer.lat,
           lng: customer.lng,
           postcode: customer.postcode ?? "",
         });
+        setSelectedArea(customer.area as Area);
       } else if (mode === "add") {
         form.resetFields(); // add mode: clear form
       }
@@ -53,8 +67,9 @@ export default function CustomerModal({
     name: string;
     openTime: dayjs.Dayjs;
     closeTime: dayjs.Dayjs;
-    address: string;
-    postcode: number;
+    detailedAddress: string;
+    area: string;
+    district: string;
     lat: number;
     lng: number;
   }
@@ -65,10 +80,11 @@ export default function CustomerModal({
           name: values.name,
           openTime: values.openTime.format("HH:mm:ss"),
           closeTime: values.closeTime.format("HH:mm:ss"),
-          address: values.address,
+          detailedAddress: values.detailedAddress,
+          area: values.area,
+          district: values.district,
           lat: values.lat,
           lng: values.lng,
-          postcode: values.postcode,
         };
         const result = await addCustomer(newCustomer);
 
@@ -76,6 +92,7 @@ export default function CustomerModal({
           message.success("Customer created successfully!");
           //message.success("Customer added successfully!");
           onSuccess();
+          setSelectedArea(null);
           onCancel();
         } else {
           message.error(`Failed to add customer: ${result.error}`);
@@ -88,10 +105,11 @@ export default function CustomerModal({
           name: values.name,
           openTime: values.openTime.format("HH:mm:ss"),
           closeTime: values.closeTime.format("HH:mm:ss"),
-          address: values.address,
+          detailedAddress: values.detailedAddress,
+          area: values.area,
+          district: values.district,
           lat: values.lat,
           lng: values.lng,
-          postcode: values.postcode,
         };
 
         const result = await updateCustomer(updatedCustomer);
@@ -111,6 +129,7 @@ export default function CustomerModal({
 
   const handleCancel = () => {
     form.resetFields();
+    setSelectedArea(null);
     onCancel();
   };
 
@@ -149,13 +168,58 @@ export default function CustomerModal({
         >
           <TimePicker style={{ width: "100%" }} />
         </AntForm.Item>
+        <Row gutter={20}>
+          <Col span={10}>
+            <AntForm.Item
+              label="Area"
+              name="area"
+              rules={[{ required: true, message: "Please select an area!" }]}
+            >
+              <Select
+                placeholder="Select Area"
+                onChange={(value) => {
+                  setSelectedArea(value);
+                  form.setFieldsValue({
+                    district: undefined,
+                  });
+                }}
+              >
+                {areas.map((area) => (
+                  <Select.Option key={area} value={area}>
+                    {area}
+                  </Select.Option>
+                ))}
+              </Select>
+            </AntForm.Item>
+          </Col>
+          <Col span={10}>
+            <AntForm.Item
+              label="District"
+              name="district"
+              rules={[{ required: true, message: "Please select a district!" }]}
+            >
+              <Select
+                placeholder="Select District"
+                disabled={!selectedArea}
+                onChange={(value) => {
+                }}
+              >
+                {districts.map((district) => (
+                  <Select.Option key={district} value={district}>
+                    {district}
+                  </Select.Option>
+                ))}
+              </Select>
+            </AntForm.Item>
+          </Col>
+        </Row>
         <AntForm.Item
-          label="Address"
-          name="address"
+          label="Detailed Address"
+          name="detailedAddress"
           rules={[
             {
               required: true,
-              message: "Please input the address of the customer!",
+              message: "Please input the detailed address of the customer!",
             },
           ]}
         >
@@ -184,18 +248,6 @@ export default function CustomerModal({
           ]}
         >
           <Input placeholder="Latitude" />
-        </AntForm.Item>
-        <AntForm.Item
-          label="Postcode"
-          name="postcode"
-          rules={[
-            {
-              required: true,
-              message: "Please input the postcode of the customer!",
-            },
-          ]}
-        >
-          <Input placeholder="Postcode" />
         </AntForm.Item>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <Button onClick={onCancel} style={{ marginRight: 8 }}>

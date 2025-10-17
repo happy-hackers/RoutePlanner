@@ -6,6 +6,8 @@ import {
   UserSwitchOutlined,
   SettingOutlined,
   CompassOutlined,
+  SettingFilled,
+  TeamOutlined
 } from "@ant-design/icons";
 
 type MenuItem = Required<MenuProps>["items"][number];
@@ -35,8 +37,8 @@ export default function Sidebar() {
     getItem("Assign Dispatcher", "/assign-dispatcher", <UserSwitchOutlined />),
     getItem("Set Dispatcher", "/set-dispatcher", <SettingOutlined />),
     getItem("Route Results", "/route-results", <CompassOutlined />,),
-    getItem("View Customers", "/view-customers", <CompassOutlined />),
-    getItem("Setting", "/setting", <CompassOutlined />),
+    getItem("View Customers", "/view-customers", <TeamOutlined />),
+    getItem("Setting", "/setting", <SettingFilled />),
   ];
 
   const handleMenuClick = (e: { key: string }) => {

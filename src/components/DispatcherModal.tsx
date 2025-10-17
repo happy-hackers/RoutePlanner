@@ -1,17 +1,27 @@
 import { useEffect } from "react";
-import { Modal, Form, Input, Select, Checkbox, Button, Space, App } from "antd";
+import { Modal, Form, Input, Select, Checkbox, Button, Space, App, Cascader, type CascaderProps } from "antd";
 import { addDispatcher, updateDispatchers } from "../utils/dbUtils";
 import type { Dispatcher } from "../types/dispatchers";
+import areaData from "../hong_kong_areas.json"
 
 const { Option } = Select;
+const { SHOW_CHILD } = Cascader;
+interface Option {
+  value: string | number;
+  label: string;
+  children?: Option[];
+}
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const areas = [
-  "Inner Melbourne",
-  "Northern Suburbs",
-  "Eastern & South-Eastern Suburbs",
-  "Western Suburbs",
-];
+
+const options: Option[] = Object.entries(areaData).map(([region, districts]) => ({
+  label: region,
+  value: region,
+  children: Object.keys(districts).map((district) => ({
+    label: district,
+    value: district,
+  })),
+}));
 
 interface DispatcherModalProps {
   visible: boolean;
@@ -28,8 +38,27 @@ export default function DispatcherModal({
   dispatcher,
   mode,
 }: DispatcherModalProps) {
+  //const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
   const [form] = Form.useForm();
   const { message } = App.useApp();
+
+  /*const getDistrictOptions = (selectedRegions: string[]) => {
+    return Object.entries(areaData)
+      .filter(([region]) => selectedRegions.includes(region))
+      .map(([region, districts]) => ({
+        label: region,
+        value: region,
+        children: Object.keys(districts).map((district) => ({
+          label: district,
+          value: district,
+        })),
+      }));
+  };
+
+  const districtOptions = useMemo(
+    () => getDistrictOptions(selectedAreas),
+    [selectedAreas]
+  );*/
 
   useEffect(() => {
     if (visible) {
@@ -50,7 +79,7 @@ export default function DispatcherModal({
   const handleSubmit = async (values: {
     name: string;
     activeDay: string[];
-    responsibleArea: string[];
+    responsibleArea: string[][];
   }) => {
     try {
       if (mode === "add") {
@@ -96,6 +125,9 @@ export default function DispatcherModal({
     form.resetFields();
     onCancel();
   };
+  const onChange: CascaderProps<Option, 'value', true>['onChange'] = (value) => {
+    console.log(value);
+  };
 
   return (
     <Modal
@@ -135,19 +167,15 @@ export default function DispatcherModal({
         </Form.Item>
 
         <Form.Item name="responsibleArea" label="Responsible Areas">
-          <Select
-            mode="multiple"
-            placeholder="Select areas"
-            style={{ width: "100%" }}
-          >
-            {areas.map((area) => (
-              <Option key={area} value={area}>
-                {area}
-              </Option>
-            ))}
-          </Select>
+          <Cascader
+            style={{ width: '100%' }}
+            options={options}
+            onChange={onChange}
+            multiple
+            maxTagCount="responsive"
+            showCheckedStrategy={SHOW_CHILD}
+          />
         </Form.Item>
-
         <Form.Item>
           <Space>
             <Button type="primary" htmlType="submit">

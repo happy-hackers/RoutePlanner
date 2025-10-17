@@ -34,9 +34,12 @@ export default function Orderform({ orders, onOrderRefetch }: Props) {
     },
     {
       title: "Address",
-      dataIndex: "address",
-      key: "address",
+      dataIndex: "detailedAddress",
+      key: "detailedAddress",
       width: "25%",
+      render: (detailedAddress: string, record: Order) => {
+        return `${detailedAddress}, ${record.area}`;
+      },
     },
     {
       title: "Status",
@@ -51,7 +54,7 @@ export default function Orderform({ orders, onOrderRefetch }: Props) {
       },
       width: "20%",
     },
-    {
+    /*{
       title: "Action",
       dataIndex: "action",
       key: "action",
@@ -66,7 +69,7 @@ export default function Orderform({ orders, onOrderRefetch }: Props) {
             </Button>
           );
       },
-    },
+    },*/
   ];
   async function orderDelivered() {
     if (selectedOrder) {

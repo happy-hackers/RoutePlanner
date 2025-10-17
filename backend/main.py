@@ -158,7 +158,7 @@ async def time_consider_route(data: RouteInput):
 
     solution = routing.SolveWithParameters(search_parameters)
     if not solution:
-        return {"error": "No feasible solution found within the time windows"}
+        return {"error": "No feasible solution found within the opening time of these customers. Please select other ways"}
     route, segment_times, total_time = [], [], 0
     index = routing.Start(0)  # get the starting routing index for vehicle 0
     while not routing.IsEnd(index): # this will make "route" variable not contain the the index of the end node
@@ -173,8 +173,7 @@ async def time_consider_route(data: RouteInput):
     # Now route has start point but not end point
     route.pop(0)
     index = [x - 1 for x in route]
-    print(route)
-    print(total_time)
+    total_time = round(total_time / 60)
     # Return the order of waypoints, the estimated time between each waypoints and the total time of the route
     return { "order": index, "segment_times": segment_times, "total_time": total_time }
 

@@ -5,19 +5,24 @@ import {
   Input,
   Select,
   Form as AntForm,
-  App
+  App,
+  Row,
+  Col
 } from "antd";
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
 import { createOrder } from "../utils/dbUtils";
 import type { Order } from "../types/order";
 import type { Customer } from "../types/customer";
+import areaData from "../hong_kong_areas.json"
 
 type OrderTime = "Morning" | "Afternoon" | "Evening";
 
 interface OrderFormValues {
   date: dayjs.Dayjs;
-  address: string;
+  detailedAddress: string;
+  area: string;
+  district: string;
   deliveryTime: string;
   latitude: number;
   longitude: number;
@@ -33,6 +38,13 @@ export default function NewOrderModal({
   customers: Customer[];
   fetchOrders: () => void;
 }) {
+  type Area = keyof typeof areaData;
+  
+  const [selectedArea, setSelectedArea] = useState<Area | null>(null);
+
+  const areas = Object.keys(areaData);
+  const districts = selectedArea ? Object.keys(areaData[selectedArea]) : [];
+
   const [open, setOpen] = useState(false);
   const [form] = AntForm.useForm<OrderFormValues>();
   const { message } = App.useApp();
@@ -51,7 +63,9 @@ export default function NewOrderModal({
       date: values.date.format("YYYY-MM-DD"),
       time: time,
       status: "Pending",
-      address: values.address,
+      detailedAddress: values.detailedAddress,
+      area: values.area,
+      district: values.district,
       lat: values.latitude,
       lng: values.longitude,
       customerId: values.customerId
@@ -60,6 +74,7 @@ export default function NewOrderModal({
     const result = await createOrder(newOrder);
 
     if (result.success && result.data) {
+      setSelectedArea(null);
       handleCancel();
       fetchOrders();
       message.success("Order created successfully!");
@@ -71,6 +86,7 @@ export default function NewOrderModal({
 
   const handleCancel = () => {
     form.resetFields();
+    setSelectedArea(null);
     setOpen(false);
   };
 
@@ -101,13 +117,19 @@ export default function NewOrderModal({
             <Select
               placeholder="Select customer"
               onChange={(value) => {
-                const selectedCustomer = customers.find(customer => customer.id === value)
-                if (selectedCustomer) 
+                const selectedCustomer = customers.find(
+                  (customer) => customer.id === value
+                );
+                if (selectedCustomer) {
                   form.setFieldsValue({
-                    address: selectedCustomer.address,
+                    detailedAddress: selectedCustomer.detailedAddress,
+                    area: selectedCustomer.area,
+                    district: selectedCustomer.district,
                     longitude: selectedCustomer.lng,
-                    latitude: selectedCustomer.lat
-                  })
+                    latitude: selectedCustomer.lat,
+                  });
+                  setSelectedArea(selectedCustomer.area as Area);
+                }
               }}
             >
               {customers?.map((customer) => (
@@ -117,9 +139,54 @@ export default function NewOrderModal({
               ))}
             </Select>
           </AntForm.Item>
+          <Row gutter={20}>
+            <Col span={10}>
+              <AntForm.Item
+                label="Area"
+                name="area"
+                rules={[{ required: true, message: "Please select an area!" }]}
+              >
+                <Select
+                  placeholder="Select Area"
+                  onChange={(value) => {
+                    setSelectedArea(value);
+                    form.setFieldsValue({
+                      district: undefined,
+                    });
+                  }}
+                >
+                  {areas.map((area) => (
+                    <Select.Option key={area} value={area}>
+                      {area}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </AntForm.Item>
+            </Col>
+            <Col span={10}>
+              <AntForm.Item
+                label="District"
+                name="district"
+                rules={[
+                  { required: true, message: "Please select a district!" },
+                ]}
+              >
+                <Select
+                  placeholder="Select District"
+                  disabled={!selectedArea}
+                >
+                  {districts.map((district) => (
+                    <Select.Option key={district} value={district}>
+                      {district}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </AntForm.Item>
+            </Col>
+          </Row>
           <AntForm.Item
-            label="Address"
-            name="address"
+            label="Detailed Address"
+            name="detailedAddress"
             rules={[
               {
                 required: true,

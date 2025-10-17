@@ -5,7 +5,9 @@ export interface Order {
   date: string;
   time: "Morning" | "Afternoon" | "Evening";
   status: OrderStatus
-  address: string;
+  detailedAddress: string;
+  area: string;
+  district: string;
   lat: number;
   lng: number;
   postcode?: number;

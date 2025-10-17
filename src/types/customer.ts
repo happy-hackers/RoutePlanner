@@ -3,7 +3,9 @@ export interface Customer {
     name: string;
     openTime: string;
     closeTime: string;
-    address: string;
+    area: string;
+    district: string;
+    detailedAddress: string;
     lat: number;
     lng: number;
     postcode?: number;

@@ -9,6 +9,7 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../store/index.ts";
 import dayjs from "dayjs";
 import { ArrowLeftOutlined } from "@ant-design/icons";
+import { addMarkerwithColor } from "../utils/markersUtils.ts";
 
 const { Title } = Typography;
 
@@ -20,8 +21,11 @@ const columns = [
   },
   {
     title: "Address",
-    dataIndex: "address",
-    key: "address",
+    dataIndex: "detailedAddress",
+    key: "detailedAddress",
+    render: (detailedAddress: string, record: Order) => {
+      return <span>{detailedAddress}, {record.area}</span>;
+    }
   },
 ];
 
@@ -147,14 +151,8 @@ export default function RouteResults() {
   const handleRowSelect = (record: Order, selected: boolean) => {
     if (selected) {
       setSelectedRowIds((prev) => [...prev, record.id]);
-      addMarker({
-        id: record.id,
-        position: { lat: record.lat, lng: record.lng },
-        address: record.address,
-        icon: redIcon,
-        dispatcherId: record.dispatcherId,
-        customer: record.customer
-      });
+      const newMarker = addMarkerwithColor(record)
+      addMarker(newMarker);
     } else {
       setSelectedRowIds(selectedRowIds.filter((id) => id !== record.id));
       removeMarker(record.id);
@@ -165,14 +163,8 @@ export default function RouteResults() {
     if (selected) {
       changeRows.forEach((record) => {
         setSelectedRowIds((prev) => [...prev, record.id]);
-        addMarker({
-          id: record.id,
-          position: { lat: record.lat, lng: record.lng },
-          address: record.address,
-          icon: redIcon,
-          dispatcherId: record.dispatcherId,
-          customer: record.customer
-        });
+        const newMarker = addMarkerwithColor(record)
+        addMarker(newMarker);
       });
     } else {
       setSelectedRowIds([]);
@@ -186,8 +178,8 @@ export default function RouteResults() {
   };
 
   return (
-    <Row style={{ height: "100%" }}>
-      <Col flex="500px">
+    <Row gutter={[16, 16]} style={{ height: "100%" }}>
+      <Col xs={24} sm={24} md={24} lg={8}>
         {isRouteMode ? (
           <Space direction="vertical" size="middle" style={{ width: "100%" }}>
             <Row justify="space-between" align="middle">
@@ -198,12 +190,13 @@ export default function RouteResults() {
                 <Button
                   type="default"
                   icon={<ArrowLeftOutlined />}
-                  onClick={() => setIsRouteMode(false)} // example back action
+                  onClick={() => setIsRouteMode(false)}
                 >
                   Back
                 </Button>
               </Col>
             </Row>
+
             <Table
               rowKey="id"
               columns={routeModeColumns}
@@ -214,19 +207,17 @@ export default function RouteResults() {
         ) : (
           <Space direction="vertical" size="middle" style={{ width: "100%" }}>
             <Select
-              defaultValue={null}
               value={selectedDispatcher ? selectedDispatcher.id : null}
-              onChange={(id: number) => {
+              onChange={(id) => {
                 if (id) {
-                  const selectedDispatcher = dispatchers.find(
-                    (d) => d.id === id
-                  );
-                  setSelectedDispatcher(selectedDispatcher ?? null);
+                  const selected = dispatchers.find((d) => d.id === id);
+                  setSelectedDispatcher(selected ?? null);
                 } else {
                   setSelectedDispatcher(null);
                 }
               }}
               options={dispatchersOption}
+              placeholder="Select Dispatcher"
             />
 
             {selectedDispatcher ? (
@@ -250,7 +241,9 @@ export default function RouteResults() {
           </Space>
         )}
       </Col>
-      <Col flex="auto">
+
+      {/* Map Section */}
+      <Col xs={24} sm={24} md={24} lg={16} style={{ height: "100vh", }}>
         <OpenStreetMap
           orderMarkers={markers}
           setOrderMarkers={setMarkers}
@@ -259,6 +252,7 @@ export default function RouteResults() {
           setSortedMarkers={setSortedMarkers}
           setIsRouteMode={setIsRouteMode}
           isRouteMode={isRouteMode}
+          isRouteResults
         />
       </Col>
     </Row>
