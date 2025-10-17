@@ -183,13 +183,13 @@ export default function CustomerModal({
                     district: undefined,
                   });
                 }}
-              >
-                {areas.map((area) => (
-                  <Select.Option key={area} value={area}>
-                    {area}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={areas.map((area) => ({
+                    value: area,
+                    label: area,
+                  }))}
+                optionFilterProp="label"
+                showSearch
+              />
             </AntForm.Item>
           </Col>
           <Col span={10}>
@@ -201,13 +201,13 @@ export default function CustomerModal({
               <Select
                 placeholder="Select District"
                 disabled={!selectedArea}
-              >
-                {districts.map((district) => (
-                  <Select.Option key={district} value={district}>
-                    {district}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={districts.map((district) => ({
+                    value: district,
+                    label: district,
+                  }))}
+                optionFilterProp="label"
+                showSearch
+              />
             </AntForm.Item>
           </Col>
         </Row>
