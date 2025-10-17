@@ -1,6 +1,6 @@
 import Orderform from "../components/Orderform";
 import NewOrderModal from "../components/NewOrderModal";
-import { DatePicker, Row, Col, Space, Checkbox, Typography } from "antd";
+import { DatePicker, Row, Col, Space, Checkbox, Typography, Button } from "antd";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo } from "react";
 import { getAllCustomers, getAllOrders } from "../utils/dbUtils";
@@ -28,6 +28,7 @@ export default function ViewOrders({
   const status = useSelector((state: RootState) => state.order.status);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   const fetchOrders = async () => {
     const ordersData = await getAllOrders();
@@ -48,7 +49,7 @@ export default function ViewOrders({
   useEffect(() => {
     fetchOrders();
     fetchCustomers();
-  }, []);
+  }, [isUploadModalOpen]);
 
   // Use useMemo to cache filtered orders and prevent infinite re-renders
   const filteredOrders = useMemo(() => {
@@ -82,7 +83,10 @@ export default function ViewOrders({
               customers={customers}
               fetchOrders={fetchOrders}
             />
-            <Upload />
+            <Button type="primary" onClick={() => setIsUploadModalOpen(true)}>
+                    Bulk Import Orders (Upload JSON/CSV)
+            </Button>
+            <Upload isOpen={isUploadModalOpen} setOpen={setIsUploadModalOpen} />
           </Space>
           <DatePicker
             defaultValue={date}
@@ -98,7 +102,7 @@ export default function ViewOrders({
             <Text strong style={{ marginRight: "20px" }}>Status:</Text>
             <Checkbox.Group options={stateOptions} defaultValue={status} onChange={(values: OrderStatus[]) => dispatch(setStatus(values))} />
           </Row>
-          <Orderform orders={filteredOrders} onOrderRefetch={fetchOrders} />
+          <Orderform orders={filteredOrders} />
         </Space>
       </Col>
     </Row>

@@ -1,49 +1,49 @@
 import type { MarkerData } from "../types/markers";
 import type { Order } from "../types/order";
+import redIconImage from "../assets/icons/marker-icon-2x-red.png"
+import blueIconImage from "../assets/icons/marker-icon-2x-blue.png"
+import orangeIconImage from "../assets/icons/marker-icon-2x-orange.png"
+
+
 
 const redIcon = {
-  url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+  url: redIconImage,
   color: "red",
 };
 
 const blueIcon = {
-  url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+  url: blueIconImage,
   color: "blue",
 };
 
-const greenIcon = {
-  url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-  color: "green",
+const orangeIcon = {
+  url: orangeIconImage,
+  color: "orange",
 };
 
-const orangeIcon = {
-  url: "http://maps.google.com/mapfiles/ms/icons/orange-dot.png",
-  color: "orange",
+// Color mapping for different regions
+const REGION_COLORS: Record<string, { url: string; scaledSize?: number; color: string }> = {
+  "Hong Kong Island": redIcon,
+  "Kowloon": blueIcon,
+  "New Territories": orangeIcon
 };
 
 const setMarkersList = (orders: Order[]): MarkerData[] => {
   return orders.map((order) => ({
     id: order.id,
     position: { lat: order.lat, lng: order.lng },
-    address: order.address,
-    icon: redIcon,
+    address: `${order.detailedAddress}, ${order.area}`,
+    icon: REGION_COLORS[order.area],
     dispatcherId: order.dispatcherId,
   }));
 };
 
-const addMarkerwithColor = (order: Order, color: string): MarkerData => {
+const addMarkerwithColor = (order: Order): MarkerData => {
   return {
     id: order.id,
     position: { lat: order.lat, lng: order.lng },
-    address: order.address,
-    icon:
-      color === "red"
-        ? redIcon
-        : color === "blue"
-        ? blueIcon
-        : color === "green"
-        ? greenIcon
-        : orangeIcon,
+    address: `${order.detailedAddress}, ${order.area}`,
+    icon: REGION_COLORS[order.area],
     dispatcherId: order.dispatcherId,
   };
 };

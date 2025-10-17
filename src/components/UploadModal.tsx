@@ -1,15 +1,17 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Modal, Button, Upload, App } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
 import type { UploadProps } from "antd";
-import { createOrder } from "../utils/dbUtils";
+import { createOrder, getAllCustomers } from "../utils/dbUtils";
 import type { Order } from "../types/order";
+import type { Customer } from "../types/customer";
 
 const { Dragger } = Upload;
 
 const parseCSV = (csvText: string): Order[] => {
   const lines = csvText.trim().split("\n");
-  const headers = parseCSVLine(lines[0]);
+  const headers = parseCSVLine(lines[0]).map(h => h.trim());
+  console.log("headers", headers)
 
   const orders: Order[] = [];
 
@@ -38,8 +40,8 @@ const parseCSV = (csvText: string): Order[] => {
             | "Delivered"
             | "Cancelled";
           break;
-        case "address":
-          order.address = value;
+        case "detailedAddress":
+          order.detailedAddress = value;
           break;
         case "lat":
           order.lat = parseFloat(value) || 0;
@@ -47,24 +49,18 @@ const parseCSV = (csvText: string): Order[] => {
         case "lng":
           order.lng = parseFloat(value) || 0;
           break;
-        case "postcode":
-          order.postcode = parseInt(value) || 0;
-          break;
-        case "dispatcherid":
+        case "dispatcherId":
           order.dispatcherId = parseInt(value) || undefined;
+          break;
+        case "customerid":
+          order.customerId = parseInt(value) || 0;
           break;
         default:
           break;
       }
     });
 
-    if (
-      order.date &&
-      order.address &&
-      order.lat &&
-      order.lng &&
-      order.postcode
-    ) {
+    if (order.date && order.time && order.customerId) {
       orders.push(order as Order);
     }
   }
@@ -105,14 +101,18 @@ const parseCSVLine = (line: string): string[] => {
   return result;
 };
 
-const JsonUploadModal: React.FC = () => {
+function JsonUploadModal({
+  isOpen,
+  setOpen,
+}: {
+  isOpen: boolean;
+  setOpen: (open: boolean) => void;
+}) {
   const { message } = App.useApp();
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const handleOpen = () => setIsModalOpen(true);
   const handleClose = () => {
-    setIsModalOpen(false);
+    setOpen(false);
     setSelectedFile(null);
   };
 
@@ -123,8 +123,8 @@ const JsonUploadModal: React.FC = () => {
     }
 
     const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
+    reader.onload = async (e) => {
+      try{
         const fileContent = e.target?.result as string;
         let orders: Order[] = [];
 
@@ -147,10 +147,8 @@ const JsonUploadModal: React.FC = () => {
         const validOrders = orders.filter((order) => {
           return (
             order.date &&
-            order.address &&
-            order.lat &&
-            order.lng &&
-            order.postcode
+            order.time &&
+            order.customerId
           );
         });
 
@@ -159,11 +157,27 @@ const JsonUploadModal: React.FC = () => {
           return;
         }
 
-        // create orders
-        validOrders.forEach((order: Order) => {
-          createOrder(order);
-        });
+        const customers = await getAllCustomers()
 
+        // create orders
+        if (customers) {
+          validOrders.forEach((order: Order) => {
+            const customer: Customer | undefined = customers.find(c => c.id === order.customerId)
+            const newOrder: Omit<Order, "id"> = {
+              date: order.date,
+              time: order.time,
+              status: order.status?? "Pending",
+              detailedAddress: order.detailedAddress?? customer?.detailedAddress,
+              area: order.area?? customer?.area,
+              district: order.district?? customer?.district,
+              lat: order.lat?? customer?.lat,
+              lng: order.lng?? customer?.lng,
+              customerId: order.customerId
+            };
+            createOrder(newOrder);
+          });
+        }
+      
         message.success(`Successfully uploaded ${validOrders.length} orders`);
         handleClose();
       } catch (err) {
@@ -199,13 +213,9 @@ const JsonUploadModal: React.FC = () => {
 
   return (
     <>
-      <Button type="primary" onClick={handleOpen}>
-        Bulk Import Orders (Upload JSON/CSV)
-      </Button>
-
       <Modal
         title="Upload JSON/CSV File"
-        open={isModalOpen}
+        open={isOpen}
         onCancel={handleClose}
         footer={[
           <Button key="cancel" onClick={handleClose}>

@@ -1,9 +1,16 @@
-import { Table } from "antd";
-import type { TableProps } from "antd";
+import { Card, Space, Table, Tag, Typography } from "antd";
 import type { Order } from "../types/order";
 import type { Dispatcher } from "../types/dispatchers";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store";
+
+const { Title, Text } = Typography;
+
+const REGION_COLORS: Record<string, string> = {
+  "Hong Kong Island": "red",
+  "Kowloon": "blue",
+  "New Territories": "orange"
+};
 
 interface DispatcherformProps {
   selectedDispatcher: Dispatcher | null;
@@ -14,7 +21,6 @@ interface DispatcherformProps {
 interface TableDataType {
   key: React.Key;
   id: number;
-  postcode: number;
   address: string;
   dispatcher?: string;
 }
@@ -24,13 +30,7 @@ const columns = [
     title: "ID",
     dataIndex: "id",
     key: "id",
-    width: 30,
-  },
-  {
-    title: "Postcode",
-    dataIndex: "postcode",
-    key: "postcode",
-    width: 60,
+    width: 40,
   },
   {
     title: "Address",
@@ -43,20 +43,10 @@ const columns = [
     title: "Dispatcher",
     dataIndex: "dispatcher",
     key: "dispatcher",
-    width: 100,
+    width: 60,
     render: (dispatcher: string) => dispatcher || "Not Assigned",
   },
 ];
-
-const rowSelection: TableProps<TableDataType>["rowSelection"] = {
-  onChange: (selectedRowKeys: React.Key[], selectedRows: TableDataType[]) => {
-    console.log(
-      `selectedRowKeys: ${selectedRowKeys}`,
-      "selectedRows: ",
-      selectedRows
-    );
-  },
-};
 
 export default function Dispatcherform({
   selectedDispatcher,
@@ -81,8 +71,7 @@ export default function Dispatcherform({
   const tableData: TableDataType[] = dispatcherOrders.map((order) => ({
     key: order.id,
     id: order.id,
-    postcode: order.postcode,
-    address: order.address,
+    address: `${order.detailedAddress}, ${order.area}`,
     dispatcher: order.dispatcherId
       ? dispatcherMap.get(order.dispatcherId)
       : undefined,
@@ -93,8 +82,7 @@ export default function Dispatcherform({
     .map((order) => ({
       key: order.id,
       id: order.id,
-      postcode: order.postcode,
-      address: order.address,
+      address: `${order.detailedAddress}, ${order.area}`,
       dispatcher: order.dispatcherId
         ? dispatcherMap.get(order.dispatcherId)
         : undefined,
@@ -113,16 +101,37 @@ export default function Dispatcherform({
     });
 
   return (
-    <div style={{ maxWidth: "600px" }}>
+    <Card style={{ maxWidth: 800, margin: "24px auto" }} bordered>
       {selectedDispatcher ? (
-        <div>
-          <h3>Orders assigned to {selectedDispatcher.name}</h3>
-          <p>
-            Responsible areas: {selectedDispatcher.responsibleArea.join(", ")}
-          </p>
-          <p>Total orders: {dispatcherOrders.length}</p>
+        <>
+          <Title level={4}>Orders assigned to {selectedDispatcher.name}</Title>
+          <Space direction="vertical" style={{ marginBottom: 16 }}>
+            <Text>
+              <strong>Responsible areas:</strong>
+              <br />
+              <Space size={[0, 8]} wrap style={{ marginTop: 4 }}>
+                {Object.entries(
+                  selectedDispatcher.responsibleArea.reduce(
+                    (acc: Record<string, string[]>, [region, district]) => {
+                      if (!acc[region]) acc[region] = [];
+                      acc[region].push(district);
+                      return acc;
+                    },
+                    {}
+                  )
+                ).map(([region, districts]) => (
+                  <Tag key={region} color={REGION_COLORS[region]}>
+                    <strong>{region}</strong>: {districts.join(", ")}
+                  </Tag>
+                ))}
+              </Space>
+            </Text>
+
+            <Text type="secondary">
+              Total orders: {dispatcherOrders.length}
+            </Text>
+          </Space>
           <Table
-            rowSelection={{ type: "checkbox", ...rowSelection }}
             columns={columns}
             dataSource={tableData}
             rowKey="id"
@@ -135,14 +144,31 @@ export default function Dispatcherform({
             }}
             scroll={{ x: 580 }}
           />
-        </div>
+        </>
       ) : (
-        <div>
-          <h3>All Orders</h3>
-          <p>Select a dispatcher to view their assigned orders</p>
-          <p>
-            <strong>Current Time Period:</strong> {date?.format("YYYY-MM-DD")}{" "}
-            {timePeriod}
+        <>
+          <Title level={4}>All Orders</Title>
+          <Text type="secondary">
+            Select a dispatcher to view their assigned orders
+          </Text>
+          <p style={{ marginTop: 8 }}>
+            <Text strong>Current Time Period:  </Text>
+            <Text type="secondary">{date?.format("YYYY-MM-DD")}  </Text>
+            {timePeriod.map((period) => (
+              <Tag
+                key={period}
+                color={
+                  period === "Morning"
+                    ? "gold"
+                    : period === "Afternoon"
+                    ? "cyan"
+                    : "purple"
+                }
+                style={{ textTransform: "capitalize" }}
+              >
+                {period}
+              </Tag>
+            ))}
           </p>
           <Table
             columns={columns}
@@ -157,8 +183,8 @@ export default function Dispatcherform({
             }}
             scroll={{ x: 580 }}
           />
-        </div>
+        </>
       )}
-    </div>
+    </Card>
   );
 }

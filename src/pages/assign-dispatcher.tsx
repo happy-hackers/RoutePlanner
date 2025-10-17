@@ -5,23 +5,15 @@ import type { Dispatcher } from "../types/dispatchers";
 import {
   getAllDispatchers,
   getAllOrders,
-  assignDispatcher,
+  updateOrder,
+  getInProgressOrdersByDispatcherId,
 } from "../utils/dbUtils";
 import type { MarkerData } from "../types/markers";
 import type { Order } from "../types/order";
-import { getRegionByPostcode } from "../utils/regionUtils";
 import { addMarkerwithColor } from "../utils/markersUtils";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store";
 import dayjs from "dayjs";
-
-// Color mapping for different regions
-const REGION_COLORS: Record<string, string> = {
-  "Inner Melbourne": "red",
-  "Northern Suburbs": "blue",
-  "Eastern & South-Eastern Suburbs": "green",
-  "Western Suburbs": "orange",
-};
 
 export default function AssignDispatchers({
   setMarkers,
@@ -98,117 +90,112 @@ export default function AssignDispatchers({
     })),
   ];
 
-  const handleAutoAssign = async (id?: number) => {
-    const dispatcherId = id ?? selectedId;
+  const getDispatcherWithLeastOrders = async (dispatchers: Dispatcher[]) => {
+    let minDispatcher: Dispatcher | null = null;
+    let minOrders = Infinity;
 
-    // Only allow auto assign when "All Dispatchers" is selected (dispatcherId is null)
-    if (dispatcherId !== null) {
-      message.warning(
-        "Auto Assign is only available when 'All Dispatchers' is selected"
-      );
-      return;
-    }
-
-    setIsAssigning(true);
-
-    try {
-      // Get all dispatchers and their responsible areas
-      const dispatcherAssignments = dispatchers.map((dispatcher) => ({
-        dispatcher,
-        responsibleAreas: dispatcher.responsibleArea,
-      }));
-
-      // Group orders by region and assign to appropriate dispatchers
-      const ordersToAssign = orders
-        .map((order) => {
-          const region = getRegionByPostcode(order.postcode);
-          const assignedDispatcher = dispatcherAssignments.find((assignment) =>
-            assignment.responsibleAreas.includes(region)
-          );
-
-          return {
-            order,
-            dispatcherId: assignedDispatcher?.dispatcher.id || null,
-            region,
-          };
-        })
-        .filter((item) => item.dispatcherId !== null);
-
-      console.log(
-        `Found ${ordersToAssign.length} orders to assign out of ${orders.length} total orders`
-      );
-
-      // Update database for each order
-      const updatePromises = ordersToAssign.map(async (item) => {
-        const result = await assignDispatcher(
-          item.order.id,
-          item.dispatcherId!
-        );
-        if (!result.success) {
-          console.error(
-            `Failed to assign order ${item.order.id} to dispatcher ${item.dispatcherId}:`,
-            result.error
-          );
-          return {
-            order: item.order,
-            dispatcherId: item.dispatcherId,
-            region: item.region,
-            success: false,
-            error: result.error,
-          };
+    for (const dispatcher of dispatchers) {
+      const orders = await getInProgressOrdersByDispatcherId(dispatcher.id);
+      if (orders) {
+        const orderCount = orders.length;
+        if (orderCount < minOrders) {
+          minOrders = orderCount;
+          minDispatcher = dispatcher;
         }
-        return {
-          order: item.order,
-          dispatcherId: item.dispatcherId,
-          region: item.region,
-          success: true,
-        };
-      });
-
-      const results = await Promise.all(updatePromises);
-      const successfulAssignments = results.filter((r) => r.success);
-      const failedAssignments = results.filter((r) => !r.success);
-
-      // Show detailed results
-      if (successfulAssignments.length > 0) {
-        message.success(
-          `Successfully assigned ${successfulAssignments.length} orders.`
-        );
       }
-
-      if (failedAssignments.length > 0) {
-        message.error(`Failed to assign ${failedAssignments.length} orders`);
-        console.error("Failed assignments:", failedAssignments);
-      }
-
-      // 刷新订单数据以获取最新的调度员分配信息
-      const ordersData = await getAllOrders();
-      if (ordersData) {
-        const filteredOrders = getFilteredOrders(ordersData);
-        setOrders(filteredOrders);
-      }
-
-      const allMarkers = orders
-        .map((order) => {
-          const region = getRegionByPostcode(order.postcode);
-          const color = REGION_COLORS[region] || "red";
-          return addMarkerwithColor(order, color);
-        })
-        .filter((marker): marker is MarkerData => marker !== null);
-
-      setMarkers(allMarkers);
-    } catch (error) {
-      console.error("Error during auto assignment:", error);
-      message.error("Failed to assign orders. Please try again.");
-    } finally {
-      setIsAssigning(false);
     }
+    return minDispatcher;
+  }
+
+  const assignOrders = async () => {
+    setIsAssigning(true);
+    if (dispatchers.length === 0) 
+      return
+
+    for (const order of orders) {
+      // Skip already assigned orders
+      if (order.dispatcherId) {
+        continue;
+      }
+      console.log("order++", order);
+      const customer = order.customer;
+      if (!customer) {
+        console.warn(`No customer attached to order ${order.id}`);
+        setIsAssigning(false);
+        continue;
+      }
+
+      let matchedDispatcher;
+
+      // Try to find a dispatcher by district first
+      let matchedDispatchers = dispatchers.filter((d) =>
+        d.responsibleArea.some(
+          ([_area, district]) =>
+            district.toLowerCase() === customer.district.toLowerCase()
+        )
+      );
+      console.log("matchedDispatchers", matchedDispatchers)
+
+      // If there is no district matched, try to find a area
+      if (matchedDispatchers.length === 0) {
+        matchedDispatchers = dispatchers.filter((d) =>
+          d.responsibleArea.some(
+            ([area]) => area.toLowerCase() === customer.area.toLowerCase()
+          )
+        );
+        // If no one matched, assign it to the dispatcher who has least number of in-progressed order
+        // If there is only one dispatcher matched, assign the order to the person
+        // If more than one dispatcher, assign it to the dispatcher who has least number of in-progressed order
+        if (matchedDispatchers.length === 0) {
+          matchedDispatcher = await getDispatcherWithLeastOrders(dispatchers)
+        } else if (matchedDispatchers.length === 1) {
+          matchedDispatcher = matchedDispatchers[0];
+        } else if (matchedDispatchers.length > 1) {
+          matchedDispatcher = await getDispatcherWithLeastOrders(matchedDispatchers)
+        }
+      } else if (matchedDispatchers.length === 1) {
+        matchedDispatcher = matchedDispatchers[0];
+      } else if (matchedDispatchers.length > 1) {
+        console.log("length", matchedDispatchers.length)
+        matchedDispatcher = await getDispatcherWithLeastOrders(matchedDispatchers)
+      }
+
+      console.log("matchedDispatcher", matchedDispatcher);
+
+      if (matchedDispatcher) {
+        const { customer, ...rest } = order;
+        const updatedOrder: Order = {
+          ...rest,
+          dispatcherId: matchedDispatcher.id,
+          status: "In Progress",
+        };
+        console.log("aabb");
+        const result = await updateOrder(updatedOrder);
+
+        if (result.success) {
+          message.success(
+            `Order ${order.id} assigned to ${matchedDispatcher.name}`
+          );
+        } else {
+          message.error(`Failed to update order ${order.id}: ${result.error}`);
+        }
+      } else {
+        message.warning(`No dispatcher found for order ${order.id}`);
+      }
+    }
+
+    const ordersData = await getAllOrders();
+    if (ordersData) {
+      const filteredOrders = getFilteredOrders(ordersData);
+      setOrders(filteredOrders);
+    }
+    setIsAssigning(false);
   };
 
   return (
     <Row style={{ height: "100%" }}>
       <Col>
-        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+        <Space direction="vertical" size={0} style={{ width: "100%" }}>
           <Space direction="horizontal" size="middle">
             <Select
               defaultValue={null}
@@ -221,15 +208,13 @@ export default function AssignDispatchers({
                   );
                   if (selectedDispatcher) {
                     const responsibleAreas = selectedDispatcher.responsibleArea;
+                    const uniqueAreas = [...new Set(responsibleAreas.map(item => item[0]))];
                     const filteredMarkers = orders
                       .filter((order) => {
-                        const region = getRegionByPostcode(order.postcode);
-                        return responsibleAreas.includes(region);
+                        return uniqueAreas.includes(order.area);
                       })
                       .map((order) => {
-                        const region = getRegionByPostcode(order.postcode);
-                        const color = REGION_COLORS[region] || "red";
-                        return addMarkerwithColor(order, color);
+                        return addMarkerwithColor(order);
                       })
                       .filter(
                         (marker): marker is MarkerData => marker !== null
@@ -240,9 +225,7 @@ export default function AssignDispatchers({
                   // Show all orders when "All Dispatchers" is selected
                   const allMarkers = orders
                     .map((order) => {
-                      const region = getRegionByPostcode(order.postcode);
-                      const color = REGION_COLORS[region] || "red";
-                      return addMarkerwithColor(order, color);
+                      return addMarkerwithColor(order);
                     })
                     .filter((marker): marker is MarkerData => marker !== null);
                   setMarkers(allMarkers);
@@ -252,7 +235,7 @@ export default function AssignDispatchers({
             />
             <Button
               type="primary"
-              onClick={() => handleAutoAssign()}
+              onClick={() => assignOrders()}
               loading={isAssigning}
               disabled={selectedId !== null}
             >

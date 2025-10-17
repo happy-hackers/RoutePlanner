@@ -105,8 +105,8 @@ export default function SetDispatcher() {
           <Col span={7}>
             <div style={{ maxHeight: "60px", overflow: "hidden" }}>
               {dispatcher.responsibleArea?.map((area) => (
-                <div key={area} style={{ fontSize: "12px", color: "#666" }}>
-                  {area}
+                <div key={area[1]} style={{ fontSize: "12px", color: "#666" }}>
+                  {area[1]}
                 </div>
               ))}
             </div>

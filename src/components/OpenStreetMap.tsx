@@ -12,6 +12,11 @@ interface NavigationMapProp {
   orderMarkers: MarkerData[];
   setOrderMarkers: (markers: MarkerData[]) => void;
   setSelectedRowId?: (rowIds: number[]) => void;
+  sortedMarkers?: (MarkerData & { travelTime: number })[];
+  setSortedMarkers?: (markers: (MarkerData & { travelTime: number })[]) => void;
+  setIsRouteMode?: (routeMode: boolean) => void;
+  isRouteMode?: boolean;
+  isRouteResults?: boolean;
 }
 
 function createNumberIcon(number: number) {
@@ -48,19 +53,20 @@ const endIcon = new L.Icon({
   iconAnchor: [20, 56],
 });
 
-const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMarkers, setSelectedRowId }) => {
+const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMarkers, setSelectedRowId, sortedMarkers, setSortedMarkers, setIsRouteMode, isRouteMode, isRouteResults }) => {
   const [startAddress, setStartAddress] = useState("");
   const [endAddress, setEndAddress] = useState("");
   const [searchOptions, setSearchOptions] = useState("normal");
+  const [totalTime, setTotalTime] = useState<number | undefined>();
   const [route, setRoute] = useState<LatLngExpression[]>([]);
   const [startMarker, setStartMarker] = useState<Omit<MarkerData, "id">>();
   const [endMarker, setEndMarker] = useState<Omit<MarkerData, "id">>();
-  const [orderedMarkers, setOrderedMarkers] = useState<(MarkerData & { order: number })[]>([]);
   const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
   const SERVER_URL = import.meta.env.VITE_SERVER_URL;
   const { message } = App.useApp();
+  const settingInfo: any = localStorage.getItem("settings");
   
   const defaultIcon = new L.Icon({
     iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -78,6 +84,27 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
       geocoderRef.current = new google.maps.Geocoder(); 
     })();
   }, []);
+
+  useEffect(() => {
+    if (settingInfo) {
+      const settingJson = JSON.parse(settingInfo);
+      if (settingJson.useDefaultAddress) {
+        setStartAddress(settingJson.startAddress);
+        setEndAddress(settingJson.endAddress);
+      }
+    }
+  }, [settingInfo]);
+
+  useEffect(() => {
+    if (!isRouteMode) {
+      setRoute([]);
+      setSortedMarkers?.([]);
+      setTotalTime(undefined);
+      setStartMarker(undefined);
+      setEndMarker(undefined);
+    }
+  }, [isRouteMode]);
+  
 
   async function geocodeAddress(address: string): Promise<{ lat: number; lng: number }> {
     return new Promise((resolve, reject) => {
@@ -106,6 +133,8 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
       lat: number;
       lng: number;
     };
+    segmentTimes: number[]
+    totalTime: number
   };
 
   async function getOptimizedWaypointOrder(
@@ -137,15 +166,18 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
             const order = result.routes[0].waypoint_order; // optimized order of indexes
             // Sum up distance and duration between points
             let totalDistance = 0;
-            let totalDuration = 0;
-
+            let totalTime = 0;
+            const segmentTimes = legs.map(
+              (leg) => Math.round((leg.duration?.value ?? 0) / 60)
+            );
             for (const leg of legs) {
               totalDistance += leg.distance?.value ?? 0; // in meters
-              totalDuration += leg.duration?.value ?? 0; // in seconds
+              totalTime += leg.duration?.value ?? 0; // in seconds
             }
+            totalTime = Math.round(totalTime / 60)
             console.log("totalDistance", totalDistance)
-            console.log("totalDuration", totalDuration)
-            resolve({ order, startCoord, endCoord });
+            console.log("totalTime", totalTime)
+            resolve({ order, startCoord, endCoord, segmentTimes, totalTime });
           } else {
             reject(status);
           }
@@ -158,7 +190,7 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
     startPoint: { lat: number; lng: number },
     endPoint: { lat: number; lng: number },
     waypoints: { lat: number; lng: number, open: string | null, close: string | null }[]
-  ) :  Promise<number[]> {
+  ) :  Promise<any> {
     const payload = {
       startPoint,
       waypoints,
@@ -172,7 +204,7 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
     });
     const result = await response.json();
     if (result.error) 
-      message.error(result.error);
+      message.error(result.error, 4);
     return result;
   }
   const calculateRoutebyTime = async () => {
@@ -190,33 +222,47 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
         open: m.customer?.openTime ?? null,
         close: m.customer?.closeTime ?? null
       }));
-      console.log("waypointsWithTimes", waypointsWithTimes)
-      const order = await getOptimizedWaypointOrderByTime(startCoord, endCoord, waypointsWithTimes);
-      const orderedMarkers = order.map((i, idx) => ({
-        ...orderMarkers[i],
-        order: idx + 1,
-      }));
-      setStartMarker({position: startCoord, address: startAddress});
-      setEndMarker({position: endCoord, address: endAddress});
-      setOrderedMarkers(orderedMarkers);
-      setOrderMarkers([]);
-      setSelectedRowId?.([]);
-      const orderedWaypoints = order.map((i) => orderMarkers[i].position);
-      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startCoord.lng},${startCoord.lat};${orderedWaypoints
-        .map((wp) => `${wp.lng},${wp.lat}`)
-        .join(";")};${endCoord.lng},${endCoord.lat}?overview=full&geometries=geojson`;
+      const optimizedRouteResult = await getOptimizedWaypointOrderByTime(startCoord, endCoord, waypointsWithTimes);
+      if (!optimizedRouteResult.error) {
+        const { order, segment_times, total_time } = optimizedRouteResult;
+        const sortedMarkers = order.map((i: number, idx: number) => ({
+          ...orderMarkers[i],
+          travelTime: segment_times[idx],
+        }));
 
-      const response = await fetch(osrmUrl);
-      const data = await response.json();
+        setStartMarker({ position: startCoord, address: startAddress });
+        setEndMarker({ position: endCoord, address: endAddress });
+        setSortedMarkers?.(sortedMarkers);
+        setTotalTime(total_time);
+        setIsRouteMode?.(true);
+        setOrderMarkers([]);
+        setSelectedRowId?.([]);
 
-      if (data.routes && data.routes.length > 0) {
-        const coordinates = data.routes[0].geometry.coordinates.map(
-          (c: [number, number]) => [c[1], c[0]] // flip lng,lat → lat,lng
+        const orderedWaypoints: { lat: number; lng: number }[] = order.map(
+          (i: number) => orderMarkers[i].position
         );
-        setRoute(coordinates);
-      } else {
-        message.error("No route found");
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${
+          startCoord.lng
+        },${startCoord.lat};${orderedWaypoints
+          .map((wp) => `${wp.lng},${wp.lat}`)
+          .join(";")};${endCoord.lng},${
+          endCoord.lat
+        }?overview=full&geometries=geojson`;
+
+        const response = await fetch(osrmUrl);
+        const data = await response.json();
+
+        if (data.routes && data.routes.length > 0) {
+          const coordinates = data.routes[0].geometry.coordinates.map(
+            (c: [number, number]) => [c[1], c[0]] // flip lng,lat → lat,lng
+          );
+          setRoute(coordinates);
+        } else {
+          message.error("No route found");
+        }
       }
+      
+      
     } catch (error) {
       console.error("Routing error:", error);
       message.error("Route calculation failed");
@@ -230,16 +276,20 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
 
     try {
       const optimizedRouteResult = await getOptimizedWaypointOrder(startAddress, endAddress, orderMarkers.map((m) => m.position));
-      const { order, startCoord, endCoord } = optimizedRouteResult
-      const orderedMarkers = order.map((i, idx) => ({
+      const { order, startCoord, endCoord, segmentTimes, totalTime } = optimizedRouteResult
+      const sortedMarkers = order.map((i: number, idx: number) => ({
         ...orderMarkers[i],
-        order: idx + 1,
+        travelTime: segmentTimes[idx],
       }));
+
       setStartMarker({position: startCoord, address: startAddress});
       setEndMarker({position: endCoord, address: endAddress});
-      setOrderedMarkers(orderedMarkers);
+      setSortedMarkers?.(sortedMarkers);
+      setTotalTime(totalTime);
+      setIsRouteMode?.(true)
       setOrderMarkers([]);
       setSelectedRowId?.([]);
+
       const orderedWaypoints = order.map((i) => orderMarkers[i].position);
       const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startCoord.lng},${startCoord.lat};${orderedWaypoints
         .map((wp) => `${wp.lng},${wp.lat}`)
@@ -264,55 +314,69 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <div
-        style={{
-          position: "absolute",
-          top: "1%",
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 1000,
-        }}
-      >
-        <Space direction="horizontal" size="middle" style={{ width: "800px" }}>
-          <Space direction="vertical" style={{ width: "600px" }}>
-            <Input
-              placeholder="Input Start (lng,lat)"
-              value={startAddress}
-              onChange={(e) => setStartAddress(e.target.value)}
-            />
-            <Input
-              placeholder="Input End (lng,lat)"
-              value={endAddress}
-              onChange={(e) => setEndAddress(e.target.value)}
-            />
-          </Space>
-          <Select
-            placeholder="Select Option"
-            value={searchOptions}
-            onChange={(value) => setSearchOptions(value)}
-            style={{ width: "100px" }}
+      {isRouteResults ? (
+        <div
+          style={{
+            position: "absolute",
+            top: 20,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 1000,
+            background: "rgba(255, 255, 255, 0.6)",
+            padding: "16px 20px",
+            borderRadius: "10px",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+            maxWidth: "95%",
+          }}
+        >
+          <Space
+            direction="horizontal"
+            size="middle"
+            wrap
+            style={{ justifyContent: "center" }}
           >
-            <Select.Option value="normal">Normal</Select.Option>
-            <Select.Option value="byTime">By Time</Select.Option>
-          </Select>
-          <Space>
+            <Space direction="vertical" style={{ width: 300 }}>
+              <Input
+                placeholder="Input Start (lng,lat)"
+                value={startAddress}
+                onChange={(e) => setStartAddress(e.target.value)}
+              />
+              <Input
+                placeholder="Input End (lng,lat)"
+                value={endAddress}
+                onChange={(e) => setEndAddress(e.target.value)}
+              />
+            </Space>
+            <Select
+              placeholder="Select Option"
+              value={searchOptions}
+              onChange={(value) => setSearchOptions(value)}
+              style={{ width: 120 }}
+            >
+              <Select.Option value="normal">Normal</Select.Option>
+              <Select.Option value="byTime">Opening Time</Select.Option>
+            </Select>
             <Button
               type="primary"
+              shape="round"
+              size="large"
+              disabled={isRouteMode}
               style={{
-                width: "70px",
-                height: "70px",
-                padding: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                width: 120,
+                backgroundColor: isRouteMode ? "#E6E6E6" : "#1677ff",
+                border: "none",
               }}
-              onClick={ searchOptions === "normal"?  calculateRoute : calculateRoutebyTime}
+              onClick={
+                searchOptions === "normal"
+                  ? calculateRoute
+                  : calculateRoutebyTime
+              }
             >
               Search
             </Button>
           </Space>
-        </Space>
-      </div>
+        </div>
+      ) : null}
 
       <MapContainer
         center={[22.3165316829187, 114.182081980287]}
@@ -327,36 +391,57 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
         />
 
         {/* Order Markers */}
-        {orderMarkers.map((marker, index) => (
-          <Marker
-            key={index}
-            position={[marker.position.lat, marker.position.lng]}
-            icon={defaultIcon}
-          >
-          <Popup>{marker.address}</Popup>
-          </Marker>
-        ))}
+        {orderMarkers.map((marker, index) => {
+          const leafletIcon = marker.icon
+            ? L.icon({
+                iconUrl: marker.icon.url,
+                iconSize: marker.icon.scaledSize
+                  ? [marker.icon.scaledSize, marker.icon.scaledSize]
+                  : [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowUrl:
+                  "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+              })
+            : defaultIcon;
 
-        {orderedMarkers.map((marker) => (
+          return (
+            <Marker
+              key={index}
+              position={[marker.position.lat, marker.position.lng]}
+              icon={leafletIcon}
+            >
+              <Popup>{marker.address}</Popup>
+            </Marker>
+          );
+        })}
+
+        {sortedMarkers?.map((marker, i) => (
           <Marker
-            key={marker.order}
+            key={i}
             position={[marker.position.lat, marker.position.lng]}
-            icon={createNumberIcon(marker.order)}
+            icon={createNumberIcon(i + 1)}
           >
             <Popup>
-              Stop {marker.order}: {marker.address}
+              Stop {i + 1}: {marker.address}
             </Popup>
           </Marker>
         ))}
 
         {startMarker ? (
-          <Marker position={[startMarker.position.lat, startMarker.position.lng]} icon={startIcon}>
+          <Marker
+            position={[startMarker.position.lat, startMarker.position.lng]}
+            icon={startIcon}
+          >
             <Popup>Start: {startAddress}</Popup>
           </Marker>
         ) : null}
-        
+
         {endMarker ? (
-          <Marker position={[endMarker.position.lat, endMarker.position.lng]} icon={endIcon}>
+          <Marker
+            position={[endMarker.position.lat, endMarker.position.lng]}
+            icon={endIcon}
+          >
             <Popup>End: {endAddress}</Popup>
           </Marker>
         ) : null}
@@ -364,6 +449,27 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
         {/* Route polyline */}
         {route.length > 0 && <Polyline positions={route} color="blue" />}
       </MapContainer>
+      {totalTime && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 20,
+            left: 20,
+            zIndex: 1000,
+            background: "rgba(255, 255, 255, 0.8)",
+            padding: "10px 16px",
+            borderRadius: "8px",
+            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.2)",
+            fontWeight: "bold",
+            fontSize: "16px",
+          }}
+        >
+          🕒 Total Time:{" "}
+          {totalTime >= 60
+            ? `${Math.floor(totalTime / 60)}h ${totalTime % 60}m`
+            : `${totalTime}m`}
+        </div>
+      )}
     </div>
   );
 };

@@ -72,6 +72,32 @@ export const getAllOrders = async (): Promise<Order[] | undefined> => {
   }
 };
 
+export const getInProgressOrdersByDispatcherId = async (
+  dispatcherId: number
+): Promise<Order[] | undefined> => {
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("dispatcher_id", dispatcherId)
+      .eq("status", "In Progress");
+    if (error) {
+      console.error("Fetch error:", error);
+      return;
+    } else {
+      // Remove create_time from each object since we don't need it currently
+      const cleanedArray = data.map(({ created_time, ...rest }) => ({
+        ...rest,
+      }));
+      const camelData = camelcaseKeys(cleanedArray, { deep: true });
+      return camelData;
+    }
+  } catch (err) {
+    console.error("Unexpected error during fetch:", err);
+    return;
+  }
+};
+
 export const updateOrder = async (
   orderData: Order
 ) => {
