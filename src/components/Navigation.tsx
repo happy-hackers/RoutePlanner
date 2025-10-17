@@ -38,7 +38,7 @@ export default function Sidebar() {
     getItem("Set Dispatcher", "/set-dispatcher", <SettingOutlined />),
     getItem("Route Results", "/route-results", <CompassOutlined />,),
     getItem("View Customers", "/view-customers", <TeamOutlined />),
-    getItem("Setting", "/setting", <SettingFilled />),
+    getItem("Settings", "/settings", <SettingFilled />),
   ];
 
   const handleMenuClick = (e: { key: string }) => {

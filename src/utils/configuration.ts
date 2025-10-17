@@ -1,4 +1,4 @@
-const key = "setting";
+const key = "settings";
 
 export function getSettingInfo() {
   const settingInfo = localStorage.getItem(key);

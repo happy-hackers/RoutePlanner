@@ -66,7 +66,7 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
   const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
   const SERVER_URL = import.meta.env.VITE_SERVER_URL;
   const { message } = App.useApp();
-  const settingInfo: any = localStorage.getItem("setting");
+  const settingInfo: any = localStorage.getItem("settings");
   
   const defaultIcon = new L.Icon({
     iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
