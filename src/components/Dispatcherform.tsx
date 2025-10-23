@@ -33,8 +33,6 @@ export default function Dispatcherform({
   const { message } = App.useApp();
   const dispatch = useDispatch();
   const loadedOrders = useSelector((state: RootState) => state.order.loadedOrders);
-  const date = useSelector((state: RootState) => state.order.date);
-  const timePeriod = useSelector((state: RootState) => state.order.timePeriod);
 
   const handleChange = async (
     dispatcherId: number,
@@ -72,7 +70,13 @@ export default function Dispatcherform({
           order.id === updatedOrder.id ? {...updatedOrder, customer} : order
         );
         dispatch(setLoadedOrders(newOrders));
-        const newMarkers = setMarkersList(newOrders, dispatchers)
+        let newMarkers;
+        if (selectedDispatcher) {
+          const newOrderData = newOrders.filter(order => order.dispatcherId === selectedDispatcher.id);
+          newMarkers = setMarkersList(newOrderData, dispatchers)
+        } else {
+          newMarkers = setMarkersList(newOrders, dispatchers)
+        }
         setMarkers(newMarkers);
         message.success(`Order ${order.id} assigned to ${name || "Unknown"}`);
       } else {
