@@ -11,9 +11,10 @@ import {
 import type { MarkerData } from "../types/markers";
 import type { Order } from "../types/order";
 import { addMarkerwithColor } from "../utils/markersUtils";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../store";
 import dayjs from "dayjs";
+import { setLoadedOrders } from "../store/orderSlice";
 
 export default function AssignDispatchers({
   setMarkers,
@@ -21,6 +22,8 @@ export default function AssignDispatchers({
   setMarkers: (markers: MarkerData[]) => void;
 }) {
   const { message } = App.useApp();
+  const dispatch = useDispatch();
+  const loadedOrders = useSelector((state: RootState) => state.order.loadedOrders);
   const date = useSelector((state: RootState) => state.order.date);
   const timePeriod = useSelector((state: RootState) => state.order.timePeriod);
   const status = useSelector((state: RootState) => state.order.status);
@@ -28,6 +31,8 @@ export default function AssignDispatchers({
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
+
+  //console.log("loadedOrders", JSON.parse(JSON.stringify(loadedOrders)))
 
   useEffect(() => {
     const fetchDispatchers = async () => {
@@ -112,12 +117,13 @@ export default function AssignDispatchers({
     if (dispatchers.length === 0) 
       return
 
-    for (const order of orders) {
+    let newLoadedOrders = [...loadedOrders]
+
+    for (const order of loadedOrders) {
       // Skip already assigned orders
       if (order.dispatcherId) {
         continue;
       }
-      console.log("order++", order);
       const customer = order.customer;
       if (!customer) {
         console.warn(`No customer attached to order ${order.id}`);
@@ -169,10 +175,12 @@ export default function AssignDispatchers({
           dispatcherId: matchedDispatcher.id,
           status: "In Progress",
         };
-        console.log("aabb");
         const result = await updateOrder(updatedOrder);
 
         if (result.success) {
+          newLoadedOrders = newLoadedOrders.map((order) =>
+            order.id === updatedOrder.id ? { ...updatedOrder, customer } : order
+          );
           message.success(
             `Order ${order.id} assigned to ${matchedDispatcher.name}`
           );
@@ -183,6 +191,8 @@ export default function AssignDispatchers({
         message.warning(`No dispatcher found for order ${order.id}`);
       }
     }
+
+    dispatch(setLoadedOrders(newLoadedOrders));
 
     const ordersData = await getAllOrders();
     if (ordersData) {
@@ -209,7 +219,7 @@ export default function AssignDispatchers({
                   if (selectedDispatcher) {
                     const responsibleAreas = selectedDispatcher.responsibleArea;
                     const uniqueAreas = [...new Set(responsibleAreas.map(item => item[0]))];
-                    const filteredMarkers = orders
+                    const filteredMarkers = loadedOrders
                       .filter((order) => {
                         return uniqueAreas.includes(order.area);
                       })
@@ -223,7 +233,7 @@ export default function AssignDispatchers({
                   }
                 } else {
                   // Show all orders when "All Dispatchers" is selected
-                  const allMarkers = orders
+                  const allMarkers = loadedOrders
                     .map((order) => {
                       return addMarkerwithColor(order);
                     })
@@ -248,7 +258,7 @@ export default function AssignDispatchers({
                 ? dispatchers.find((d) => d.id === selectedId) || null
                 : null
             }
-            orders={orders}
+            orders={loadedOrders}
             dispatchers={dispatchers}
           />
         </Space>

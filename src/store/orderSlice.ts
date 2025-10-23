@@ -1,16 +1,18 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import dayjs, { Dayjs } from "dayjs";
-import type { OrderStatus } from "../types/order.ts";
+import type { Order, OrderStatus } from "../types/order.ts";
 
 export type TimePeriod = "Morning" | "Afternoon" | "Evening";
 
 interface OrderState {
+  loadedOrders: Order[];
   status: OrderStatus[];
   date: Dayjs;
   timePeriod: TimePeriod[];
 }
 
 const initialState: OrderState = {
+  loadedOrders: [],
   status: ["In Progress"],
   date: dayjs(),
   timePeriod: ["Afternoon"],
@@ -20,6 +22,9 @@ const orderSlice = createSlice({
   name: "order",
   initialState,
   reducers: {
+    setLoadedOrders(state, action: PayloadAction<Order[]>) {
+      state.loadedOrders = action.payload;
+    },
     setStatus(state, action: PayloadAction<OrderStatus[]>) {
       state.status = action.payload;
     },
@@ -32,5 +37,5 @@ const orderSlice = createSlice({
   },
 });
 
-export const { setStatus, setDate, setTimePeriod } = orderSlice.actions;
+export const { setLoadedOrders, setStatus, setDate, setTimePeriod } = orderSlice.actions;
 export default orderSlice.reducer;

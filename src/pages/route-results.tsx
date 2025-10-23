@@ -155,7 +155,7 @@ export default function RouteResults() {
     }
   };
 
-  const handleAllRowSelect = (selected: boolean, changeRows: Order[]) => {
+  const handleAllRowSelect = (selected: boolean, _selectedRows: Order[], changeRows: Order[]) => {
     if (selected) {
       changeRows.forEach((record) => {
         setSelectedRowIds((prev) => [...prev, record.id]);

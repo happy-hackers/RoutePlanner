@@ -1,8 +1,10 @@
-import { Card, Space, Table, Tag, Typography } from "antd";
+import { App, Card, Select, Space, Table, Tag, Typography } from "antd";
 import type { Order } from "../types/order";
 import type { Dispatcher } from "../types/dispatchers";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../store";
+import { updateOrder } from "../utils/dbUtils";
+import { setLoadedOrders } from "../store/orderSlice";
 
 const { Title, Text } = Typography;
 
@@ -18,44 +20,110 @@ interface DispatcherformProps {
   dispatchers: Dispatcher[];
 }
 
-interface TableDataType {
-  key: React.Key;
-  id: number;
-  address: string;
-  dispatcher?: string;
-}
-
-const columns = [
-  {
-    title: "ID",
-    dataIndex: "id",
-    key: "id",
-    width: 40,
-  },
-  {
-    title: "Address",
-    dataIndex: "address",
-    key: "address",
-    ellipsis: true,
-    width: 200,
-  },
-  {
-    title: "Dispatcher",
-    dataIndex: "dispatcher",
-    key: "dispatcher",
-    width: 60,
-    render: (dispatcher: string) => dispatcher || "Not Assigned",
-  },
-];
-
 export default function Dispatcherform({
   selectedDispatcher,
   orders,
   dispatchers,
 }: DispatcherformProps) {
   // get global time information from redux
+  const { message } = App.useApp();
+  const dispatch = useDispatch();
+  const loadedOrders = useSelector((state: RootState) => state.order.loadedOrders);
   const date = useSelector((state: RootState) => state.order.date);
   const timePeriod = useSelector((state: RootState) => state.order.timePeriod);
+
+  const handleChange = async (
+    dispatcherId: number,
+    name: string | undefined,
+    order: Order
+  ) => {
+    const { customer, ...rest } = order;
+    if (dispatcherId === -1) {
+      const updatedOrder: Order = {
+        ...rest,
+        dispatcherId: undefined,
+        status: "Pending",
+      };
+      const result = await updateOrder(updatedOrder);
+      if (result.success) {
+        console.log("loadedOrdersBefore", JSON.parse(JSON.stringify(loadedOrders)))
+        const newOrders = loadedOrders.map((order) =>
+          order.id === updatedOrder.id ? {...updatedOrder, customer} : order
+        );
+        console.log("newOrders", JSON.parse(JSON.stringify(newOrders)))
+        dispatch(setLoadedOrders(newOrders));
+        message.success(`Order ${order.id} is not assigned`);
+        console.log("loadedOrders", JSON.parse(JSON.stringify(loadedOrders)))
+      } else {
+        message.error(`Failed to update order ${order.id}: ${result.error}`);
+      }
+    } else {
+      const updatedOrder: Order = {
+        ...rest,
+        dispatcherId,
+        status: "In Progress",
+      };
+      const result = await updateOrder(updatedOrder);
+      if (result.success) {
+        const newOrders = loadedOrders.map((order) =>
+          order.id === updatedOrder.id ? {...updatedOrder, customer} : order
+        );
+        dispatch(setLoadedOrders(newOrders));
+        message.success(`Order ${order.id} assigned to ${name || "Unknown"}`);
+        console.log("loadedOrders", JSON.parse(JSON.stringify(loadedOrders)))
+      } else {
+        message.error(`Failed to update order ${order.id}: ${result.error}`);
+      }
+    }
+  };
+  const options = [
+    { value: -1, label: "Not Assigned" },
+    ...dispatchers.map((dispatcher) => ({
+      value: dispatcher.id,
+      label: dispatcher.name,
+    })),
+  ];
+
+  const columns = [
+    {
+      title: "ID",
+      dataIndex: "id",
+      key: "id",
+      width: "12%",
+    },
+    {
+      title: "Address",
+      dataIndex: "detailedAddress",
+      key: "detailedAddress",
+      ellipsis: true,
+      width: "65%",
+      render: (detailedAddress: string, record: Order) => (
+        <Text>
+          {detailedAddress}, {record.area}
+        </Text>
+      ),
+    },
+    {
+      title: "Dispatcher",
+      dataIndex: "dispatcherId",
+      key: "dispatcherId",
+      width: "23%",
+      render: (dispatcherId: number | undefined, record: Order) => {
+        const value = dispatcherId ?? null;
+        return (
+          <Select
+            style={{ width: "100%" }}
+            value={value?? -1}
+            onChange={(value) => {
+              const label = options.find((opt) => opt.value === value)?.label;
+              handleChange(value, label, record);
+            }}
+            options={options}
+          />
+        );
+      },
+    },
+  ];
 
   // Filter orders for the selected dispatcher
   const dispatcherOrders = selectedDispatcher
@@ -67,41 +135,25 @@ export default function Dispatcherform({
     dispatchers.map((dispatcher) => [dispatcher.id, dispatcher.name])
   );
 
-  // Transform orders data for table
-  const tableData: TableDataType[] = dispatcherOrders.map((order) => ({
-    key: order.id,
-    id: order.id,
-    address: `${order.detailedAddress}, ${order.area}`,
-    dispatcher: order.dispatcherId
-      ? dispatcherMap.get(order.dispatcherId)
-      : undefined,
-  }));
+  const allOrdersData = [...orders].sort((a, b) => {
+    // order by name
+    const dispatcherA = a.dispatcherId
+      ? dispatcherMap.get(a.dispatcherId) ?? "ZZZ"
+      : "ZZZ"; // not assigned orders at the end
+    const dispatcherB = b.dispatcherId
+      ? dispatcherMap.get(b.dispatcherId) ?? "ZZZ"
+      : "ZZZ";
 
-  // Transform all orders data for table (when no dispatcher is selected)
-  const allOrdersData: TableDataType[] = orders
-    .map((order) => ({
-      key: order.id,
-      id: order.id,
-      address: `${order.detailedAddress}, ${order.area}`,
-      dispatcher: order.dispatcherId
-        ? dispatcherMap.get(order.dispatcherId)
-        : undefined,
-    }))
-    .sort((a, b) => {
-      // order by name
-      const dispatcherA = a.dispatcher || "ZZZ"; // not assigned orders at the end
-      const dispatcherB = b.dispatcher || "ZZZ";
+    if (dispatcherA !== dispatcherB) {
+      return dispatcherA.localeCompare(dispatcherB);
+    }
 
-      if (dispatcherA !== dispatcherB) {
-        return dispatcherA.localeCompare(dispatcherB);
-      }
-
-      // if dispatcher is the same, order by id
-      return a.id - b.id;
-    });
+    // if dispatcher is the same, order by id
+    return a.id - b.id;
+  });
 
   return (
-    <Card style={{ maxWidth: 800, margin: "24px auto" }} bordered>
+    <Card style={{ maxWidth: 600, margin: "24px auto" }}>
       {selectedDispatcher ? (
         <>
           <Title level={4}>Orders assigned to {selectedDispatcher.name}</Title>
@@ -133,7 +185,7 @@ export default function Dispatcherform({
           </Space>
           <Table
             columns={columns}
-            dataSource={tableData}
+            dataSource={dispatcherOrders}
             rowKey="id"
             pagination={{
               pageSize: 10,
@@ -142,7 +194,7 @@ export default function Dispatcherform({
               showTotal: (total, range) =>
                 `${range[0]}-${range[1]} of ${total} orders`,
             }}
-            scroll={{ x: 580 }}
+            scroll={{ y: 380 }}
           />
         </>
       ) : (
@@ -152,8 +204,8 @@ export default function Dispatcherform({
             Select a dispatcher to view their assigned orders
           </Text>
           <p style={{ marginTop: 8 }}>
-            <Text strong>Current Time Period:  </Text>
-            <Text type="secondary">{date?.format("YYYY-MM-DD")}  </Text>
+            <Text strong>Current Time Period: </Text>
+            <Text type="secondary">{date?.format("YYYY-MM-DD")} </Text>
             {timePeriod.map((period) => (
               <Tag
                 key={period}
@@ -181,7 +233,7 @@ export default function Dispatcherform({
               showTotal: (total, range) =>
                 `${range[0]}-${range[1]} of ${total} orders`,
             }}
-            scroll={{ x: 580 }}
+            scroll={{ y: 380 }}
           />
         </>
       )}

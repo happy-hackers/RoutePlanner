@@ -1,6 +1,5 @@
-import Orderform from "../components/Orderform";
 import NewOrderModal from "../components/NewOrderModal";
-import { DatePicker, Row, Col, Space, Checkbox, Typography, Button } from "antd";
+import { DatePicker, Row, Col, Space, Checkbox, Typography, Button, Badge, Table } from "antd";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo } from "react";
 import { getAllCustomers, getAllOrders } from "../utils/dbUtils";
@@ -9,13 +8,15 @@ import type { MarkerData } from "../types/markers";
 import { setMarkersList } from "../utils/markersUtils.ts";
 import type { Customer } from "../types/customer.ts";
 
+import Upload from "../components/UploadModal.tsx";
+import { useSelector, useDispatch } from "react-redux";
+import { setDate, setTimePeriod, setStatus, setLoadedOrders } from "../store/orderSlice.ts";
+import type { RootState } from "../store";
+import LoadedOrderModal from "../components/LoadedOrderModal.tsx";
+
 type TimePeriod = "Morning" | "Afternoon" | "Evening";
 
 const { Text } = Typography;
-import Upload from "../components/UploadModal.tsx";
-import { useSelector, useDispatch } from "react-redux";
-import { setDate, setTimePeriod, setStatus } from "../store/orderSlice.ts";
-import type { RootState } from "../store";
 
 export default function ViewOrders({
   setMarkers,
@@ -23,12 +24,100 @@ export default function ViewOrders({
   setMarkers: (markers: MarkerData[]) => void;
 }) {
   const dispatch = useDispatch();
+  const loadedOrders = useSelector((state: RootState) => state.order.loadedOrders);
   const date = useSelector((state: RootState) => state.order.date);
   const timePeriod = useSelector((state: RootState) => state.order.timePeriod);
   const status = useSelector((state: RootState) => state.order.status);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isLoadedOrderModal, setIsLoadedOrderModal] = useState(false);
+  const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState<Order[]>([]);
+
+  console.log("loadedOrders", JSON.parse(JSON.stringify(loadedOrders)))
+
+  const columns = [
+    {
+      title: "ID",
+      dataIndex: "id",
+      key: "id",
+      width: "10%",
+    },
+    {
+      title: "Delivery Time",
+      dataIndex: "time",
+      key: "deliveryTime",
+      width: "25%",
+      render: (time: string, record: Order) => {
+        const date = dayjs(record.date).format("YYYY-MM-DD");
+        const timeDisplay = time.charAt(0).toUpperCase() + time.slice(1);
+        return `${date} ${timeDisplay}`;
+      },
+    },
+    {
+      title: "Address",
+      dataIndex: "detailedAddress",
+      key: "detailedAddress",
+      width: "45%",
+      render: (detailedAddress: string, record: Order) => {
+        return `${detailedAddress}, ${record.area}`;
+      },
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      render: (status: string) => {
+        let color = "";
+        if (status === "In Progress") color = "orange";
+        else if (status === "Delivered") color = "#53CC3F";
+
+        return <span style={{ color }}>{status}</span>;
+      },
+      width: "20%",
+    },
+  ];
+
+  const handleRowSelect = (record: Order, selected: boolean) => {
+    if (selected) {
+      setSelectedRowIds((prev) => [...prev, record.id]);
+      dispatch(setLoadedOrders([...loadedOrders, record]));
+    } else {
+      setSelectedRowIds(selectedRowIds.filter((id) => id !== record.id));
+      dispatch(
+        setLoadedOrders(loadedOrders.filter((order) => order.id !== record.id))
+      );
+    }
+  };
+
+  const handleAllRowSelect = (
+    selected: boolean,
+    _selectedRows: Order[],
+    changeRows: Order[]
+  ) => {
+    const changedId = changeRows.map((row) => row.id);
+    if (selected) {
+      /*changeRows.forEach((record) => {
+            setSelectedRowIds((prev) => [...prev, record.id]);
+          });*/
+      setSelectedRowIds((prev) => [...prev, ...changedId]);
+      dispatch(setLoadedOrders([...loadedOrders, ...changeRows]));
+    } else {
+      setSelectedRowIds((prev) => prev.filter((id) => !changedId.includes(id)));
+      dispatch(
+        setLoadedOrders(
+          loadedOrders.filter((order) => !changedId.includes(order.id))
+        )
+      );
+    }
+  };
+
+  const rowSelection = {
+    selectedRowKeys: selectedRowIds,
+    onSelect: handleRowSelect,
+    onSelectAll: handleAllRowSelect,
+  };
 
   const fetchOrders = async () => {
     const ordersData = await getAllOrders();
@@ -50,6 +139,10 @@ export default function ViewOrders({
     fetchOrders();
     fetchCustomers();
   }, [isUploadModalOpen]);
+
+  useEffect(() => {
+    setSelectedRowIds(loadedOrders.map(order => order.id));
+  }, [loadedOrders]);
 
   // Use useMemo to cache filtered orders and prevent infinite re-renders
   const filteredOrders = useMemo(() => {
@@ -84,7 +177,7 @@ export default function ViewOrders({
               fetchOrders={fetchOrders}
             />
             <Button type="primary" onClick={() => setIsUploadModalOpen(true)}>
-                    Bulk Import Orders (Upload JSON/CSV)
+              Bulk Import Orders (Upload JSON/CSV)
             </Button>
             <Upload isOpen={isUploadModalOpen} setOpen={setIsUploadModalOpen} />
           </Space>
@@ -95,14 +188,63 @@ export default function ViewOrders({
             format="YYYY-MM-DD"
           />
           <Row>
-            <Text strong style={{ marginRight: "20px" }}>Time:</Text>
-            <Checkbox.Group options={timeOptions} defaultValue={timePeriod} onChange={(values: TimePeriod[]) => dispatch(setTimePeriod(values))} />
+            <Text strong style={{ marginRight: "20px" }}>
+              Time:
+            </Text>
+            <Checkbox.Group
+              options={timeOptions}
+              defaultValue={timePeriod}
+              onChange={(values: TimePeriod[]) =>
+                dispatch(setTimePeriod(values))
+              }
+            />
           </Row>
           <Row>
-            <Text strong style={{ marginRight: "20px" }}>Status:</Text>
-            <Checkbox.Group options={stateOptions} defaultValue={status} onChange={(values: OrderStatus[]) => dispatch(setStatus(values))} />
+            <Text strong style={{ marginRight: "20px" }}>
+              Status:
+            </Text>
+            <Checkbox.Group
+              options={stateOptions}
+              defaultValue={status}
+              onChange={(values: OrderStatus[]) => dispatch(setStatus(values))}
+            />
           </Row>
-          <Orderform orders={filteredOrders} />
+          <Space direction="vertical" style={{ width: "100%" }}>
+            <Row justify="end">
+              <Badge
+                count={loadedOrders.length}
+                offset={[-2, 2]}
+                style={{
+                  fontSize: "10px",
+                  height: "16px",
+                  width: "18px",
+                  minWidth: "10px",
+                  lineHeight: "16px",
+                }}
+              >
+                <Button
+                  type="primary"
+                  onClick={() => setIsLoadedOrderModal(true)}
+                >
+                  Loaded Orders
+                </Button>
+              </Badge>
+            </Row>
+            <LoadedOrderModal
+              orders={loadedOrders}
+              isVisible={isLoadedOrderModal}
+              setVisibility={setIsLoadedOrderModal}
+              setSelectedRowIds={setSelectedRowIds}
+            />
+            <Table
+              rowKey="id"
+              columns={columns}
+              dataSource={filteredOrders}
+              rowSelection={rowSelection}
+              scroll={{ y: 380 }}
+              style={{ maxWidth: "600px" }}
+            />
+          </Space>
         </Space>
       </Col>
     </Row>
