@@ -147,7 +147,7 @@ export default function RouteResults() {
   const handleRowSelect = (record: Order, selected: boolean) => {
     if (selected) {
       setSelectedRowIds((prev) => [...prev, record.id]);
-      const newMarker = addMarkerwithColor(record)
+      const newMarker = addMarkerwithColor(record, dispatchers)
       addMarker(newMarker);
     } else {
       setSelectedRowIds(selectedRowIds.filter((id) => id !== record.id));
@@ -159,7 +159,7 @@ export default function RouteResults() {
     if (selected) {
       changeRows.forEach((record) => {
         setSelectedRowIds((prev) => [...prev, record.id]);
-        const newMarker = addMarkerwithColor(record)
+        const newMarker = addMarkerwithColor(record, dispatchers)
         addMarker(newMarker);
       });
     } else {

@@ -3,8 +3,27 @@ import type { Order } from "../types/order";
 import redIconImage from "../assets/icons/marker-icon-2x-red.png"
 import blueIconImage from "../assets/icons/marker-icon-2x-blue.png"
 import orangeIconImage from "../assets/icons/marker-icon-2x-orange.png"
+import greyIconImage from "../assets/icons/marker-icon-2x-grey.png"
+import blackIconImage from "../assets/icons/marker-icon-2x-black.png"
+import goldIconImage from "../assets/icons/marker-icon-2x-gold.png"
+import violetIconImage from "../assets/icons/marker-icon-2x-violet.png"
+import greenIconImage from "../assets/icons/marker-icon-2x-green.png"
+import type { Dispatcher } from "../types/dispatchers";
 
+const generateDispatcherColors = (dispatchers: { id: number }[]) => {
+  const map: Record<number, { url: string; color: string }> = {};
+  
+  dispatchers.forEach((dispatcher, index) => {
+    map[dispatcher.id] = ICONS[index];
+  });
 
+  return map;
+};
+
+const greyIcon = {
+  url: greyIconImage,
+  color: "red",
+}
 
 const redIcon = {
   url: redIconImage,
@@ -21,6 +40,28 @@ const orangeIcon = {
   color: "orange",
 };
 
+const blackIcon = {
+  url: blackIconImage,
+  color: "black",
+};
+
+const goldIcon = {
+  url: goldIconImage,
+  color: "gold",
+};
+
+const violetIcon = {
+  url: violetIconImage,
+  color: "violet",
+};
+
+const greenIcon = {
+  url: greenIconImage,
+  color: "green",
+};
+
+const ICONS = [redIcon, blueIcon, orangeIcon, blackIcon, goldIcon, violetIcon, greenIcon];
+
 // Color mapping for different regions
 const REGION_COLORS: Record<string, { url: string; scaledSize?: number; color: string }> = {
   "Hong Kong Island": redIcon,
@@ -28,22 +69,24 @@ const REGION_COLORS: Record<string, { url: string; scaledSize?: number; color: s
   "New Territories": orangeIcon
 };
 
-const setMarkersList = (orders: Order[]): MarkerData[] => {
+const setMarkersList = (orders: Order[], dispatchers: Dispatcher[]): MarkerData[] => {
+  const DISPATCHER_COLORS = generateDispatcherColors(dispatchers);
   return orders.map((order) => ({
     id: order.id,
     position: { lat: order.lat, lng: order.lng },
     address: `${order.detailedAddress}, ${order.area}`,
-    icon: REGION_COLORS[order.area],
+    icon: order.dispatcherId? DISPATCHER_COLORS[order.dispatcherId] : greyIcon,
     dispatcherId: order.dispatcherId,
   }));
 };
 
-const addMarkerwithColor = (order: Order): MarkerData => {
+const addMarkerwithColor = (order: Order, dispatchers: Dispatcher[]): MarkerData => {
+  const DISPATCHER_COLORS = generateDispatcherColors(dispatchers);
   return {
     id: order.id,
     position: { lat: order.lat, lng: order.lng },
     address: `${order.detailedAddress}, ${order.area}`,
-    icon: REGION_COLORS[order.area],
+    icon: order.dispatcherId? DISPATCHER_COLORS[order.dispatcherId] : greyIcon,
     customer: order.customer,
     dispatcherId: order.dispatcherId,
   };

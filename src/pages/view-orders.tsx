@@ -2,7 +2,7 @@ import NewOrderModal from "../components/NewOrderModal";
 import { DatePicker, Row, Col, Space, Checkbox, Typography, Button, Badge, Table } from "antd";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo } from "react";
-import { getAllCustomers, getAllOrders } from "../utils/dbUtils";
+import { getAllCustomers, getAllDispatchers, getAllOrders } from "../utils/dbUtils";
 import type { Order, OrderStatus } from "../types/order.ts";
 import type { MarkerData } from "../types/markers";
 import { setMarkersList } from "../utils/markersUtils.ts";
@@ -33,7 +33,6 @@ export default function ViewOrders({
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isLoadedOrderModal, setIsLoadedOrderModal] = useState(false);
   const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
-  const [selectedRows, setSelectedRows] = useState<Order[]>([]);
 
   console.log("loadedOrders", JSON.parse(JSON.stringify(loadedOrders)))
 
@@ -125,6 +124,7 @@ export default function ViewOrders({
       setOrders(ordersData);
     }
   };
+
   const fetchCustomers = async () => {
     const customersData = await getAllCustomers();
     if (customersData) {
@@ -163,8 +163,14 @@ export default function ViewOrders({
   }, [orders, date, timePeriod, status]);
 
   useEffect(() => {
-    setMarkers(setMarkersList(filteredOrders));
-  }, [filteredOrders, setMarkers]);
+    const fetchAndSetMarkers = async () => {
+      const dispatchersData = await getAllDispatchers();
+      if (dispatchersData)
+        setMarkers(setMarkersList(loadedOrders, dispatchersData));
+    };
+
+    fetchAndSetMarkers();
+  }, [loadedOrders, setMarkers]);
 
   return (
     <Row style={{ height: "100%" }}>

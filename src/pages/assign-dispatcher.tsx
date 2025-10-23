@@ -10,7 +10,7 @@ import {
 } from "../utils/dbUtils";
 import type { MarkerData } from "../types/markers";
 import type { Order } from "../types/order";
-import { addMarkerwithColor } from "../utils/markersUtils";
+import { addMarkerwithColor, setMarkersList } from "../utils/markersUtils";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../store";
 import dayjs from "dayjs";
@@ -181,6 +181,8 @@ export default function AssignDispatchers({
           newLoadedOrders = newLoadedOrders.map((order) =>
             order.id === updatedOrder.id ? { ...updatedOrder, customer } : order
           );
+          const newMarkers = setMarkersList(newLoadedOrders, dispatchers)
+          setMarkers(newMarkers);
           message.success(
             `Order ${order.id} assigned to ${matchedDispatcher.name}`
           );
@@ -217,14 +219,9 @@ export default function AssignDispatchers({
                     (dispatcher) => dispatcher.id === id
                   );
                   if (selectedDispatcher) {
-                    const responsibleAreas = selectedDispatcher.responsibleArea;
-                    const uniqueAreas = [...new Set(responsibleAreas.map(item => item[0]))];
-                    const filteredMarkers = loadedOrders
-                      .filter((order) => {
-                        return uniqueAreas.includes(order.area);
-                      })
+                    const filteredMarkers = loadedOrders.filter(order => order.dispatcherId === id)
                       .map((order) => {
-                        return addMarkerwithColor(order);
+                        return addMarkerwithColor(order, dispatchers);
                       })
                       .filter(
                         (marker): marker is MarkerData => marker !== null
@@ -235,7 +232,7 @@ export default function AssignDispatchers({
                   // Show all orders when "All Dispatchers" is selected
                   const allMarkers = loadedOrders
                     .map((order) => {
-                      return addMarkerwithColor(order);
+                      return addMarkerwithColor(order, dispatchers);
                     })
                     .filter((marker): marker is MarkerData => marker !== null);
                   setMarkers(allMarkers);
@@ -260,6 +257,7 @@ export default function AssignDispatchers({
             }
             orders={loadedOrders}
             dispatchers={dispatchers}
+            setMarkers={setMarkers}
           />
         </Space>
       </Col>

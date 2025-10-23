@@ -5,6 +5,8 @@ import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../store";
 import { updateOrder } from "../utils/dbUtils";
 import { setLoadedOrders } from "../store/orderSlice";
+import type { MarkerData } from "../types/markers";
+import { setMarkersList } from "../utils/markersUtils";
 
 const { Title, Text } = Typography;
 
@@ -18,12 +20,14 @@ interface DispatcherformProps {
   selectedDispatcher: Dispatcher | null;
   orders: Order[];
   dispatchers: Dispatcher[];
+  setMarkers: (markers: MarkerData[]) => void;
 }
 
 export default function Dispatcherform({
   selectedDispatcher,
   orders,
   dispatchers,
+  setMarkers
 }: DispatcherformProps) {
   // get global time information from redux
   const { message } = App.useApp();
@@ -46,14 +50,13 @@ export default function Dispatcherform({
       };
       const result = await updateOrder(updatedOrder);
       if (result.success) {
-        console.log("loadedOrdersBefore", JSON.parse(JSON.stringify(loadedOrders)))
         const newOrders = loadedOrders.map((order) =>
           order.id === updatedOrder.id ? {...updatedOrder, customer} : order
         );
-        console.log("newOrders", JSON.parse(JSON.stringify(newOrders)))
         dispatch(setLoadedOrders(newOrders));
+        const newMarkers = setMarkersList(newOrders, dispatchers)
+        setMarkers(newMarkers);
         message.success(`Order ${order.id} is not assigned`);
-        console.log("loadedOrders", JSON.parse(JSON.stringify(loadedOrders)))
       } else {
         message.error(`Failed to update order ${order.id}: ${result.error}`);
       }
@@ -69,8 +72,9 @@ export default function Dispatcherform({
           order.id === updatedOrder.id ? {...updatedOrder, customer} : order
         );
         dispatch(setLoadedOrders(newOrders));
+        const newMarkers = setMarkersList(newOrders, dispatchers)
+        setMarkers(newMarkers);
         message.success(`Order ${order.id} assigned to ${name || "Unknown"}`);
-        console.log("loadedOrders", JSON.parse(JSON.stringify(loadedOrders)))
       } else {
         message.error(`Failed to update order ${order.id}: ${result.error}`);
       }
