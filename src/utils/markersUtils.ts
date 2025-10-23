@@ -44,6 +44,7 @@ const addMarkerwithColor = (order: Order): MarkerData => {
     position: { lat: order.lat, lng: order.lng },
     address: `${order.detailedAddress}, ${order.area}`,
     icon: REGION_COLORS[order.area],
+    customer: order.customer,
     dispatcherId: order.dispatcherId,
   };
 };
