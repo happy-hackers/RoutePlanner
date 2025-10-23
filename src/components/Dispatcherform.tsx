@@ -231,7 +231,7 @@ export default function Dispatcherform({
             dataSource={allOrdersData}
             rowKey="id"
             pagination={{
-              pageSize: 10,
+              pageSize: 20,
               showSizeChanger: true,
               showQuickJumper: true,
               showTotal: (total, range) =>

@@ -248,6 +248,13 @@ export default function ViewOrders({
               dataSource={filteredOrders}
               rowSelection={rowSelection}
               scroll={{ y: 380 }}
+              pagination={{
+                pageSize: 20,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) =>
+                  `${range[0]}-${range[1]} of ${total} orders`,
+              }}
               style={{ maxWidth: "600px" }}
             />
           </Space>
