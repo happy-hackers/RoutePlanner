@@ -35,8 +35,8 @@ export default function Sidebar() {
   const menuItems: MenuItem[] = [
     getItem("View Orders", "/view-orders", <ShoppingOutlined />),
     getItem("Assign Dispatcher", "/assign-dispatcher", <UserSwitchOutlined />),
-    getItem("Set Dispatcher", "/set-dispatcher", <SettingOutlined />),
     getItem("Route Results", "/route-results", <CompassOutlined />,),
+    getItem("Set Dispatcher", "/set-dispatcher", <SettingOutlined />),
     getItem("View Customers", "/view-customers", <TeamOutlined />),
     getItem("Settings", "/settings", <SettingFilled />),
   ];

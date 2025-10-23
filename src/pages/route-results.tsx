@@ -67,6 +67,7 @@ export default function RouteResults() {
   const [selectedDispatcher, setSelectedDispatcher] =
     useState<Dispatcher | null>(null);
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
+  const loadedOrders = useSelector((state: RootState) => state.order.loadedOrders);
   const date = useSelector((state: RootState) => state.order.date);
   const timePeriod = useSelector((state: RootState) => state.order.timePeriod);
 
@@ -124,7 +125,7 @@ export default function RouteResults() {
     };
   }, [selectedDispatcher]);
 
-  if (orders.length === 0) {
+  if (loadedOrders.length === 0) {
     return (
       <div>
         <Title level={4}>No orders found</Title>
@@ -132,7 +133,7 @@ export default function RouteResults() {
     );
   }
 
-  const data = orders.filter(
+  const data = loadedOrders.filter(
     (order) => order.dispatcherId === selectedDispatcher?.id
   );
 
@@ -147,7 +148,7 @@ export default function RouteResults() {
   const handleRowSelect = (record: Order, selected: boolean) => {
     if (selected) {
       setSelectedRowIds((prev) => [...prev, record.id]);
-      const newMarker = addMarkerwithColor(record)
+      const newMarker = addMarkerwithColor(record, dispatchers)
       addMarker(newMarker);
     } else {
       setSelectedRowIds(selectedRowIds.filter((id) => id !== record.id));
@@ -155,11 +156,11 @@ export default function RouteResults() {
     }
   };
 
-  const handleAllRowSelect = (selected: boolean, changeRows: Order[]) => {
+  const handleAllRowSelect = (selected: boolean, _selectedRows: Order[], changeRows: Order[]) => {
     if (selected) {
       changeRows.forEach((record) => {
         setSelectedRowIds((prev) => [...prev, record.id]);
-        const newMarker = addMarkerwithColor(record)
+        const newMarker = addMarkerwithColor(record, dispatchers)
         addMarker(newMarker);
       });
     } else {
