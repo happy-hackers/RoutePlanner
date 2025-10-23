@@ -86,7 +86,7 @@ def time_to_seconds(t: str) -> int:
 
 def get_current_time_in_seconds():
     now = datetime.now()
-    return now.hour * 3600 + now.minute * 60 + now.second
+    return 10 * 3600 + now.minute * 60 + now.second
 
 @app.post("/optimize-route")
 async def time_consider_route(data: RouteInput):

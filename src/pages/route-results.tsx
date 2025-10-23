@@ -67,6 +67,7 @@ export default function RouteResults() {
   const [selectedDispatcher, setSelectedDispatcher] =
     useState<Dispatcher | null>(null);
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
+  const loadedOrders = useSelector((state: RootState) => state.order.loadedOrders);
   const date = useSelector((state: RootState) => state.order.date);
   const timePeriod = useSelector((state: RootState) => state.order.timePeriod);
 
@@ -124,7 +125,7 @@ export default function RouteResults() {
     };
   }, [selectedDispatcher]);
 
-  if (orders.length === 0) {
+  if (loadedOrders.length === 0) {
     return (
       <div>
         <Title level={4}>No orders found</Title>
@@ -132,7 +133,7 @@ export default function RouteResults() {
     );
   }
 
-  const data = orders.filter(
+  const data = loadedOrders.filter(
     (order) => order.dispatcherId === selectedDispatcher?.id
   );
 

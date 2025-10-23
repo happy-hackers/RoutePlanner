@@ -207,7 +207,7 @@ export default function Dispatcherform({
           <Text type="secondary">
             Select a dispatcher to view their assigned orders
           </Text>
-          <p style={{ marginTop: 8 }}>
+          {/*<p style={{ marginTop: 8 }}>
             <Text strong>Current Time Period: </Text>
             <Text type="secondary">{date?.format("YYYY-MM-DD")} </Text>
             {timePeriod.map((period) => (
@@ -225,7 +225,7 @@ export default function Dispatcherform({
                 {period}
               </Tag>
             ))}
-          </p>
+          </p>*/}
           <Table
             columns={columns}
             dataSource={allOrdersData}
@@ -237,7 +237,8 @@ export default function Dispatcherform({
               showTotal: (total, range) =>
                 `${range[0]}-${range[1]} of ${total} orders`,
             }}
-            scroll={{ y: 380 }}
+            scroll={{ y: 440 }}
+            style={{ marginTop: 8 }}
           />
         </>
       )}
