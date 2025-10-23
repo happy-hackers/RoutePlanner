@@ -185,7 +185,11 @@ export default function ViewOrders({
             <Button type="primary" onClick={() => setIsUploadModalOpen(true)}>
               Bulk Import Orders (Upload JSON/CSV)
             </Button>
-            <Upload isOpen={isUploadModalOpen} setOpen={setIsUploadModalOpen} />
+            <Upload
+              isOpen={isUploadModalOpen}
+              setOpen={setIsUploadModalOpen}
+              onUploadComplete={fetchOrders}
+            />
           </Space>
           <DatePicker
             defaultValue={date}

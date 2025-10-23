@@ -104,9 +104,11 @@ const parseCSVLine = (line: string): string[] => {
 function JsonUploadModal({
   isOpen,
   setOpen,
+  onUploadComplete
 }: {
   isOpen: boolean;
   setOpen: (open: boolean) => void;
+  onUploadComplete: () => void;
 }) {
   const { message } = App.useApp();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -179,6 +181,7 @@ function JsonUploadModal({
         }
       
         message.success(`Successfully uploaded ${validOrders.length} orders`);
+        onUploadComplete();
         handleClose();
       } catch (err) {
         message.error(

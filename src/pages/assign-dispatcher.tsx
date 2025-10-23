@@ -4,7 +4,6 @@ import Dispatcherform from "../components/Dispatcherform";
 import type { Dispatcher } from "../types/dispatchers";
 import {
   getAllDispatchers,
-  getAllOrders,
   updateOrder,
   getInProgressOrdersByDispatcherId,
 } from "../utils/dbUtils";
@@ -13,7 +12,6 @@ import type { Order } from "../types/order";
 import { addMarkerwithColor, setMarkersList } from "../utils/markersUtils";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../store";
-import dayjs from "dayjs";
 import { setLoadedOrders } from "../store/orderSlice";
 
 export default function AssignDispatchers({
@@ -24,12 +22,8 @@ export default function AssignDispatchers({
   const { message } = App.useApp();
   const dispatch = useDispatch();
   const loadedOrders = useSelector((state: RootState) => state.order.loadedOrders);
-  const date = useSelector((state: RootState) => state.order.date);
-  const timePeriod = useSelector((state: RootState) => state.order.timePeriod);
-  const status = useSelector((state: RootState) => state.order.status);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
 
   //console.log("loadedOrders", JSON.parse(JSON.stringify(loadedOrders)))
@@ -49,43 +43,6 @@ export default function AssignDispatchers({
 
     fetchDispatchers();
   }, []);
-
-  const getFilteredOrders = (ordersData: Order[]): Order[] => {
-    let filteredOrders: Order[]
-    if (date === null) {
-      filteredOrders = ordersData.filter((order) => {
-        const isSameTimePeriod = timePeriod.includes(order.time);
-        const isSameStatus = status.includes(order.status);
-        return isSameTimePeriod && isSameStatus;
-      })
-    } else {
-      filteredOrders = ordersData.filter((order) => {
-        const orderDate = dayjs(order.date);
-        const isSameDate = orderDate.isSame(date, "day");
-        const isSameTimePeriod = timePeriod.includes(order.time);
-        const isSameStatus = status.includes(order.status);
-        return isSameDate && isSameTimePeriod && isSameStatus;
-      });
-    }
-    return filteredOrders;
-  }
-
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const ordersData = await getAllOrders();
-        if (ordersData) {
-          const filteredOrders = getFilteredOrders(ordersData);
-          setOrders(filteredOrders);
-        }
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-        message.error("Failed to load orders.");
-      }
-    };
-
-    fetchOrders();
-  }, [date, timePeriod]);
 
   const dispatchersOption = [
     { value: null, label: "All Dispatchers" },
@@ -195,12 +152,6 @@ export default function AssignDispatchers({
     }
 
     dispatch(setLoadedOrders(newLoadedOrders));
-
-    const ordersData = await getAllOrders();
-    if (ordersData) {
-      const filteredOrders = getFilteredOrders(ordersData);
-      setOrders(filteredOrders);
-    }
     setIsAssigning(false);
   };
 

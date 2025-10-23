@@ -62,13 +62,6 @@ const greenIcon = {
 
 const ICONS = [redIcon, blueIcon, orangeIcon, blackIcon, goldIcon, violetIcon, greenIcon];
 
-// Color mapping for different regions
-const REGION_COLORS: Record<string, { url: string; scaledSize?: number; color: string }> = {
-  "Hong Kong Island": redIcon,
-  "Kowloon": blueIcon,
-  "New Territories": orangeIcon
-};
-
 const setMarkersList = (orders: Order[], dispatchers: Dispatcher[]): MarkerData[] => {
   const DISPATCHER_COLORS = generateDispatcherColors(dispatchers);
   return orders.map((order) => ({

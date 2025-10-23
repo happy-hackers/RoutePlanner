@@ -2,12 +2,11 @@ import { Select, Table, Typography, Row, Col, Space, Button } from "antd";
 import type { Order } from "../types/order.ts";
 import { useEffect, useState } from "react";
 import type { MarkerData } from "../types/markers.ts";
-import { getAllDispatchers, getAllOrders } from "../utils/dbUtils";
+import { getAllDispatchers } from "../utils/dbUtils";
 import type { Dispatcher } from "../types/dispatchers";
 import OpenStreetMap from "../components/OpenStreetMap";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store/index.ts";
-import dayjs from "dayjs";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { addMarkerwithColor } from "../utils/markersUtils.ts";
 
@@ -59,7 +58,6 @@ const routeModeColumns = [
 export default function RouteResults() {
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
   const [isRouteMode, setIsRouteMode] = useState<boolean>(false);
   const [sortedMarkers, setSortedMarkers] = useState<(MarkerData & { travelTime: number })[]>([]);
 
@@ -68,8 +66,6 @@ export default function RouteResults() {
     useState<Dispatcher | null>(null);
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
   const loadedOrders = useSelector((state: RootState) => state.order.loadedOrders);
-  const date = useSelector((state: RootState) => state.order.date);
-  const timePeriod = useSelector((state: RootState) => state.order.timePeriod);
 
   const dispatchersOption = [
     { value: null, label: "Please select dispatcher" },
@@ -79,38 +75,10 @@ export default function RouteResults() {
     })),
   ];
 
-  const getFilteredOrders = (ordersData: Order[]): Order[] => {
-    let filteredOrders: Order[]
-    if (date === null) {
-      filteredOrders = ordersData.filter((order) => {
-        const isSameTimePeriod = timePeriod.includes(order.time);
-        const isInProgress = order.status === "In Progress";
-        return isSameTimePeriod && isInProgress;
-      })
-    } else {
-      filteredOrders = ordersData.filter((order) => {
-        const orderDate = dayjs(order.date);
-        const isSameDate = orderDate.isSame(date, "day");
-        const isSameTimePeriod = timePeriod.includes(order.time);
-        const isInProgress = order.status === "In Progress";
-        return isSameDate && isSameTimePeriod && isInProgress;
-      });
-    }
-    return filteredOrders;
-  }
-
   // Fetch dispatchers from Supabase
   useEffect(() => {
     const fetchOrders = async () => {
-      const [ordersData, dispatchersData] = await Promise.all([
-        getAllOrders(),
-        getAllDispatchers(),
-      ]);
-
-      if (ordersData) {
-        const filteredOrders = getFilteredOrders(ordersData)
-        setOrders(filteredOrders);
-      }
+      const dispatchersData = await getAllDispatchers();
       if (dispatchersData) {
         setDispatchers(dispatchersData);
       }

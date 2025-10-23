@@ -1,4 +1,4 @@
-import { Modal, Table, Input, Button, Typography } from "antd";
+import { Modal, Table, Button, Typography } from "antd";
 import { useState } from "react";
 import type { Order } from "../types/order";
 import { useSelector, useDispatch } from "react-redux";
