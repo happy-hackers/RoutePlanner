@@ -7,6 +7,7 @@ import { updateOrder } from "../utils/dbUtils";
 import { setLoadedOrders } from "../store/orderSlice";
 import type { MarkerData } from "../types/markers";
 import { setMarkersList } from "../utils/markersUtils";
+import sortOrders from "../utils/sortOrderUtils";
 
 const { Title, Text } = Typography;
 
@@ -138,28 +139,6 @@ export default function Dispatcherform({
     ? orders.filter((order) => order.dispatcherId === selectedDispatcher.id)
     : [];
 
-  // create a map of dispatcher id to name
-  const dispatcherMap = new Map(
-    dispatchers.map((dispatcher) => [dispatcher.id, dispatcher.name])
-  );
-
-  const allOrdersData = [...orders].sort((a, b) => {
-    // order by name
-    const dispatcherA = a.dispatcherId
-      ? dispatcherMap.get(a.dispatcherId) ?? "ZZZ"
-      : "ZZZ"; // not assigned orders at the end
-    const dispatcherB = b.dispatcherId
-      ? dispatcherMap.get(b.dispatcherId) ?? "ZZZ"
-      : "ZZZ";
-
-    if (dispatcherA !== dispatcherB) {
-      return dispatcherA.localeCompare(dispatcherB);
-    }
-
-    // if dispatcher is the same, order by id
-    return a.id - b.id;
-  });
-
   return (
     <Card style={{ maxWidth: 600, margin: "24px auto" }}>
       {selectedDispatcher ? (
@@ -232,7 +211,7 @@ export default function Dispatcherform({
           </p>*/}
           <Table
             columns={columns}
-            dataSource={allOrdersData}
+            dataSource={orders}
             rowKey="id"
             pagination={{
               pageSize: 20,
