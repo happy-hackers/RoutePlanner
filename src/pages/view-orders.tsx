@@ -48,7 +48,7 @@ export default function ViewOrders({
       title: "Delivery Time",
       dataIndex: "time",
       key: "deliveryTime",
-      width: "25%",
+      width: "20%",
       render: (time: string, record: Order) => {
         const date = dayjs(record.date).format("YYYY-MM-DD");
         const timeDisplay = time.charAt(0).toUpperCase() + time.slice(1);
@@ -59,7 +59,7 @@ export default function ViewOrders({
       title: "Address",
       dataIndex: "detailedAddress",
       key: "detailedAddress",
-      width: "45%",
+      width: "50%",
       render: (detailedAddress: string, record: Order) => {
         return `${detailedAddress}, ${record.area}`;
       },
@@ -264,7 +264,7 @@ export default function ViewOrders({
                 showTotal: (total, range) =>
                   `${range[0]}-${range[1]} of ${total} orders`,
               }}
-              style={{ maxWidth: "600px" }}
+              style={{ maxWidth: "650px" }}
             />
           </Space>
         </Space>

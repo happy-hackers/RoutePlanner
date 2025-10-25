@@ -105,7 +105,7 @@ export default function Dispatcherform({
       dataIndex: "detailedAddress",
       key: "detailedAddress",
       ellipsis: true,
-      width: "65%",
+      width: "60%",
       render: (detailedAddress: string, record: Order) => (
         <Text>
           {detailedAddress}, {record.area}
@@ -116,7 +116,7 @@ export default function Dispatcherform({
       title: "Dispatcher",
       dataIndex: "dispatcherId",
       key: "dispatcherId",
-      width: "23%",
+      width: "28%",
       render: (dispatcherId: number | undefined, record: Order) => {
         const value = dispatcherId ?? null;
         return (
@@ -140,7 +140,14 @@ export default function Dispatcherform({
     : [];
 
   return (
-    <Card style={{ maxWidth: 600, margin: "24px auto" }}>
+    <Card
+      style={{ maxWidth: 650, margin: "24px auto" }}
+      styles={{
+        body: {
+          padding: "12px 16px",
+        },
+      }}
+    >
       {selectedDispatcher ? (
         <>
           <Title level={4}>Orders assigned to {selectedDispatcher.name}</Title>
