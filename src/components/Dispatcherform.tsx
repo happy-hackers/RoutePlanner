@@ -7,7 +7,6 @@ import { updateOrder } from "../utils/dbUtils";
 import { setLoadedOrders } from "../store/orderSlice";
 import type { MarkerData } from "../types/markers";
 import { setMarkersList } from "../utils/markersUtils";
-import sortOrders from "../utils/sortOrderUtils";
 
 const { Title, Text } = Typography;
 

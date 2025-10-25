@@ -1,3 +1,4 @@
+import type { Dispatcher } from "../types/dispatchers";
 import type { Order } from "../types/order";
 
 // create a map of dispatcher id to name
@@ -25,4 +26,11 @@ const sortOrders = (orders: Order[]) => {
   return sortedOrders;
 }
 
-export default sortOrders;
+const sortDispatchers = (dispatchers: Dispatcher[]) => {
+    const sortedOrders = [...dispatchers].sort((a, b) => {
+    return a.id - b.id;
+  })
+  return sortedOrders;
+}
+
+export {sortOrders, sortDispatchers};

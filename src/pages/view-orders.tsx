@@ -13,7 +13,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { setDate, setTimePeriod, setStatus, setLoadedOrders } from "../store/orderSlice.ts";
 import type { RootState } from "../store";
 import LoadedOrderModal from "../components/LoadedOrderModal.tsx";
-import sortOrders from "../utils/sortOrderUtils.ts";
+import {sortOrders} from "../utils/sortingUtils.ts";
 
 type TimePeriod = "Morning" | "Afternoon" | "Evening";
 
