@@ -21,13 +21,15 @@ interface DispatcherformProps {
   orders: Order[];
   dispatchers: Dispatcher[];
   setMarkers: (markers: MarkerData[]) => void;
+  setHoveredOrderId: (id: number | null) => void;
 }
 
 export default function Dispatcherform({
   selectedDispatcher,
   orders,
   dispatchers,
-  setMarkers
+  setMarkers,
+  setHoveredOrderId
 }: DispatcherformProps) {
   // get global time information from redux
   const { message } = App.useApp();
@@ -188,6 +190,10 @@ export default function Dispatcherform({
                 `${range[0]}-${range[1]} of ${total} orders`,
             }}
             scroll={{ y: 380 }}
+            onRow={(record) => ({
+              onMouseEnter: () => setHoveredOrderId(record.id),
+              onMouseLeave: () => setHoveredOrderId(null),
+            })}
           />
         </>
       ) : (
@@ -228,6 +234,10 @@ export default function Dispatcherform({
             }}
             scroll={{ y: 440 }}
             style={{ marginTop: 8 }}
+            onRow={(record) => ({
+              onMouseEnter: () => setHoveredOrderId(record.id),
+              onMouseLeave: () => setHoveredOrderId(null),
+            })}
           />
         </>
       )}

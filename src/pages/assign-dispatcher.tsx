@@ -16,8 +16,12 @@ import { setLoadedOrders } from "../store/orderSlice";
 
 export default function AssignDispatchers({
   setMarkers,
+  hoveredOrderId,
+  setHoveredOrderId,
 }: {
   setMarkers: (markers: MarkerData[]) => void;
+  hoveredOrderId: number | null;
+  setHoveredOrderId: (id: number | null) => void;
 }) {
   const { message } = App.useApp();
   const dispatch = useDispatch();
@@ -209,6 +213,7 @@ export default function AssignDispatchers({
             orders={loadedOrders}
             dispatchers={dispatchers}
             setMarkers={setMarkers}
+            setHoveredOrderId={setHoveredOrderId}
           />
         </Space>
       </Col>
