@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getAllDispatchers } from "../utils/dbUtils";
 import type { Dispatcher } from "../types/dispatchers";
 import DispatcherModal from "../components/DispatcherModal";
+import { sortDispatchers } from "../utils/sortingUtils";
 
 const { Text } = Typography;
 
@@ -24,7 +25,8 @@ export default function SetDispatcher() {
     const dispatchers = await getAllDispatchers();
     console.log(dispatchers);
     if (dispatchers) {
-      setDispatchers(dispatchers);
+      const sortedDispatchers = sortDispatchers(dispatchers);
+      setDispatchers(sortedDispatchers);
     }
   };
 

@@ -104,7 +104,7 @@ export default function Dispatcherform({
       dataIndex: "detailedAddress",
       key: "detailedAddress",
       ellipsis: true,
-      width: "65%",
+      width: "60%",
       render: (detailedAddress: string, record: Order) => (
         <Text>
           {detailedAddress}, {record.area}
@@ -115,7 +115,7 @@ export default function Dispatcherform({
       title: "Dispatcher",
       dataIndex: "dispatcherId",
       key: "dispatcherId",
-      width: "23%",
+      width: "28%",
       render: (dispatcherId: number | undefined, record: Order) => {
         const value = dispatcherId ?? null;
         return (
@@ -138,30 +138,15 @@ export default function Dispatcherform({
     ? orders.filter((order) => order.dispatcherId === selectedDispatcher.id)
     : [];
 
-  // create a map of dispatcher id to name
-  const dispatcherMap = new Map(
-    dispatchers.map((dispatcher) => [dispatcher.id, dispatcher.name])
-  );
-
-  const allOrdersData = [...orders].sort((a, b) => {
-    // order by name
-    const dispatcherA = a.dispatcherId
-      ? dispatcherMap.get(a.dispatcherId) ?? "ZZZ"
-      : "ZZZ"; // not assigned orders at the end
-    const dispatcherB = b.dispatcherId
-      ? dispatcherMap.get(b.dispatcherId) ?? "ZZZ"
-      : "ZZZ";
-
-    if (dispatcherA !== dispatcherB) {
-      return dispatcherA.localeCompare(dispatcherB);
-    }
-
-    // if dispatcher is the same, order by id
-    return a.id - b.id;
-  });
-
   return (
-    <Card style={{ maxWidth: 600, margin: "24px auto" }}>
+    <Card
+      style={{ maxWidth: 650, margin: "24px auto" }}
+      styles={{
+        body: {
+          padding: "12px 16px",
+        },
+      }}
+    >
       {selectedDispatcher ? (
         <>
           <Title level={4}>Orders assigned to {selectedDispatcher.name}</Title>
@@ -232,7 +217,7 @@ export default function Dispatcherform({
           </p>*/}
           <Table
             columns={columns}
-            dataSource={allOrdersData}
+            dataSource={orders}
             rowKey="id"
             pagination={{
               pageSize: 20,

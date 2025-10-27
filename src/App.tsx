@@ -30,7 +30,7 @@ function AppContent() {
       <Navigation />
       <Content style={{ flex: 1, padding: "10px" }}>
         <Row style={{ height: "100%", width: "100%" }}>
-          <Col flex={needMap ? "600px" : "auto"} style={{ marginRight: "10px" }}>
+          <Col flex={needMap ? "650px" : "auto"} style={{ marginRight: "10px" }}>
             <Routes>
               <Route
                 path="/"
@@ -46,7 +46,6 @@ function AppContent() {
               />
               <Route path="/set-dispatcher" element={<SetDispatcher />} />
               <Route path="/route-results" element={<RouteResults />} />
-              <Route path="/route-results/:id" element={<RouteResults />} />
               <Route path="/view-customers" element={<ViewCustomers />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<div>Page not found</div>} />

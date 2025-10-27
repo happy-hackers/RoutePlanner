@@ -351,7 +351,7 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
               placeholder="Select Option"
               value={searchOptions}
               onChange={(value) => setSearchOptions(value)}
-              style={{ width: 120 }}
+              style={{ width: 140 }}
             >
               <Select.Option value="normal">Normal</Select.Option>
               <Select.Option value="byTime">Opening Time</Select.Option>

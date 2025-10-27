@@ -13,6 +13,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { setDate, setTimePeriod, setStatus, setLoadedOrders } from "../store/orderSlice.ts";
 import type { RootState } from "../store";
 import LoadedOrderModal from "../components/LoadedOrderModal.tsx";
+import {sortOrders} from "../utils/sortingUtils.ts";
 
 type TimePeriod = "Morning" | "Afternoon" | "Evening";
 
@@ -47,7 +48,7 @@ export default function ViewOrders({
       title: "Delivery Time",
       dataIndex: "time",
       key: "deliveryTime",
-      width: "25%",
+      width: "20%",
       render: (time: string, record: Order) => {
         const date = dayjs(record.date).format("YYYY-MM-DD");
         const timeDisplay = time.charAt(0).toUpperCase() + time.slice(1);
@@ -58,7 +59,7 @@ export default function ViewOrders({
       title: "Address",
       dataIndex: "detailedAddress",
       key: "detailedAddress",
-      width: "45%",
+      width: "50%",
       render: (detailedAddress: string, record: Order) => {
         return `${detailedAddress}, ${record.area}`;
       },
@@ -81,7 +82,8 @@ export default function ViewOrders({
   const handleRowSelect = (record: Order, selected: boolean) => {
     if (selected) {
       setSelectedRowIds((prev) => [...prev, record.id]);
-      dispatch(setLoadedOrders([...loadedOrders, record]));
+      const sortedOrders = sortOrders([...loadedOrders, record])
+      dispatch(setLoadedOrders(sortedOrders));
     } else {
       setSelectedRowIds(selectedRowIds.filter((id) => id !== record.id));
       dispatch(
@@ -101,7 +103,8 @@ export default function ViewOrders({
             setSelectedRowIds((prev) => [...prev, record.id]);
           });*/
       setSelectedRowIds((prev) => [...prev, ...changedId]);
-      dispatch(setLoadedOrders([...loadedOrders, ...changeRows]));
+      const sortedOrders = sortOrders([...loadedOrders, ...changeRows])
+      dispatch(setLoadedOrders(sortedOrders));
     } else {
       setSelectedRowIds((prev) => prev.filter((id) => !changedId.includes(id)));
       dispatch(
@@ -161,6 +164,8 @@ export default function ViewOrders({
         return isSameDate && isSameTimePeriod && isSameStatus;
       });
   }, [orders, date, timePeriod, status]);
+
+  const sortedOrders = sortOrders(filteredOrders);
 
   useEffect(() => {
     const fetchAndSetMarkers = async () => {
@@ -249,7 +254,7 @@ export default function ViewOrders({
             <Table
               rowKey="id"
               columns={columns}
-              dataSource={filteredOrders}
+              dataSource={sortedOrders}
               rowSelection={rowSelection}
               scroll={{ y: 380 }}
               pagination={{
@@ -259,7 +264,7 @@ export default function ViewOrders({
                 showTotal: (total, range) =>
                   `${range[0]}-${range[1]} of ${total} orders`,
               }}
-              style={{ maxWidth: "600px" }}
+              style={{ maxWidth: "650px" }}
             />
           </Space>
         </Space>
