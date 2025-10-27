@@ -7,8 +7,6 @@ import { sortDispatchers } from "../utils/sortingUtils";
 
 const { Text } = Typography;
 
-const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
 export default function SetDispatcher() {
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -83,25 +81,60 @@ export default function SetDispatcher() {
             <Text>{dispatcher.name}</Text>
           </Col>
           <Col span={10}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-              {days.map((day) => (
-                <div
-                  key={day}
-                  style={{
-                    padding: "2px 6px",
-                    fontSize: "12px",
-                    backgroundColor: dispatcher.activeDay?.includes(day)
-                      ? "#1890ff"
-                      : "#f5f5f5",
-                    color: dispatcher.activeDay?.includes(day)
-                      ? "white"
-                      : "#666",
-                    borderRadius: "4px",
-                  }}
-                >
-                  {day.slice(0, 3)}
-                </div>
-              ))}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 8px", fontSize: "12px" }}>
+              {(() => {
+                const activeDay = dispatcher.activeDay || {};
+
+                if (Object.keys(activeDay).length === 0) {
+                  return <Text type="secondary" style={{ fontSize: "12px" }}>No active days</Text>;
+                }
+
+                const dayOrder = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+                // Separate days into two groups: full periods and partial periods
+                const fullPeriodDays: [string, string[]][] = [];
+                const partialPeriodDays: [string, string[]][] = [];
+
+                Object.entries(activeDay).forEach(([day, periods]) => {
+                  const periodList = periods as string[];
+                  if (periodList.length === 3) {
+                    fullPeriodDays.push([day, periodList]);
+                  } else {
+                    partialPeriodDays.push([day, periodList]);
+                  }
+                });
+
+                // Sort both groups by day order
+                fullPeriodDays.sort(([dayA], [dayB]) => dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB));
+                partialPeriodDays.sort(([dayA], [dayB]) => dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB));
+
+                // Combine: full periods first, then partial periods
+                const sortedDays = [...fullPeriodDays, ...partialPeriodDays];
+
+                return sortedDays.map(([day, periods]) => {
+                  const periodList = periods as string[];
+                  const isAllPeriods = periodList.length === 3;
+
+                  // Display format: "Mon" (all periods) or "Sat: Morning / Afternoon" (partial)
+                  const displayText = isAllPeriods
+                    ? day
+                    : `${day}: ${periodList.join(" / ")}`;
+
+                  return (
+                    <div
+                      key={day}
+                      style={{
+                        padding: "2px 6px",
+                        backgroundColor: isAllPeriods ? "#52c41a" : "#1890ff",
+                        color: "white",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      {displayText}
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </Col>
           <Col span={7}>

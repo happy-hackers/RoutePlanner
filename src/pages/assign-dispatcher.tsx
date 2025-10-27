@@ -11,18 +11,23 @@ import type { Order } from "../types/order";
 import { addMarkerwithColor, setMarkersList } from "../utils/markersUtils";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../store";
-import { setLoadedOrders } from "../store/orderSlice";
+import { setSelectedOrders as setLoadedOrders } from "../store/orderSlice";
 import type { Customer } from "../types/customer";
 
 export default function AssignDispatchers({
   setMarkers,
+  hoveredOrderId: _hoveredOrderId,
+  setHoveredOrderId,
 }: {
   setMarkers: (markers: MarkerData[]) => void;
+  hoveredOrderId: number | null;
+  setHoveredOrderId: (id: number | null) => void;
 }) {
   const { message } = App.useApp();
   const dispatch = useDispatch();
-  const loadedOrders = useSelector((state: RootState) => state.order.loadedOrders);
+  const loadedOrders = useSelector((state: RootState) => state.order.selectedOrders);
   const isEveryOrderAssigned = loadedOrders.every(order => order.dispatcherId !== null && order.dispatcherId !== undefined);
+  const selectedOrders = useSelector((state: RootState) => state.order.selectedOrders);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
@@ -220,7 +225,7 @@ export default function AssignDispatchers({
                     (dispatcher) => dispatcher.id === id
                   );
                   if (selectedDispatcher) {
-                    const filteredMarkers = loadedOrders.filter(order => order.dispatcherId === id)
+                    const filteredMarkers = selectedOrders.filter(order => order.dispatcherId === id)
                       .map((order) => {
                         return addMarkerwithColor(order, dispatchers);
                       })
@@ -231,7 +236,7 @@ export default function AssignDispatchers({
                   }
                 } else {
                   // Show all orders when "All Dispatchers" is selected
-                  const allMarkers = loadedOrders
+                  const allMarkers = selectedOrders
                     .map((order) => {
                       return addMarkerwithColor(order, dispatchers);
                     })
@@ -270,9 +275,10 @@ export default function AssignDispatchers({
                 ? dispatchers.find((d) => d.id === selectedId) || null
                 : null
             }
-            orders={loadedOrders}
+            orders={selectedOrders}
             dispatchers={dispatchers}
             setMarkers={setMarkers}
+            setHoveredOrderId={setHoveredOrderId}
           />
         </Space>
       </Col>

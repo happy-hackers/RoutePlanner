@@ -50,10 +50,13 @@ export default function ViewCustomers() {
   return (
     <Card title="Customers" style={{ maxWidth: "70%", margin: "0 auto" }}>
       <Row gutter={12} style={{ marginBottom: 12 }}>
-        <Col span={5}>
+        <Col span={2}>
+          <Text strong>ID</Text>
+        </Col>
+        <Col span={4}>
           <Text strong>Name</Text>
         </Col>
-        <Col span={10}>
+        <Col span={8}>
           <Text strong>Address</Text>
         </Col>
         <Col span={3}>
@@ -62,7 +65,7 @@ export default function ViewCustomers() {
         <Col span={3}>
           <Text strong>Close Time</Text>
         </Col>
-        <Col span={3}>
+        <Col span={4}>
           <Text strong>Action</Text>
         </Col>
       </Row>
@@ -78,10 +81,13 @@ export default function ViewCustomers() {
             borderBottom: "1px solid #f0f0f0",
           }}
         >
-          <Col span={5}>
+          <Col span={2}>
+            <Text>{customer.id}</Text>
+          </Col>
+          <Col span={4}>
             <Text>{customer.name}</Text>
           </Col>
-          <Col span={10}>
+          <Col span={8}>
             <Text>{customer.detailedAddress}, {customer.area}</Text>
           </Col>
           <Col span={3}>
@@ -90,7 +96,7 @@ export default function ViewCustomers() {
           <Col span={3}>
             <Text>{customer.closeTime}</Text>
           </Col>
-          <Col span={3}>
+          <Col span={4}>
             <Button
               type="link"
               size="small"

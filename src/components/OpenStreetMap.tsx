@@ -17,6 +17,7 @@ interface NavigationMapProp {
   setIsRouteMode?: (routeMode: boolean) => void;
   isRouteMode?: boolean;
   isRouteResults?: boolean;
+  hoveredOrderId?: number | null;
 }
 
 function createNumberIcon(number: number) {
@@ -53,7 +54,7 @@ const endIcon = new L.Icon({
   iconAnchor: [20, 56],
 });
 
-const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMarkers, setSelectedRowId, sortedMarkers, setSortedMarkers, setIsRouteMode, isRouteMode, isRouteResults }) => {
+const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMarkers, setSelectedRowId, sortedMarkers, setSortedMarkers, setIsRouteMode, isRouteMode, isRouteResults, hoveredOrderId }) => {
   const [startAddress, setStartAddress] = useState("");
   const [endAddress, setEndAddress] = useState("");
   const [searchOptions, setSearchOptions] = useState("normal");
@@ -67,14 +68,14 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
   const SERVER_URL = import.meta.env.VITE_SERVER_URL;
   const { message } = App.useApp();
   const settingInfo: any = localStorage.getItem("settings");
-  
-  const defaultIcon = new L.Icon({
-    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  });
+
+  // const defaultIcon = new L.Icon({
+  //   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  //   iconSize: [25, 41],
+  //   iconAnchor: [12, 41],
+  //   popupAnchor: [1, -34],
+  //   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  // });
 
   useEffect(() => {
     setOptions({ key: GOOGLE_API_KEY });
@@ -392,18 +393,28 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
 
         {/* Order Markers */}
         {orderMarkers.map((marker, index) => {
+          const isHovered = marker.id === hoveredOrderId;
+          const baseSize = marker.icon?.scaledSize || 25;
+          const baseHeight = 41;
+          const iconSize = isHovered ? baseSize * 1.5 : baseSize;
+          const iconHeight = isHovered ? baseHeight * 1.5 : baseHeight;
+
           const leafletIcon = marker.icon
             ? L.icon({
                 iconUrl: marker.icon.url,
-                iconSize: marker.icon.scaledSize
-                  ? [marker.icon.scaledSize, marker.icon.scaledSize]
-                  : [25, 41],
-                iconAnchor: [12, 41],
-                popupAnchor: [1, -34],
+                iconSize: [iconSize, iconHeight],
+                iconAnchor: [iconSize / 2, iconHeight],
+                popupAnchor: [1, -iconHeight + 7],
                 shadowUrl:
                   "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
               })
-            : defaultIcon;
+            : L.icon({
+                iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+                iconSize: [iconSize, iconHeight],
+                iconAnchor: [iconSize / 2, iconHeight],
+                popupAnchor: [1, -iconHeight + 7],
+                shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+              });
 
           return (
             <Marker
