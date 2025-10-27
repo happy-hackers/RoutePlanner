@@ -11,7 +11,7 @@ import type { Order } from "../types/order";
 import { addMarkerwithColor, setMarkersList } from "../utils/markersUtils";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../store";
-import { setSelectedOrders as setLoadedOrders } from "../store/orderSlice";
+import { setSelectedOrders } from "../store/orderSlice";
 import type { Customer } from "../types/customer";
 
 export default function AssignDispatchers({
@@ -25,9 +25,8 @@ export default function AssignDispatchers({
 }) {
   const { message } = App.useApp();
   const dispatch = useDispatch();
-  const loadedOrders = useSelector((state: RootState) => state.order.selectedOrders);
-  const isEveryOrderAssigned = loadedOrders.every(order => order.dispatcherId !== null && order.dispatcherId !== undefined);
   const selectedOrders = useSelector((state: RootState) => state.order.selectedOrders);
+  const isEveryOrderAssigned = selectedOrders.every(order => order.dispatcherId !== null && order.dispatcherId !== undefined);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
@@ -197,12 +196,12 @@ export default function AssignDispatchers({
           }
         }
       }
-      dispatch(setLoadedOrders(newActiveOrders));
+      dispatch(setSelectedOrders(newActiveOrders));
       setIsAssigning(false);
 
   };
     const confirm = () => {
-      const newActiveOrders = loadedOrders.map(order => ({
+      const newActiveOrders = selectedOrders.map(order => ({
         ...order,
         dispatcherId: undefined,
       }));
@@ -263,7 +262,7 @@ export default function AssignDispatchers({
                 type="primary"
                 loading={isAssigning}
                 disabled={selectedId !== null}
-                onClick={() => assignOrders(loadedOrders)}
+                onClick={() => assignOrders(selectedOrders)}
               >
                 {isAssigning ? "Assigning..." : "Auto Assign"}
               </Button>
