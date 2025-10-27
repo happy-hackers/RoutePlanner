@@ -61,11 +61,10 @@ export default function RouteResults() {
   const [isRouteMode, setIsRouteMode] = useState<boolean>(false);
   const [sortedMarkers, setSortedMarkers] = useState<(MarkerData & { travelTime: number })[]>([]);
 
-  // 这里的Dispatcher并没有被定义，只是去掉redux之后还没有写获取，如何获取可以参考assign-disparture.tsx
   const [selectedDispatcher, setSelectedDispatcher] =
     useState<Dispatcher | null>(null);
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
-  const loadedOrders = useSelector((state: RootState) => state.order.loadedOrders);
+  const selectedOrders = useSelector((state: RootState) => state.order.selectedOrders);
 
   const dispatchersOption = [
     { value: null, label: "Please select dispatcher" },
@@ -93,7 +92,7 @@ export default function RouteResults() {
     };
   }, [selectedDispatcher]);
 
-  if (loadedOrders.length === 0) {
+  if (selectedOrders.length === 0) {
     return (
       <div>
         <Title level={4}>No orders found</Title>
@@ -101,7 +100,7 @@ export default function RouteResults() {
     );
   }
 
-  const data = loadedOrders.filter(
+  const data = selectedOrders.filter(
     (order) => order.dispatcherId === selectedDispatcher?.id
   );
 

@@ -12,11 +12,11 @@ import type { Order } from "../types/order";
 import { addMarkerwithColor, setMarkersList } from "../utils/markersUtils";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../store";
-import { setLoadedOrders } from "../store/orderSlice";
+import { setSelectedOrders } from "../store/orderSlice";
 
 export default function AssignDispatchers({
   setMarkers,
-  hoveredOrderId,
+  hoveredOrderId: _hoveredOrderId,
   setHoveredOrderId,
 }: {
   setMarkers: (markers: MarkerData[]) => void;
@@ -25,12 +25,12 @@ export default function AssignDispatchers({
 }) {
   const { message } = App.useApp();
   const dispatch = useDispatch();
-  const loadedOrders = useSelector((state: RootState) => state.order.loadedOrders);
+  const selectedOrders = useSelector((state: RootState) => state.order.selectedOrders);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
 
-  //console.log("loadedOrders", JSON.parse(JSON.stringify(loadedOrders)))
+  //console.log("selectedOrders", JSON.parse(JSON.stringify(selectedOrders)))
 
   useEffect(() => {
     const fetchDispatchers = async () => {
@@ -75,12 +75,12 @@ export default function AssignDispatchers({
 
   const assignOrders = async () => {
     setIsAssigning(true);
-    if (dispatchers.length === 0) 
+    if (dispatchers.length === 0)
       return
 
-    let newLoadedOrders = [...loadedOrders]
+    let newSelectedOrders = [...selectedOrders]
 
-    for (const order of loadedOrders) {
+    for (const order of selectedOrders) {
       // Skip already assigned orders
       if (order.dispatcherId) {
         continue;
@@ -139,10 +139,10 @@ export default function AssignDispatchers({
         const result = await updateOrder(updatedOrder);
 
         if (result.success) {
-          newLoadedOrders = newLoadedOrders.map((order) =>
+          newSelectedOrders = newSelectedOrders.map((order) =>
             order.id === updatedOrder.id ? { ...updatedOrder, customer } : order
           );
-          const newMarkers = setMarkersList(newLoadedOrders, dispatchers)
+          const newMarkers = setMarkersList(newSelectedOrders, dispatchers)
           setMarkers(newMarkers);
           message.success(
             `Order ${order.id} assigned to ${matchedDispatcher.name}`
@@ -155,7 +155,7 @@ export default function AssignDispatchers({
       }
     }
 
-    dispatch(setLoadedOrders(newLoadedOrders));
+    dispatch(setSelectedOrders(newSelectedOrders));
     setIsAssigning(false);
   };
 
@@ -174,7 +174,7 @@ export default function AssignDispatchers({
                     (dispatcher) => dispatcher.id === id
                   );
                   if (selectedDispatcher) {
-                    const filteredMarkers = loadedOrders.filter(order => order.dispatcherId === id)
+                    const filteredMarkers = selectedOrders.filter(order => order.dispatcherId === id)
                       .map((order) => {
                         return addMarkerwithColor(order, dispatchers);
                       })
@@ -185,7 +185,7 @@ export default function AssignDispatchers({
                   }
                 } else {
                   // Show all orders when "All Dispatchers" is selected
-                  const allMarkers = loadedOrders
+                  const allMarkers = selectedOrders
                     .map((order) => {
                       return addMarkerwithColor(order, dispatchers);
                     })
@@ -210,7 +210,7 @@ export default function AssignDispatchers({
                 ? dispatchers.find((d) => d.id === selectedId) || null
                 : null
             }
-            orders={loadedOrders}
+            orders={selectedOrders}
             dispatchers={dispatchers}
             setMarkers={setMarkers}
             setHoveredOrderId={setHoveredOrderId}

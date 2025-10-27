@@ -10,9 +10,9 @@ import type { Customer } from "../types/customer.ts";
 
 import Upload from "../components/UploadModal.tsx";
 import { useSelector, useDispatch } from "react-redux";
-import { setDate, setTimePeriod, setStatus, setLoadedOrders } from "../store/orderSlice.ts";
+import { setDate, setTimePeriod, setStatus, setSelectedOrders } from "../store/orderSlice.ts";
 import type { RootState } from "../store";
-import LoadedOrderModal from "../components/LoadedOrderModal.tsx";
+import SelectedOrderModal from "../components/SelectedOrderModal.tsx";
 import {sortOrders} from "../utils/sortingUtils.ts";
 
 type TimePeriod = "Morning" | "Afternoon" | "Evening";
@@ -25,17 +25,17 @@ export default function ViewOrders({
   setMarkers: (markers: MarkerData[]) => void;
 }) {
   const dispatch = useDispatch();
-  const loadedOrders = useSelector((state: RootState) => state.order.loadedOrders);
+  const selectedOrders = useSelector((state: RootState) => state.order.selectedOrders);
   const date = useSelector((state: RootState) => state.order.date);
   const timePeriod = useSelector((state: RootState) => state.order.timePeriod);
   const status = useSelector((state: RootState) => state.order.status);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isLoadedOrderModal, setIsLoadedOrderModal] = useState(false);
+  const [isSelectedOrderModal, setIsSelectedOrderModal] = useState(false);
   const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
 
-  console.log("loadedOrders", JSON.parse(JSON.stringify(loadedOrders)))
+  console.log("selectedOrders", JSON.parse(JSON.stringify(selectedOrders)))
 
   const columns = [
     {
@@ -82,12 +82,12 @@ export default function ViewOrders({
   const handleRowSelect = (record: Order, selected: boolean) => {
     if (selected) {
       setSelectedRowIds((prev) => [...prev, record.id]);
-      const sortedOrders = sortOrders([...loadedOrders, record])
-      dispatch(setLoadedOrders(sortedOrders));
+      const sortedOrders = sortOrders([...selectedOrders, record])
+      dispatch(setSelectedOrders(sortedOrders));
     } else {
       setSelectedRowIds(selectedRowIds.filter((id) => id !== record.id));
       dispatch(
-        setLoadedOrders(loadedOrders.filter((order) => order.id !== record.id))
+        setSelectedOrders(selectedOrders.filter((order) => order.id !== record.id))
       );
     }
   };
@@ -103,13 +103,13 @@ export default function ViewOrders({
             setSelectedRowIds((prev) => [...prev, record.id]);
           });*/
       setSelectedRowIds((prev) => [...prev, ...changedId]);
-      const sortedOrders = sortOrders([...loadedOrders, ...changeRows])
-      dispatch(setLoadedOrders(sortedOrders));
+      const sortedOrders = sortOrders([...selectedOrders, ...changeRows])
+      dispatch(setSelectedOrders(sortedOrders));
     } else {
       setSelectedRowIds((prev) => prev.filter((id) => !changedId.includes(id)));
       dispatch(
-        setLoadedOrders(
-          loadedOrders.filter((order) => !changedId.includes(order.id))
+        setSelectedOrders(
+          selectedOrders.filter((order) => !changedId.includes(order.id))
         )
       );
     }
@@ -144,8 +144,8 @@ export default function ViewOrders({
   }, [isUploadModalOpen]);
 
   useEffect(() => {
-    setSelectedRowIds(loadedOrders.map(order => order.id));
-  }, [loadedOrders]);
+    setSelectedRowIds(selectedOrders.map(order => order.id));
+  }, [selectedOrders]);
 
   // Use useMemo to cache filtered orders and prevent infinite re-renders
   const filteredOrders = useMemo(() => {
@@ -171,11 +171,11 @@ export default function ViewOrders({
     const fetchAndSetMarkers = async () => {
       const dispatchersData = await getAllDispatchers();
       if (dispatchersData)
-        setMarkers(setMarkersList(loadedOrders, dispatchersData));
+        setMarkers(setMarkersList(selectedOrders, dispatchersData));
     };
 
     fetchAndSetMarkers();
-  }, [loadedOrders, setMarkers]);
+  }, [selectedOrders, setMarkers]);
 
   return (
     <Row style={{ height: "100%" }}>
@@ -227,7 +227,7 @@ export default function ViewOrders({
           <Space direction="vertical" style={{ width: "100%" }}>
             <Row justify="end">
               <Badge
-                count={loadedOrders.length}
+                count={selectedOrders.length}
                 offset={[-2, 2]}
                 style={{
                   fontSize: "10px",
@@ -239,16 +239,16 @@ export default function ViewOrders({
               >
                 <Button
                   type="primary"
-                  onClick={() => setIsLoadedOrderModal(true)}
+                  onClick={() => setIsSelectedOrderModal(true)}
                 >
-                  Loaded Orders
+                  Selected Orders
                 </Button>
               </Badge>
             </Row>
-            <LoadedOrderModal
-              orders={loadedOrders}
-              isVisible={isLoadedOrderModal}
-              setVisibility={setIsLoadedOrderModal}
+            <SelectedOrderModal
+              orders={selectedOrders}
+              isVisible={isSelectedOrderModal}
+              setVisibility={setIsSelectedOrderModal}
               setSelectedRowIds={setSelectedRowIds}
             />
             <Table

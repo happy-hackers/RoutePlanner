@@ -4,7 +4,7 @@ import type { Dispatcher } from "../types/dispatchers";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../store";
 import { updateOrder } from "../utils/dbUtils";
-import { setLoadedOrders } from "../store/orderSlice";
+import { setSelectedOrders } from "../store/orderSlice";
 import type { MarkerData } from "../types/markers";
 import { setMarkersList } from "../utils/markersUtils";
 
@@ -34,7 +34,7 @@ export default function Dispatcherform({
   // get global time information from redux
   const { message } = App.useApp();
   const dispatch = useDispatch();
-  const loadedOrders = useSelector((state: RootState) => state.order.loadedOrders);
+  const selectedOrders = useSelector((state: RootState) => state.order.selectedOrders);
 
   const handleChange = async (
     dispatcherId: number,
@@ -50,10 +50,10 @@ export default function Dispatcherform({
       };
       const result = await updateOrder(updatedOrder);
       if (result.success) {
-        const newOrders = loadedOrders.map((order) =>
+        const newOrders = selectedOrders.map((order) =>
           order.id === updatedOrder.id ? {...updatedOrder, customer} : order
         );
-        dispatch(setLoadedOrders(newOrders));
+        dispatch(setSelectedOrders(newOrders));
         const newMarkers = setMarkersList(newOrders, dispatchers)
         setMarkers(newMarkers);
         message.success(`Order ${order.id} is not assigned`);
@@ -68,10 +68,10 @@ export default function Dispatcherform({
       };
       const result = await updateOrder(updatedOrder);
       if (result.success) {
-        const newOrders = loadedOrders.map((order) =>
+        const newOrders = selectedOrders.map((order) =>
           order.id === updatedOrder.id ? {...updatedOrder, customer} : order
         );
-        dispatch(setLoadedOrders(newOrders));
+        dispatch(setSelectedOrders(newOrders));
         let newMarkers;
         if (selectedDispatcher) {
           const newOrderData = newOrders.filter(order => order.dispatcherId === selectedDispatcher.id);

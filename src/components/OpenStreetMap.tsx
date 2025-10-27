@@ -68,14 +68,14 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
   const SERVER_URL = import.meta.env.VITE_SERVER_URL;
   const { message } = App.useApp();
   const settingInfo: any = localStorage.getItem("settings");
-  
-  const defaultIcon = new L.Icon({
-    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  });
+
+  // const defaultIcon = new L.Icon({
+  //   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  //   iconSize: [25, 41],
+  //   iconAnchor: [12, 41],
+  //   popupAnchor: [1, -34],
+  //   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  // });
 
   useEffect(() => {
     setOptions({ key: GOOGLE_API_KEY });
