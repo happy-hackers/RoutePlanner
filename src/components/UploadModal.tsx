@@ -127,6 +127,7 @@ function JsonUploadModal({
   const [processedOrders, setProcessedOrders] = useState<Omit<Order, "id">[]>([]);
   const [failedAddresses, setFailedAddresses] = useState<{ address: string; error: string }[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
 
   // Initialize geocoder
@@ -143,6 +144,7 @@ function JsonUploadModal({
     setNewCustomers([]);
     setProcessedOrders([]);
     setFailedAddresses([]);
+    setIsProcessing(false);
   };
 
   const handleUpload = async () => {
@@ -158,6 +160,7 @@ function JsonUploadModal({
 
     const reader = new FileReader();
     reader.onload = async (e) => {
+      setIsProcessing(true);
       try {
         const fileContent = e.target?.result as string;
         let orders: Partial<Order>[] = [];
@@ -259,10 +262,7 @@ function JsonUploadModal({
                 if (customerIdMap.has(addressKey)) {
                   finalCustomerId = customerIdMap.get(addressKey);
                   customerData = customersToCreate.find(
-                    (c) =>
-                      c.detailedAddress === order.detailedAddress &&
-                      c.area === order.area &&
-                      c.district === order.district
+                    (c) => c.tempId === addressKey
                   );
                 } else {
                   // Geocode the address
@@ -278,13 +278,21 @@ function JsonUploadModal({
                   // Add small delay to avoid rate limiting
                   await new Promise((resolve) => setTimeout(resolve, 100));
 
+                  // Validate that we have valid area and district (from CSV or geocoding)
+                  const finalArea = order.area || geoResult.area;
+                  const finalDistrict = order.district || geoResult.district;
+
+                  if (!finalArea || !finalDistrict) {
+                    throw new Error("Could not determine Hong Kong area/district for this address");
+                  }
+
                   const newCustomer: NewCustomerData = {
                     name: `Customer at ${order.detailedAddress.substring(0, 30)}`,
                     openTime: "09:00",
                     closeTime: "18:00",
                     detailedAddress: order.detailedAddress,
-                    area: order.area || geoResult.area,
-                    district: order.district || geoResult.district,
+                    area: finalArea,
+                    district: finalDistrict,
                     lat: order.lat || geoResult.lat,
                     lng: order.lng || geoResult.lng,
                     postcode: order.postcode,
@@ -337,6 +345,8 @@ function JsonUploadModal({
         message.error(
           `Error processing file: ${err instanceof Error ? err.message : "Unknown error"}`
         );
+      } finally {
+        setIsProcessing(false);
       }
     };
     reader.readAsText(selectedFile);
@@ -413,17 +423,18 @@ function JsonUploadModal({
     <>
       <Modal
         title="Upload JSON/CSV File"
-        open={isOpen}
+        open={isOpen && !showPreview}
         onCancel={handleClose}
         footer={[
-          <Button key="cancel" onClick={handleClose}>
+          <Button key="cancel" onClick={handleClose} disabled={isProcessing}>
             Cancel
           </Button>,
           <Button
             key="upload"
             type="primary"
             onClick={handleUpload}
-            disabled={!selectedFile}
+            disabled={!selectedFile || isProcessing}
+            loading={isProcessing}
           >
             Upload
           </Button>,

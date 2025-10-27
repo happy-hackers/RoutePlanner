@@ -23,15 +23,19 @@ export async function geocodeAddressWithDetails(
         const result = results[0];
         const loc = result.geometry.location;
 
-        // Extract area and district from address components
-        const { area, district } = extractAreaAndDistrict(result.address_components);
+        try {
+          // Extract area and district from address components
+          const { area, district } = extractAreaAndDistrict(result.address_components);
 
-        resolve({
-          lat: loc.lat(),
-          lng: loc.lng(),
-          area,
-          district,
-        });
+          resolve({
+            lat: loc.lat(),
+            lng: loc.lng(),
+            area: area || "",
+            district: district || "",
+          });
+        } catch (error) {
+          reject(`Failed to extract area/district for "${address}": ${error instanceof Error ? error.message : "Unknown error"}`);
+        }
       } else {
         reject(`Geocode failed for "${address}" with status: ${status}`);
       }
@@ -43,10 +47,15 @@ export async function geocodeAddressWithDetails(
  * Extract Hong Kong area and district from Google geocoding address components
  */
 function extractAreaAndDistrict(
-  components: google.maps.GeocoderAddressComponent[]
+  components: google.maps.GeocoderAddressComponent[] | undefined
 ): { area: string; district: string } {
   let area = "";
   let district = "";
+
+  // Check if components exist and is an array
+  if (!components || !Array.isArray(components) || components.length === 0) {
+    return { area: "", district: "" };
+  }
 
   // Try to find district from neighborhood or sublocality
   const districtComponent = components.find(
