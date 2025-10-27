@@ -98,6 +98,10 @@ export default function Dispatcherform({
       dataIndex: "id",
       key: "id",
       width: "12%",
+      sorter: (a: Order, b: Order) => {
+        return a.id - b.id;
+      },
+      sortDirections: ["ascend", "descend"] as unknown as ("ascend" | "descend" | null)[],
     },
     {
       title: "Address",
@@ -105,6 +109,9 @@ export default function Dispatcherform({
       key: "detailedAddress",
       ellipsis: true,
       width: "60%",
+      sorter: (a: Order, b: Order) =>
+        a.detailedAddress.localeCompare(b.detailedAddress), 
+      sortDirections: ["ascend", "descend"] as unknown as ("ascend" | "descend" | null)[],
       render: (detailedAddress: string, record: Order) => (
         <Text>
           {detailedAddress}, {record.area}
@@ -116,6 +123,14 @@ export default function Dispatcherform({
       dataIndex: "dispatcherId",
       key: "dispatcherId",
       width: "28%",
+      sorter: (a: Order, b: Order) => {
+        const nameA =
+          dispatchers.find((d) => d.id === a.dispatcherId)?.name || "Not Assigned";
+        const nameB =
+          dispatchers.find((d) => d.id === b.dispatcherId)?.name || "Not Assigned";
+        return nameA.localeCompare(nameB);
+      },
+      sortDirections: ["ascend", "descend"] as unknown as ("ascend" | "descend" | null)[],
       render: (dispatcherId: number | undefined, record: Order) => {
         const value = dispatcherId ?? null;
         return (
