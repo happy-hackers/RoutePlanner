@@ -1,11 +1,10 @@
-import { Select, Button, Row, Col, Space, App } from "antd";
+import { Select, Button, Row, Col, Space, App, Popconfirm } from "antd";
 import { useState, useEffect } from "react";
 import Dispatcherform from "../components/Dispatcherform";
 import type { Dispatcher } from "../types/dispatchers";
 import {
   getAllDispatchers,
   updateOrder,
-  getInProgressOrdersByDispatcherId,
 } from "../utils/dbUtils";
 import type { MarkerData } from "../types/markers";
 import type { Order } from "../types/order";
@@ -13,6 +12,7 @@ import { addMarkerwithColor, setMarkersList } from "../utils/markersUtils";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../store";
 import { setSelectedOrders } from "../store/orderSlice";
+import type { Customer } from "../types/customer";
 
 export default function AssignDispatchers({
   setMarkers,
@@ -26,11 +26,10 @@ export default function AssignDispatchers({
   const { message } = App.useApp();
   const dispatch = useDispatch();
   const selectedOrders = useSelector((state: RootState) => state.order.selectedOrders);
+  const isEveryOrderAssigned = selectedOrders.every(order => order.dispatcherId !== null && order.dispatcherId !== undefined);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
-
-  //console.log("selectedOrders", JSON.parse(JSON.stringify(selectedOrders)))
 
   useEffect(() => {
     const fetchDispatchers = async () => {
@@ -56,31 +55,68 @@ export default function AssignDispatchers({
     })),
   ];
 
-  const getDispatcherWithLeastOrders = async (dispatchers: Dispatcher[]) => {
+  const handleUpdateOrders = async (
+    order: Order | (Order & { matchedDispatchers: Dispatcher[] }), dispatcher: Dispatcher, newActiveOrders: Order[]
+  ) : Promise<Order[]> => {
+    let customer: Customer | undefined;
+    let rest: Omit<Order, "customer">;
+    let matchedDispatchers: Dispatcher[] = [];
+    if ("matchedDispatchers" in order) {
+      ({ customer, matchedDispatchers, ...rest } = order);
+    } else {
+      ({ customer, ...rest } = order);
+    }
+    void matchedDispatchers;
+    const updatedOrder: Order = {
+      ...rest,
+      dispatcherId: dispatcher.id,
+      status: "In Progress",
+    };
+    const result = await updateOrder(updatedOrder);
+
+    if (result.success) {
+      newActiveOrders = newActiveOrders.map((order) =>
+        order.id === updatedOrder.id ? { ...updatedOrder, customer: customer ?? undefined } : order
+      );
+      const newMarkers = setMarkersList(newActiveOrders, dispatchers);
+      setMarkers(newMarkers);
+      message.success(`Order ${order.id} assigned to ${dispatcher.name}`);
+    } else {
+      message.error(`Failed to update order ${order.id}: ${result.error}`);
+    }
+    return newActiveOrders
+  };
+
+  const getDispatcherWithLeastAssigned = (
+    dispatchers: Dispatcher[],
+    tempOrders: Order[]
+  ): Dispatcher | null => {
     let minDispatcher: Dispatcher | null = null;
-    let minOrders = Infinity;
+    let minCount = Infinity;
 
     for (const dispatcher of dispatchers) {
-      const orders = await getInProgressOrdersByDispatcherId(dispatcher.id);
-      if (orders) {
-        const orderCount = orders.length;
-        if (orderCount < minOrders) {
-          minOrders = orderCount;
-          minDispatcher = dispatcher;
-        }
+      const assignedCount = tempOrders.filter(
+        (order) => order.dispatcherId === dispatcher.id
+      ).length;
+
+      if (assignedCount < minCount) {
+        minCount = assignedCount;
+        minDispatcher = dispatcher;
       }
     }
+
     return minDispatcher;
-  }
+  };
 
-  const assignOrders = async () => {
+  const assignOrders = async (newActiveOrders: Order[]) => {
     setIsAssigning(true);
-    if (dispatchers.length === 0)
-      return
-
-    let newSelectedOrders = [...selectedOrders]
-
-    for (const order of selectedOrders) {
+    if (dispatchers.length === 0) return;
+    // 1. First assign those orders whose area or district only matches to one dispatcher
+    // 2. Then assign those orders whose area or district matches more than one dispatcher
+    // 3. Lastly assign those orders whose area or district doesn't match any dispatcher
+    let unassignedOrderswithDispatchers: (Order & { matchedDispatchers: Dispatcher[] })[] = [];
+    let unassignedOrderswithNoDispatchers: Order[] = [];
+    for (const order of newActiveOrders) {
       // Skip already assigned orders
       if (order.dispatcherId) {
         continue;
@@ -93,7 +129,6 @@ export default function AssignDispatchers({
       }
 
       let matchedDispatcher;
-
       // Try to find a dispatcher by district first
       let matchedDispatchers = dispatchers.filter((d) =>
         d.responsibleArea.some(
@@ -101,8 +136,6 @@ export default function AssignDispatchers({
             district.toLowerCase() === customer.district.toLowerCase()
         )
       );
-      console.log("matchedDispatchers", matchedDispatchers)
-
       // If there is no district matched, try to find a area
       if (matchedDispatchers.length === 0) {
         matchedDispatchers = dispatchers.filter((d) =>
@@ -110,54 +143,71 @@ export default function AssignDispatchers({
             ([area]) => area.toLowerCase() === customer.area.toLowerCase()
           )
         );
-        // If no one matched, assign it to the dispatcher who has least number of in-progressed order
         // If there is only one dispatcher matched, assign the order to the person
-        // If more than one dispatcher, assign it to the dispatcher who has least number of in-progressed order
         if (matchedDispatchers.length === 0) {
-          matchedDispatcher = await getDispatcherWithLeastOrders(dispatchers)
+          unassignedOrderswithNoDispatchers.push(order);
+          continue;
         } else if (matchedDispatchers.length === 1) {
+          
           matchedDispatcher = matchedDispatchers[0];
         } else if (matchedDispatchers.length > 1) {
-          matchedDispatcher = await getDispatcherWithLeastOrders(matchedDispatchers)
+          unassignedOrderswithDispatchers.push({
+            ...order,
+            matchedDispatchers,
+          });
+          continue;
         }
       } else if (matchedDispatchers.length === 1) {
         matchedDispatcher = matchedDispatchers[0];
       } else if (matchedDispatchers.length > 1) {
-        console.log("length", matchedDispatchers.length)
-        matchedDispatcher = await getDispatcherWithLeastOrders(matchedDispatchers)
+        unassignedOrderswithDispatchers.push({ ...order, matchedDispatchers });
+        console.log("unassignedOrderswithDispatchers", unassignedOrderswithDispatchers)
+        continue;
       }
-
-      console.log("matchedDispatcher", matchedDispatcher);
-
       if (matchedDispatcher) {
-        const { customer, ...rest } = order;
-        const updatedOrder: Order = {
-          ...rest,
-          dispatcherId: matchedDispatcher.id,
-          status: "In Progress",
-        };
-        const result = await updateOrder(updatedOrder);
-
-        if (result.success) {
-          newSelectedOrders = newSelectedOrders.map((order) =>
-            order.id === updatedOrder.id ? { ...updatedOrder, customer } : order
-          );
-          const newMarkers = setMarkersList(newSelectedOrders, dispatchers)
-          setMarkers(newMarkers);
-          message.success(
-            `Order ${order.id} assigned to ${matchedDispatcher.name}`
-          );
-        } else {
-          message.error(`Failed to update order ${order.id}: ${result.error}`);
-        }
+        newActiveOrders = await handleUpdateOrders(order, matchedDispatcher, newActiveOrders);
       } else {
         message.warning(`No dispatcher found for order ${order.id}`);
       }
-    }
+}
+      if (unassignedOrderswithDispatchers.length > 0) {
+        for (const order of unassignedOrderswithDispatchers) {
+          const dispatcher = getDispatcherWithLeastAssigned(
+            order.matchedDispatchers,
+            newActiveOrders
+          );
+          if (dispatcher) {
+            newActiveOrders = await handleUpdateOrders(order, dispatcher, newActiveOrders);
+          } else {
+            message.warning(`No dispatcher found for order ${order.id}`);
+          }
+        }
+      }
+      if (unassignedOrderswithNoDispatchers.length > 0) {
+        for (const order of unassignedOrderswithNoDispatchers) {
+          const dispatcher = getDispatcherWithLeastAssigned(
+            dispatchers,
+            newActiveOrders
+          );
+          if (dispatcher) {
+            newActiveOrders = await handleUpdateOrders(order, dispatcher, newActiveOrders);
+          } else {
+            message.warning(`No dispatcher found for order ${order.id}`);
+          }
+        }
+      }
+      dispatch(setSelectedOrders(newActiveOrders));
+      setIsAssigning(false);
 
-    dispatch(setSelectedOrders(newSelectedOrders));
-    setIsAssigning(false);
   };
+    const confirm = () => {
+      const newActiveOrders = selectedOrders.map(order => ({
+        ...order,
+        dispatcherId: undefined,
+      }));
+      assignOrders(newActiveOrders);
+      console.log("newActiveOrders", newActiveOrders)
+    };
 
   return (
     <Row style={{ height: "100%" }}>
@@ -195,14 +245,28 @@ export default function AssignDispatchers({
               }}
               options={dispatchersOption}
             />
-            <Button
-              type="primary"
-              onClick={() => assignOrders()}
-              loading={isAssigning}
-              disabled={selectedId !== null}
-            >
-              {isAssigning ? "Assigning..." : "Auto Assign"}
-            </Button>
+            {isEveryOrderAssigned ? (
+              <Popconfirm
+                placement="rightBottom"
+                title={"Do you want to re-assign orders?"}
+                okText="Yes"
+                cancelText="No"
+                onConfirm={confirm}
+              >
+                <Button type="primary" loading={isAssigning} disabled={selectedId !== null}>
+                  {isAssigning ? "Assigning..." : "Auto Assign"}
+                </Button>
+              </Popconfirm>
+            ) : (
+              <Button
+                type="primary"
+                loading={isAssigning}
+                disabled={selectedId !== null}
+                onClick={() => assignOrders(selectedOrders)}
+              >
+                {isAssigning ? "Assigning..." : "Auto Assign"}
+              </Button>
+            )}
           </Space>
           <Dispatcherform
             selectedDispatcher={
