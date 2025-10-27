@@ -1,6 +1,6 @@
 export interface Dispatcher {
   id: number;
   name: string;
-  activeDay: string[];
+  activeDay: Record<string, string[]>;
   responsibleArea: string[][];
 }
