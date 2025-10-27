@@ -4,7 +4,7 @@ import type { Order } from "../types/order";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../store";
 import ActionConfirmModal from "./ActionConfirmModal";
-import { setLoadedOrders } from "../store/orderSlice";
+import { setSelectedOrders } from "../store/orderSlice";
 
 const { Text } = Typography;
 
@@ -15,7 +15,7 @@ interface ServerListModalProps {
   setSelectedRowIds: React.Dispatch<React.SetStateAction<number[]>>;
 }
 
-const LoadedOrderModal: React.FC<ServerListModalProps> = ({
+const SelectedOrderModal: React.FC<ServerListModalProps> = ({
   orders,
   isVisible,
   setVisibility,
@@ -23,8 +23,8 @@ const LoadedOrderModal: React.FC<ServerListModalProps> = ({
 }) => {
   const [isActionConfirm, setIsActionConfirm] = useState(false);
   const dispatch = useDispatch();
-  const loadedOrders = useSelector(
-    (state: RootState) => state.order.loadedOrders
+  const selectedOrders = useSelector(
+    (state: RootState) => state.order.selectedOrders
   );
 
   const columns = [
@@ -64,19 +64,19 @@ const LoadedOrderModal: React.FC<ServerListModalProps> = ({
   ];
 
   const handleDelete = (id: number) => {
-    dispatch(setLoadedOrders(loadedOrders.filter((order) => order.id !== id)));
+    dispatch(setSelectedOrders(selectedOrders.filter((order) => order.id !== id)));
     setSelectedRowIds((prev) => prev.filter((rowId) => rowId !== id))
   };
 
   const handleDeleteAll = () => {
-    dispatch(setLoadedOrders([]));
+    dispatch(setSelectedOrders([]));
     setSelectedRowIds([]);
   };
 
   return (
     <>
       <Modal
-        title="Loaded Orders"
+        title="Selected Orders"
         open={isVisible}
         onCancel={() => setVisibility(false)}
         footer={[
@@ -106,7 +106,7 @@ const LoadedOrderModal: React.FC<ServerListModalProps> = ({
       </Modal>
       <ActionConfirmModal
         isOpen={isActionConfirm}
-        description={"Do you want to remove all loaded orders"}
+        description={"Do you want to remove all selected orders"}
         actionText={"Yes"}
         cancelText={"No"}
         onConfirm={() => {
@@ -119,4 +119,4 @@ const LoadedOrderModal: React.FC<ServerListModalProps> = ({
   );
 };
 
-export default LoadedOrderModal;
+export default SelectedOrderModal;

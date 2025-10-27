@@ -13,6 +13,7 @@ interface Option {
 }
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const periods = ["Morning", "Afternoon", "Evening"];
 
 const options: Option[] = Object.entries(areaData).map(([region, districts]) => ({
   label: region,
@@ -78,14 +79,14 @@ export default function DispatcherModal({
 
   const handleSubmit = async (values: {
     name: string;
-    activeDay: string[];
+    activeDay: Record<string, string[]>;
     responsibleArea: string[][];
   }) => {
     try {
       if (mode === "add") {
         const result = await addDispatcher({
           name: values.name,
-          activeDay: values.activeDay || [],
+          activeDay: values.activeDay || {},
           responsibleArea: values.responsibleArea || [],
         });
 
@@ -102,7 +103,7 @@ export default function DispatcherModal({
         const updatedDispatcher: Dispatcher = {
           ...dispatcher,
           name: values.name,
-          activeDay: values.activeDay || [],
+          activeDay: values.activeDay || {},
           responsibleArea: values.responsibleArea || [],
         };
 
@@ -142,7 +143,7 @@ export default function DispatcherModal({
         layout="vertical"
         onFinish={handleSubmit}
         initialValues={{
-          activeDay: [],
+          activeDay: {},
           responsibleArea: [],
         }}
       >
@@ -155,15 +156,82 @@ export default function DispatcherModal({
         </Form.Item>
 
         <Form.Item name="activeDay" label="Active Days">
-          <Checkbox.Group>
-            <Space wrap>
-              {days.map((day) => (
-                <Checkbox key={day} value={day}>
-                  {day}
-                </Checkbox>
-              ))}
-            </Space>
-          </Checkbox.Group>
+          <Form.Item noStyle shouldUpdate>
+            {({ getFieldValue, setFieldValue }) => {
+              const activeDay = getFieldValue("activeDay") || {};
+
+              const handleCheckboxChange = (day: string, period: string, checked: boolean) => {
+                const currentPeriods = activeDay[day] || [];
+                const newPeriods = checked
+                  ? [...currentPeriods, period]
+                  : currentPeriods.filter((p: string) => p !== period);
+
+                const newActiveDay = { ...activeDay };
+                if (newPeriods.length > 0) {
+                  newActiveDay[day] = newPeriods;
+                } else {
+                  delete newActiveDay[day];
+                }
+
+                setFieldValue("activeDay", newActiveDay);
+              };
+
+              const handleDayCheckboxChange = (day: string, checked: boolean) => {
+                const newActiveDay = { ...activeDay };
+                if (checked) {
+                  // Select all periods for this day
+                  newActiveDay[day] = [...periods];
+                } else {
+                  // Deselect all periods for this day
+                  delete newActiveDay[day];
+                }
+                setFieldValue("activeDay", newActiveDay);
+              };
+
+              return (
+                <div style={{ border: "1px solid #d9d9d9", borderRadius: "4px", padding: "12px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "40px 60px repeat(3, 1fr)", gap: "8px", alignItems: "center" }}>
+                    {/* Header row */}
+                    <div></div>
+                    <div></div>
+                    {periods.map((period) => (
+                      <div key={period} style={{ fontWeight: "bold", textAlign: "center", color: "#ff4d4f" }}>
+                        {period}
+                      </div>
+                    ))}
+
+                    {/* Day rows */}
+                    {days.map((day) => {
+                      const dayPeriods = activeDay[day] || [];
+                      const isAllSelected = dayPeriods.length === periods.length;
+
+                      return (
+                        <>
+                          <div key={`${day}-checkbox`} style={{ textAlign: "center" }}>
+                            <Checkbox
+                              checked={isAllSelected}
+                              onChange={(e) => handleDayCheckboxChange(day, e.target.checked)}
+                            />
+                          </div>
+                          <div key={`${day}-label`} style={{ fontWeight: "500", color: "#ff4d4f" }}>
+                            {day}
+                          </div>
+                          {periods.map((period) => (
+                            <div key={`${day}-${period}`} style={{ textAlign: "center" }}>
+                              <Checkbox
+                                checked={dayPeriods.includes(period)}
+                                onChange={(e) => handleCheckboxChange(day, period, e.target.checked)}
+                              />
+                            </div>
+                          ))}
+                        </>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            }}
+          </Form.Item>
         </Form.Item>
 
         <Form.Item name="responsibleArea" label="Responsible Areas">

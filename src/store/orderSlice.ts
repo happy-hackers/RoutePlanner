@@ -5,14 +5,14 @@ import type { Order, OrderStatus } from "../types/order.ts";
 export type TimePeriod = "Morning" | "Afternoon" | "Evening";
 
 interface OrderState {
-  loadedOrders: Order[];
+  selectedOrders: Order[];
   status: OrderStatus[];
   date: Dayjs;
   timePeriod: TimePeriod[];
 }
 
 const initialState: OrderState = {
-  loadedOrders: [],
+  selectedOrders: [],
   status: ["In Progress"],
   date: dayjs(),
   timePeriod: ["Afternoon"],
@@ -22,8 +22,8 @@ const orderSlice = createSlice({
   name: "order",
   initialState,
   reducers: {
-    setLoadedOrders(state, action: PayloadAction<Order[]>) {
-      state.loadedOrders = action.payload;
+    setSelectedOrders(state, action: PayloadAction<Order[]>) {
+      state.selectedOrders = action.payload;
     },
     setStatus(state, action: PayloadAction<OrderStatus[]>) {
       state.status = action.payload;
@@ -37,5 +37,5 @@ const orderSlice = createSlice({
   },
 });
 
-export const { setLoadedOrders, setStatus, setDate, setTimePeriod } = orderSlice.actions;
+export const { setSelectedOrders, setStatus, setDate, setTimePeriod } = orderSlice.actions;
 export default orderSlice.reducer;

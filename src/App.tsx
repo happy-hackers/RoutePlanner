@@ -19,6 +19,7 @@ const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
 function AppContent() {
   const location = useLocation();
   const [markers, setMarkers] = useState<MarkerData[]>([]);
+  const [hoveredOrderId, setHoveredOrderId] = useState<number | null>(null);
 
   const needMap = ["/view-orders", "/assign-dispatcher"].some((path) => {
     const pattern = new RegExp("^" + path.replace(/:[^/]+/g, "[^/]+") + "$");
@@ -42,7 +43,7 @@ function AppContent() {
               />
               <Route
                 path="/assign-dispatcher"
-                element={<AssignDispatchers setMarkers={setMarkers} />}
+                element={<AssignDispatchers setMarkers={setMarkers} hoveredOrderId={hoveredOrderId} setHoveredOrderId={setHoveredOrderId} />}
               />
               <Route path="/set-dispatcher" element={<SetDispatcher />} />
               <Route path="/route-results" element={<RouteResults />} />
@@ -53,7 +54,7 @@ function AppContent() {
           </Col>
           {needMap && (
             <Col flex="auto">
-              <OpenStreetMap orderMarkers={markers} setOrderMarkers={setMarkers} />
+              <OpenStreetMap orderMarkers={markers} setOrderMarkers={setMarkers} hoveredOrderId={hoveredOrderId} />
             </Col>
           )}
         </Row>
