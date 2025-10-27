@@ -103,8 +103,6 @@ export default function NewOrderModal({
           radius: 50000,
         }
       });
-      //console.log("resultsSuggestions", JSON.parse(JSON.stringify(results.suggestions)))
-      //console.log("resultsSuggestions", results.suggestions?[0].placePrediction.secondaryText.text)
       setSuggestions(
         results.suggestions.map((s) => ({
           value: s.placePrediction?.placeId ?? "",
