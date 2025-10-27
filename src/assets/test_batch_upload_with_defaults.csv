@@ -1,0 +1,11 @@
+date,time,status,customerId,detailedAddress,area,district
+2025-01-20,Morning,Pending,9,,,
+,Afternoon,Pending,,"Shop 3, 15 Peking Road, Tsim Sha Tsui",,
+2025-01-20,,Pending,,"Tower 2, 8 Finance Street, Central",,
+,,Pending,,"Shop 3, 15 Peking Road, Tsim Sha Tsui",,
+2025-01-21,Morning,Pending,10,"G/F, 100 Nathan Road, Mong Kok, Kowloon",,
+,Afternoon,Pending,,"Shing Wan Rd, Tai Wai",New Territories,Sha Tin
+2025-01-21,,Pending,,"456 Des Voeux Road, Sheung Wan",Hong Kong Island,Central and Western
+,,Pending,,"123 Main Street, Causeway Bay",,
+2025-01-22,Evening,Pending,15,,,
+,,Pending,,"999 Sample Address, Wan Chai",,

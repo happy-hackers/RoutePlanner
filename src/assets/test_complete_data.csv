@@ -1,0 +1,6 @@
+date,time,status,customerId,detailedAddress,area,district
+2025-01-25,Morning,Pending,1,"Shop A, 100 Queen's Road, Central",Hong Kong Island,Central and Western
+2025-01-25,Afternoon,Pending,,"Flat B, 200 Nathan Road, Tsim Sha Tsui",Kowloon,Yau Tsim Mong
+2025-01-26,Evening,Pending,,"Unit C, 300 Hennessy Road, Wan Chai",Hong Kong Island,Wan Chai
+2025-01-26,Morning,Pending,,"Shop D, 400 Canton Road, Tsim Sha Tsui",Kowloon,Yau Tsim Mong
+2025-01-27,Afternoon,Pending,,"Office E, 500 Des Voeux Road, Sheung Wan",Hong Kong Island,Central and Western
