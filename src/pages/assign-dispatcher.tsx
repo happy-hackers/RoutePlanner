@@ -1,4 +1,4 @@
-import { Select, Button, Row, Col, Space, App } from "antd";
+import { Select, Button, Row, Col, Space, App, Popconfirm } from "antd";
 import { useState, useEffect } from "react";
 import Dispatcherform from "../components/Dispatcherform";
 import type { Dispatcher } from "../types/dispatchers";
@@ -22,6 +22,7 @@ export default function AssignDispatchers({
   const { message } = App.useApp();
   const dispatch = useDispatch();
   const loadedOrders = useSelector((state: RootState) => state.order.loadedOrders);
+  const isEveryOrderAssigned = loadedOrders.every(order => order.dispatcherId !== null && order.dispatcherId !== undefined);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
@@ -51,7 +52,7 @@ export default function AssignDispatchers({
   ];
 
   const handleUpdateOrders = async (
-    order: Order | (Order & { matchedDispatchers: Dispatcher[] }), dispatcher: Dispatcher, newLoadedOrders: Order[]
+    order: Order | (Order & { matchedDispatchers: Dispatcher[] }), dispatcher: Dispatcher, newActiveOrders: Order[]
   ) : Promise<Order[]> => {
     let customer: Customer | undefined;
     let rest: Omit<Order, "customer">;
@@ -70,16 +71,16 @@ export default function AssignDispatchers({
     const result = await updateOrder(updatedOrder);
 
     if (result.success) {
-      newLoadedOrders = newLoadedOrders.map((order) =>
+      newActiveOrders = newActiveOrders.map((order) =>
         order.id === updatedOrder.id ? { ...updatedOrder, customer: customer ?? undefined } : order
       );
-      const newMarkers = setMarkersList(newLoadedOrders, dispatchers);
+      const newMarkers = setMarkersList(newActiveOrders, dispatchers);
       setMarkers(newMarkers);
       message.success(`Order ${order.id} assigned to ${dispatcher.name}`);
     } else {
       message.error(`Failed to update order ${order.id}: ${result.error}`);
     }
-    return newLoadedOrders
+    return newActiveOrders
   };
 
   const getDispatcherWithLeastAssigned = (
@@ -103,17 +104,15 @@ export default function AssignDispatchers({
     return minDispatcher;
   };
 
-  const assignOrders = async () => {
+  const assignOrders = async (newActiveOrders: Order[]) => {
     setIsAssigning(true);
     if (dispatchers.length === 0) return;
-
-    let newLoadedOrders = [...loadedOrders];
     // 1. First assign those orders whose area or district only matches to one dispatcher
     // 2. Then assign those orders whose area or district matches more than one dispatcher
     // 3. Lastly assign those orders whose area or district doesn't match any dispatcher
     let unassignedOrderswithDispatchers: (Order & { matchedDispatchers: Dispatcher[] })[] = [];
     let unassignedOrderswithNoDispatchers: Order[] = [];
-    for (const order of loadedOrders) {
+    for (const order of newActiveOrders) {
       // Skip already assigned orders
       if (order.dispatcherId) {
         continue;
@@ -162,7 +161,7 @@ export default function AssignDispatchers({
         continue;
       }
       if (matchedDispatcher) {
-        newLoadedOrders = await handleUpdateOrders(order, matchedDispatcher, newLoadedOrders);
+        newActiveOrders = await handleUpdateOrders(order, matchedDispatcher, newActiveOrders);
       } else {
         message.warning(`No dispatcher found for order ${order.id}`);
       }
@@ -171,10 +170,10 @@ export default function AssignDispatchers({
         for (const order of unassignedOrderswithDispatchers) {
           const dispatcher = getDispatcherWithLeastAssigned(
             order.matchedDispatchers,
-            newLoadedOrders
+            newActiveOrders
           );
           if (dispatcher) {
-            newLoadedOrders = await handleUpdateOrders(order, dispatcher, newLoadedOrders);
+            newActiveOrders = await handleUpdateOrders(order, dispatcher, newActiveOrders);
           } else {
             message.warning(`No dispatcher found for order ${order.id}`);
           }
@@ -184,19 +183,27 @@ export default function AssignDispatchers({
         for (const order of unassignedOrderswithNoDispatchers) {
           const dispatcher = getDispatcherWithLeastAssigned(
             dispatchers,
-            newLoadedOrders
+            newActiveOrders
           );
           if (dispatcher) {
-            newLoadedOrders = await handleUpdateOrders(order, dispatcher, newLoadedOrders);
+            newActiveOrders = await handleUpdateOrders(order, dispatcher, newActiveOrders);
           } else {
             message.warning(`No dispatcher found for order ${order.id}`);
           }
         }
       }
-      dispatch(setLoadedOrders(newLoadedOrders));
+      dispatch(setLoadedOrders(newActiveOrders));
       setIsAssigning(false);
-    
+
   };
+    const confirm = () => {
+      const newActiveOrders = loadedOrders.map(order => ({
+        ...order,
+        dispatcherId: undefined,
+      }));
+      assignOrders(newActiveOrders);
+      console.log("newActiveOrders", newActiveOrders)
+    };
 
   return (
     <Row style={{ height: "100%" }}>
@@ -234,14 +241,28 @@ export default function AssignDispatchers({
               }}
               options={dispatchersOption}
             />
-            <Button
-              type="primary"
-              onClick={() => assignOrders()}
-              loading={isAssigning}
-              disabled={selectedId !== null}
-            >
-              {isAssigning ? "Assigning..." : "Auto Assign"}
-            </Button>
+            {isEveryOrderAssigned ? (
+              <Popconfirm
+                placement="rightBottom"
+                title={"Do you want to re-assign orders?"}
+                okText="Yes"
+                cancelText="No"
+                onConfirm={confirm}
+              >
+                <Button type="primary" loading={isAssigning} disabled={selectedId !== null}>
+                  {isAssigning ? "Assigning..." : "Auto Assign"}
+                </Button>
+              </Popconfirm>
+            ) : (
+              <Button
+                type="primary"
+                loading={isAssigning}
+                disabled={selectedId !== null}
+                onClick={() => assignOrders(loadedOrders)}
+              >
+                {isAssigning ? "Assigning..." : "Auto Assign"}
+              </Button>
+            )}
           </Space>
           <Dispatcherform
             selectedDispatcher={
