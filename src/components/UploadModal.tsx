@@ -288,8 +288,8 @@ function JsonUploadModal({
 
                   const newCustomer: NewCustomerData = {
                     name: `Customer at ${order.detailedAddress.substring(0, 30)}`,
-                    openTime: "09:00",
-                    closeTime: "18:00",
+                    openTime: "09:00:00",
+                    closeTime: "18:00:00",
                     detailedAddress: order.detailedAddress,
                     area: finalArea,
                     district: finalDistrict,
@@ -359,9 +359,10 @@ function JsonUploadModal({
 
       // Step 1: Create new customers
       for (const newCustomer of newCustomers) {
-        const result = await addCustomer(newCustomer);
+        const { tempId, ...customerWithoutTempId } = newCustomer;
+        const result = await addCustomer(customerWithoutTempId);
         if (result.success && result.data) {
-          const addressKey = newCustomer.tempId || "";
+          const addressKey = tempId || "";
           customerIdMap.set(addressKey, result.data.id);
         } else {
           message.error(`Failed to create customer: ${result.error || "Unknown error"}`);
