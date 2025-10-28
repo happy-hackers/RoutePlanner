@@ -23,7 +23,7 @@ export default function ViewCustomers() {
   const fetchCustomers = async () => {
     const customers = await getAllCustomers();
     if (customers) {
-      customers.sort((a, b) => a.name.localeCompare(b.name));
+      customers.sort((a, b) => a.id - b.id);
       setCustomers(customers);
     }
   };
