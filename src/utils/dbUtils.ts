@@ -176,13 +176,73 @@ export const updateCustomer = async (
       return {
         success: true
       }
-    }  
+    }
   } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Network error occurred",
       };
     }
+};
+
+export const deleteCustomer = async (
+  customerId: number
+): Promise<{ success: boolean; error?: string; orderCount?: number }> => {
+  try {
+    // First, check how many orders this customer has
+    const { count, error: countError } = await supabase
+      .from("orders")
+      .select("*", { count: "exact", head: true })
+      .eq("customer_id", customerId);
+
+    if (countError) {
+      console.error("Error checking orders:", countError);
+      return {
+        success: false,
+        error: countError.message,
+      };
+    }
+
+    // Delete all orders for this customer first (cascade delete pattern)
+    if (count && count > 0) {
+      const { error: deleteOrdersError } = await supabase
+        .from("orders")
+        .delete()
+        .eq("customer_id", customerId);
+
+      if (deleteOrdersError) {
+        console.error("Error deleting orders:", deleteOrdersError);
+        return {
+          success: false,
+          error: deleteOrdersError.message,
+        };
+      }
+    }
+
+    // Then delete the customer
+    const { error: deleteCustomerError } = await supabase
+      .from("customers")
+      .delete()
+      .eq("id", customerId);
+
+    if (deleteCustomerError) {
+      console.error("Error deleting customer:", deleteCustomerError);
+      return {
+        success: false,
+        error: deleteCustomerError.message,
+      };
+    }
+
+    return {
+      success: true,
+      orderCount: count || 0,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Network error occurred",
+    };
+  }
 };
 
 export const getAllDispatchers = async (): Promise<
