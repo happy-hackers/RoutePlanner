@@ -1,12 +1,14 @@
-import { Card, Typography, Row, Col, Button } from "antd";
+import { Card, Typography, Row, Col, Button, App } from "antd";
+import { DeleteOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
-import { getAllCustomers } from "../utils/dbUtils";
+import { getAllCustomers, deleteCustomer } from "../utils/dbUtils";
 import type { Customer } from "../types/customer.ts";
 import CustomerModal from "../components/CustomerModal";
 
 const { Text } = Typography;
 
 export default function ViewCustomers() {
+  const { modal, message } = App.useApp();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
@@ -21,7 +23,7 @@ export default function ViewCustomers() {
   const fetchCustomers = async () => {
     const customers = await getAllCustomers();
     if (customers) {
-      customers.sort((a, b) => a.name.localeCompare(b.name));
+      customers.sort((a, b) => a.id - b.id);
       setCustomers(customers);
     }
   };
@@ -45,6 +47,44 @@ export default function ViewCustomers() {
 
   const handleModalSuccess = () => {
     fetchCustomers(); // refresh customers
+  };
+
+  const handleDeleteCustomer = (customer: Customer) => {
+    modal.confirm({
+      title: "Delete Customer",
+      icon: <DeleteOutlined style={{ color: "red" }} />,
+      content: (
+        <div>
+          <p>
+            Are you sure you want to delete <strong>{customer.name}</strong>?
+          </p>
+          <p style={{ color: "red", marginTop: 8 }}>
+            <strong>Warning:</strong> This will permanently delete the customer
+            and all their associated orders. This action cannot be undone.
+          </p>
+        </div>
+      ),
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        const result = await deleteCustomer(customer.id);
+        if (result.success) {
+          message.success(
+            `Customer deleted successfully${
+              result.orderCount && result.orderCount > 0
+                ? ` (${result.orderCount} order${
+                    result.orderCount > 1 ? "s" : ""
+                  } also deleted)`
+                : ""
+            }`
+          );
+          fetchCustomers();
+        } else {
+          message.error(`Failed to delete customer: ${result.error}`);
+        }
+      },
+    });
   };
 
   return (
@@ -103,6 +143,15 @@ export default function ViewCustomers() {
               onClick={() => handleEditCustomer(customer)}
             >
               Edit
+            </Button>
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDeleteCustomer(customer)}
+            >
+              Delete
             </Button>
           </Col>
         </Row>

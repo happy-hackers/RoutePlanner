@@ -8,7 +8,7 @@ import type { MarkerData } from "../types/markers";
 import { setMarkersList } from "../utils/markersUtils.ts";
 import type { Customer } from "../types/customer.ts";
 
-import Upload from "../components/UploadModal.tsx";
+import { BatchUploadModal } from "../components/batch-upload";
 import { useSelector, useDispatch } from "react-redux";
 import { setDate, setTimePeriod, setStatus, setSelectedOrders } from "../store/orderSlice.ts";
 import type { RootState } from "../store";
@@ -190,7 +190,7 @@ export default function ViewOrders({
             <Button type="primary" onClick={() => setIsUploadModalOpen(true)}>
               Bulk Import Orders (Upload JSON/CSV)
             </Button>
-            <Upload
+            <BatchUploadModal
               isOpen={isUploadModalOpen}
               setOpen={setIsUploadModalOpen}
               onUploadComplete={fetchOrders}

@@ -1,6 +1,7 @@
-import { Card, Typography, Row, Col, Button } from "antd";
+import { Card, Typography, Row, Col, Button, App } from "antd";
+import { DeleteOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
-import { getAllDispatchers } from "../utils/dbUtils";
+import { getAllDispatchers, deleteDispatcher } from "../utils/dbUtils";
 import type { Dispatcher } from "../types/dispatchers";
 import DispatcherModal from "../components/DispatcherModal";
 import { sortDispatchers } from "../utils/sortingUtils";
@@ -8,6 +9,7 @@ import { sortDispatchers } from "../utils/sortingUtils";
 const { Text } = Typography;
 
 export default function SetDispatcher() {
+  const { modal, message } = App.useApp();
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
@@ -47,6 +49,44 @@ export default function SetDispatcher() {
 
   const handleModalSuccess = () => {
     fetchDispatchers(); // 刷新dispatcher列表
+  };
+
+  const handleDeleteDispatcher = (dispatcher: Dispatcher) => {
+    modal.confirm({
+      title: "Delete Dispatcher",
+      icon: <DeleteOutlined style={{ color: "red" }} />,
+      content: (
+        <div>
+          <p>
+            Are you sure you want to delete dispatcher <strong>{dispatcher.name}</strong>?
+          </p>
+          <p style={{ color: "red", marginTop: 8 }}>
+            <strong>Warning:</strong> This will permanently delete the dispatcher
+            and unassign all their orders. This action cannot be undone.
+          </p>
+        </div>
+      ),
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        const result = await deleteDispatcher(dispatcher.id);
+        if (result.success) {
+          message.success(
+            `Dispatcher deleted successfully${
+              result.orderCount && result.orderCount > 0
+                ? ` (${result.orderCount} order${
+                    result.orderCount > 1 ? "s" : ""
+                  } unassigned)`
+                : ""
+            }`
+          );
+          fetchDispatchers();
+        } else {
+          message.error(`Failed to delete dispatcher: ${result.error}`);
+        }
+      },
+    });
   };
 
   return (
@@ -153,6 +193,15 @@ export default function SetDispatcher() {
               onClick={() => handleEditDispatcher(dispatcher)}
             >
               Edit
+            </Button>
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDeleteDispatcher(dispatcher)}
+            >
+              Delete
             </Button>
           </Col>
         </Row>

@@ -176,13 +176,73 @@ export const updateCustomer = async (
       return {
         success: true
       }
-    }  
+    }
   } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Network error occurred",
       };
     }
+};
+
+export const deleteCustomer = async (
+  customerId: number
+): Promise<{ success: boolean; error?: string; orderCount?: number }> => {
+  try {
+    // First, check how many orders this customer has
+    const { count, error: countError } = await supabase
+      .from("orders")
+      .select("*", { count: "exact", head: true })
+      .eq("customer_id", customerId);
+
+    if (countError) {
+      console.error("Error checking orders:", countError);
+      return {
+        success: false,
+        error: countError.message,
+      };
+    }
+
+    // Delete all orders for this customer first (cascade delete pattern)
+    if (count && count > 0) {
+      const { error: deleteOrdersError } = await supabase
+        .from("orders")
+        .delete()
+        .eq("customer_id", customerId);
+
+      if (deleteOrdersError) {
+        console.error("Error deleting orders:", deleteOrdersError);
+        return {
+          success: false,
+          error: deleteOrdersError.message,
+        };
+      }
+    }
+
+    // Then delete the customer
+    const { error: deleteCustomerError } = await supabase
+      .from("customers")
+      .delete()
+      .eq("id", customerId);
+
+    if (deleteCustomerError) {
+      console.error("Error deleting customer:", deleteCustomerError);
+      return {
+        success: false,
+        error: deleteCustomerError.message,
+      };
+    }
+
+    return {
+      success: true,
+      orderCount: count || 0,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Network error occurred",
+    };
+  }
 };
 
 export const getAllDispatchers = async (): Promise<
@@ -298,6 +358,83 @@ export const updateDispatchers = async (
         error: errors,
       };
     }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Network error occurred",
+    };
+  }
+};
+
+export const deleteDispatcher = async (
+  dispatcherId: number
+): Promise<{ success: boolean; error?: string; orderCount?: number }> => {
+  try {
+    // First, check how many orders are assigned to this dispatcher
+    const { count, error: countError } = await supabase
+      .from("orders")
+      .select("*", { count: "exact", head: true })
+      .eq("dispatcher_id", dispatcherId);
+
+    if (countError) {
+      console.error("Error checking orders:", countError);
+      return {
+        success: false,
+        error: countError.message,
+      };
+    }
+
+    // Update orders based on their current status
+    if (count && count > 0) {
+      // For active orders ("In Progress", "Assigned"): reset to "Pending"
+      const { error: updateActiveOrdersError } = await supabase
+        .from("orders")
+        .update({ dispatcher_id: null, status: "Pending" })
+        .eq("dispatcher_id", dispatcherId)
+        .in("status", ["In Progress", "Assigned"]);
+
+      if (updateActiveOrdersError) {
+        console.error("Error updating active orders:", updateActiveOrdersError);
+        return {
+          success: false,
+          error: updateActiveOrdersError.message,
+        };
+      }
+
+      // For completed orders ("Delivered", "Cancelled"): only remove dispatcher_id
+      const { error: updateCompletedOrdersError } = await supabase
+        .from("orders")
+        .update({ dispatcher_id: null })
+        .eq("dispatcher_id", dispatcherId)
+        .in("status", ["Delivered", "Cancelled"]);
+
+      if (updateCompletedOrdersError) {
+        console.error("Error updating completed orders:", updateCompletedOrdersError);
+        return {
+          success: false,
+          error: updateCompletedOrdersError.message,
+        };
+      }
+    }
+
+    // Then delete the dispatcher
+    const { error: deleteDispatcherError } = await supabase
+      .from("dispatchers")
+      .delete()
+      .eq("id", dispatcherId);
+
+    if (deleteDispatcherError) {
+      console.error("Error deleting dispatcher:", deleteDispatcherError);
+      return {
+        success: false,
+        error: deleteDispatcherError.message,
+      };
+    }
+
+    return {
+      success: true,
+      orderCount: count || 0,
+    };
   } catch (error) {
     return {
       success: false,
