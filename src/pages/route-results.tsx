@@ -280,7 +280,8 @@ export default function RouteResults() {
                     danger
                     size="small"
                     type="primary"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       const filteredOrders = selectedOrders.filter(
                         (o) => o.dispatcherId === dispatcher.id
                       );
@@ -305,7 +306,8 @@ export default function RouteResults() {
                   <Button
                     size="small"
                     type="primary"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       mapRef.current?.triggerCalculate(dispatcher.id);
                     }}
                   >
