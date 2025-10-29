@@ -10,16 +10,34 @@ import SetDispatcher from "./pages/set-dispatcher";
 import Settings from "./pages/settings";
 import OpenStreetMap from "./components/OpenStreetMap";
 import { useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { MarkerData } from "./types/markers";
+import { useDispatch } from "react-redux";
+import { getAllDispatchers } from "./utils/dbUtils";
+import { setDispatchers } from "./store/dispatcherSlice";
 
 const { Content } = Layout;
 const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
 
 function AppContent() {
+  const dispatch = useDispatch();
   const location = useLocation();
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [hoveredOrderId, setHoveredOrderId] = useState<number | null>(null);
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const dispatchersData = await getAllDispatchers();
+        if (dispatchersData)
+          dispatch(setDispatchers(dispatchersData));
+      } catch (err) {
+        console.error("Failed to fetch dispatchers:", err);
+      }
+    };
+    fetchData();
+  }, []);
+
 
   const needMap = ["/view-orders", "/assign-dispatcher"].some((path) => {
     const pattern = new RegExp("^" + path.replace(/:[^/]+/g, "[^/]+") + "$");
@@ -54,7 +72,7 @@ function AppContent() {
           </Col>
           {needMap && (
             <Col flex="auto">
-              <OpenStreetMap orderMarkers={markers} setOrderMarkers={setMarkers} hoveredOrderId={hoveredOrderId} />
+              <OpenStreetMap orderMarkers={markers} setOrderMarkers={setMarkers} />
             </Col>
           )}
         </Row>

@@ -1,23 +1,33 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
 import { Input, Space, Button, Select, App } from "antd";
-import { MapContainer, TileLayer, Marker, Polyline, Popup } from "react-leaflet";
-import L, { type LatLngExpression } from "leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Polyline,
+  Popup,
+} from "react-leaflet";
+import L from "leaflet";
 import type { MarkerData } from "../types/markers";
 import orderedMarkerImg from "../assets/icons/orderedMarker.png";
 import startMarkerImg from "../assets/icons/startMarker.png";
 import endMarkerImg from "../assets/icons/endMarker.png";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
+import type { Route } from "../types/route";
+import type { Dispatcher } from "../types/dispatchers";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store";
+import { generateDispatcherColorsMap } from "../utils/markersUtils";
 
 interface NavigationMapProp {
   orderMarkers: MarkerData[];
-  setOrderMarkers: (markers: MarkerData[]) => void;
-  setSelectedRowId?: (rowIds: number[]) => void;
-  sortedMarkers?: (MarkerData & { travelTime: number })[];
-  setSortedMarkers?: (markers: (MarkerData & { travelTime: number })[]) => void;
-  setIsRouteMode?: (routeMode: boolean) => void;
-  isRouteMode?: boolean;
-  isRouteResults?: boolean;
-  hoveredOrderId?: number | null;
+  setOrderMarkers: React.Dispatch<React.SetStateAction<MarkerData[]>>;
+  setSelectedRowId?: React.Dispatch<React.SetStateAction<number[]>>;
+  isRouteResultsPage?: boolean;
+  routes?: Route[];
+  setRoutes?: React.Dispatch<React.SetStateAction<Route[]>>;
+  isAllRoutes?: boolean;
+  selectedDispatcher?: Dispatcher | null
 }
 
 function createNumberIcon(number: number) {
@@ -54,35 +64,53 @@ const endIcon = new L.Icon({
   iconAnchor: [20, 56],
 });
 
-const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMarkers, setSelectedRowId, sortedMarkers, setSortedMarkers, setIsRouteMode, isRouteMode, isRouteResults, hoveredOrderId }) => {
+const OpenStreetMap = forwardRef(({
+  orderMarkers,
+  setOrderMarkers,
+  setSelectedRowId,
+  isRouteResultsPage,
+  routes,
+  setRoutes,
+  isAllRoutes,
+  selectedDispatcher,
+}: NavigationMapProp, ref) => {
   const [startAddress, setStartAddress] = useState("");
   const [endAddress, setEndAddress] = useState("");
   const [searchOptions, setSearchOptions] = useState("normal");
-  const [totalTime, setTotalTime] = useState<number | undefined>();
-  const [route, setRoute] = useState<LatLngExpression[]>([]);
-  const [startMarker, setStartMarker] = useState<Omit<MarkerData, "id">>();
-  const [endMarker, setEndMarker] = useState<Omit<MarkerData, "id">>();
-  const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
+  const directionsServiceRef = useRef<google.maps.DirectionsService | null>(
+    null
+  );
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
   const SERVER_URL = import.meta.env.VITE_SERVER_URL;
   const { message } = App.useApp();
   const settingInfo: any = localStorage.getItem("settings");
 
-  // const defaultIcon = new L.Icon({
-  //   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  //   iconSize: [25, 41],
-  //   iconAnchor: [12, 41],
-  //   popupAnchor: [1, -34],
-  //   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  // });
+  const dispatchers = useSelector((state: RootState) => state.dispatcher.dispatchers);
+
+  const DISPATCHER_COLORS_MAP = generateDispatcherColorsMap(dispatchers)
+
+  const foundRoute = routes?.find(
+    (route) => route.dispatcherId === selectedDispatcher?.id
+  );
+
+  console.log("selectedDispatcher", selectedDispatcher)
+  console.log("foundRoute", foundRoute)
+
+  const defaultIcon = new L.Icon({
+    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  });
 
   useEffect(() => {
     setOptions({ key: GOOGLE_API_KEY });
     (async () => {
       await importLibrary("routes");
       directionsServiceRef.current = new google.maps.DirectionsService();
-      geocoderRef.current = new google.maps.Geocoder(); 
+      geocoderRef.current = new google.maps.Geocoder();
     })();
   }, []);
 
@@ -96,21 +124,16 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
     }
   }, [settingInfo]);
 
-  useEffect(() => {
-    if (!isRouteMode) {
-      setRoute([]);
-      setSortedMarkers?.([]);
-      setTotalTime(undefined);
-      setStartMarker(undefined);
-      setEndMarker(undefined);
-    }
-  }, [isRouteMode]);
-  
-
-  async function geocodeAddress(address: string): Promise<{ lat: number; lng: number }> {
+  async function geocodeAddress(
+    address: string
+  ): Promise<{ lat: number; lng: number }> {
     return new Promise((resolve, reject) => {
       geocoderRef.current?.geocode({ address }, (results, status) => {
-        if (status === google.maps.GeocoderStatus.OK && results && results.length > 0) {
+        if (
+          status === google.maps.GeocoderStatus.OK &&
+          results &&
+          results.length > 0
+        ) {
           const loc = results[0].geometry.location;
           resolve({
             lat: loc.lat(),
@@ -134,15 +157,15 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
       lat: number;
       lng: number;
     };
-    segmentTimes: number[]
-    totalTime: number
+    segmentTimes: number[];
+    totalTime: number;
   };
 
   async function getOptimizedWaypointOrder(
     startAddress: string,
     endAddress: string,
     waypoints: { lat: number; lng: number }[]
-  ) :  Promise<OptimizedRouteResult> {
+  ): Promise<OptimizedRouteResult> {
     return new Promise((resolve, reject) => {
       directionsServiceRef.current?.route(
         {
@@ -156,11 +179,13 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
           if (status === google.maps.DirectionsStatus.OK && result) {
             const route = result.routes[0];
             const legs = route.legs;
-            const startCoord = { // start address coordination
+            const startCoord = {
+              // start address coordination
               lat: legs[0].start_location.lat(),
               lng: legs[0].start_location.lng(),
             };
-            const endCoord = { // end address coordination
+            const endCoord = {
+              // end address coordination
               lat: legs[legs.length - 1].end_location.lat(),
               lng: legs[legs.length - 1].end_location.lng(),
             };
@@ -168,16 +193,16 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
             // Sum up distance and duration between points
             let totalDistance = 0;
             let totalTime = 0;
-            const segmentTimes = legs.map(
-              (leg) => Math.round((leg.duration?.value ?? 0) / 60)
+            const segmentTimes = legs.map((leg) =>
+              Math.round((leg.duration?.value ?? 0) / 60)
             );
             for (const leg of legs) {
               totalDistance += leg.distance?.value ?? 0; // in meters
               totalTime += leg.duration?.value ?? 0; // in seconds
             }
-            totalTime = Math.round(totalTime / 60)
-            console.log("totalDistance", totalDistance)
-            console.log("totalTime", totalTime)
+            totalTime = Math.round(totalTime / 60);
+            console.log("totalDistance", totalDistance);
+            console.log("totalTime", totalTime);
             resolve({ order, startCoord, endCoord, segmentTimes, totalTime });
           } else {
             reject(status);
@@ -190,57 +215,63 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
   async function getOptimizedWaypointOrderByTime(
     startPoint: { lat: number; lng: number },
     endPoint: { lat: number; lng: number },
-    waypoints: { lat: number; lng: number, open: string | null, close: string | null }[]
-  ) :  Promise<any> {
+    waypoints: {
+      lat: number;
+      lng: number;
+      open: string | null;
+      close: string | null;
+    }[]
+  ): Promise<any> {
     const payload = {
       startPoint,
       waypoints,
-      endPoint
+      endPoint,
     };
-    console.log("payload: ", payload)
+    console.log("payload: ", payload);
     const response = await fetch(`${SERVER_URL}/optimize-route`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     const result = await response.json();
-    if (result.error) 
-      message.error(result.error, 4);
+    if (result.error) message.error(result.error, 4);
     return result;
   }
-  const calculateRoutebyTime = async () => {
+  const calculateRoutebyTime = async (dispatcherId?: number) => {
     if (!startAddress || !endAddress) {
       message.error("Start location and destination should be entered");
       return;
     }
 
     try {
+      let oMarkers: MarkerData[];
+      if (dispatcherId) oMarkers = [...orderMarkers.filter(m => m.dispatcherId === dispatcherId)];
+      else oMarkers = [...orderMarkers];
       const startCoord = await geocodeAddress(startAddress);
       const endCoord = await geocodeAddress(endAddress);
-      const waypointsWithTimes = orderMarkers.map(m => ({
+      const waypointsWithTimes = oMarkers.map((m) => ({
         lat: m.position.lat,
         lng: m.position.lng,
         open: m.customer?.openTime ?? null,
-        close: m.customer?.closeTime ?? null
+        close: m.customer?.closeTime ?? null,
       }));
-      const optimizedRouteResult = await getOptimizedWaypointOrderByTime(startCoord, endCoord, waypointsWithTimes);
+      const optimizedRouteResult = await getOptimizedWaypointOrderByTime(
+        startCoord,
+        endCoord,
+        waypointsWithTimes
+      );
       if (!optimizedRouteResult.error) {
         const { order, segment_times, total_time } = optimizedRouteResult;
         const sortedMarkers = order.map((i: number, idx: number) => ({
-          ...orderMarkers[i],
+          ...oMarkers[i],
           travelTime: segment_times[idx],
         }));
 
-        setStartMarker({ position: startCoord, address: startAddress });
-        setEndMarker({ position: endCoord, address: endAddress });
-        setSortedMarkers?.(sortedMarkers);
-        setTotalTime(total_time);
-        setIsRouteMode?.(true);
-        setOrderMarkers([]);
-        setSelectedRowId?.([]);
+        setSelectedRowId?.((prev) => prev.filter(p => !oMarkers.map(m => m.id).includes(p)));
+        setOrderMarkers((prev) => prev.filter(p => p.dispatcherId !== oMarkers[0]?.dispatcherId ));
 
         const orderedWaypoints: { lat: number; lng: number }[] = order.map(
-          (i: number) => orderMarkers[i].position
+          (i: number) => oMarkers[i].position
         );
         const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${
           startCoord.lng
@@ -257,44 +288,73 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
           const coordinates = data.routes[0].geometry.coordinates.map(
             (c: [number, number]) => [c[1], c[0]] // flip lng,lat → lat,lng
           );
-          setRoute(coordinates);
+          const newRoute: Route = {
+          dispatcherId: oMarkers[0].dispatcherId!,
+          startPoint: startCoord,
+          endPoint: endCoord,
+          startAddress: startAddress,
+          endAddress: endAddress,
+          waypoints: sortedMarkers.map((m: MarkerData & { travelTime: number }) => m.position),
+          waypointsAddresses: sortedMarkers.map((m: MarkerData & { travelTime: number }) => m.address),
+          routeLine: coordinates,
+          segmentTimes: segment_times,
+          total_time: total_time,
+        };
+        setRoutes?.((prev) => {
+          const existingIndex = prev.findIndex(
+            (r) => r.dispatcherId === newRoute.dispatcherId
+          );
+          if (existingIndex !== -1) {
+            // Overwrite the existing route
+            const updated = [...prev];
+            updated[existingIndex] = newRoute;
+            return updated;
+          } else {
+            return [...prev, newRoute];
+          }
+        });
         } else {
           message.error("No route found");
         }
       }
-      
-      
     } catch (error) {
       console.error("Routing error:", error);
       message.error("Route calculation failed");
     }
   };
-  const calculateRoute = async () => {
+  const calculateRoute = async (dispatcherId?: number) => {
     if (!startAddress || !endAddress) {
       message.error("Start location and destination should be entered");
       return;
     }
 
     try {
-      const optimizedRouteResult = await getOptimizedWaypointOrder(startAddress, endAddress, orderMarkers.map((m) => m.position));
-      const { order, startCoord, endCoord, segmentTimes, totalTime } = optimizedRouteResult
+      let oMarkers: MarkerData[];
+      if (dispatcherId) oMarkers = [...orderMarkers.filter(m => m.dispatcherId === dispatcherId)];
+      else oMarkers = [...orderMarkers];
+      const optimizedRouteResult = await getOptimizedWaypointOrder(
+        startAddress,
+        endAddress,
+        oMarkers.map((m) => m.position)
+      );
+      const { order, startCoord, endCoord, segmentTimes, totalTime } =
+        optimizedRouteResult;
       const sortedMarkers = order.map((i: number, idx: number) => ({
-        ...orderMarkers[i],
+        ...oMarkers[i],
         travelTime: segmentTimes[idx],
       }));
 
-      setStartMarker({position: startCoord, address: startAddress});
-      setEndMarker({position: endCoord, address: endAddress});
-      setSortedMarkers?.(sortedMarkers);
-      setTotalTime(totalTime);
-      setIsRouteMode?.(true)
-      setOrderMarkers([]);
-      setSelectedRowId?.([]);
+      setSelectedRowId?.((prev) => prev.filter(p => !oMarkers.map(m => m.id).includes(p)));
+      setOrderMarkers((prev) => prev.filter(p => p.dispatcherId !== oMarkers[0]?.dispatcherId ));
 
-      const orderedWaypoints = order.map((i) => orderMarkers[i].position);
-      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startCoord.lng},${startCoord.lat};${orderedWaypoints
+      const orderedWaypoints = order.map((i) => oMarkers[i].position);
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${
+        startCoord.lng
+      },${startCoord.lat};${orderedWaypoints
         .map((wp) => `${wp.lng},${wp.lat}`)
-        .join(";")};${endCoord.lng},${endCoord.lat}?overview=full&geometries=geojson`;
+        .join(";")};${endCoord.lng},${
+        endCoord.lat
+      }?overview=full&geometries=geojson`;
 
       const response = await fetch(osrmUrl);
       const data = await response.json();
@@ -303,7 +363,31 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
         const coordinates = data.routes[0].geometry.coordinates.map(
           (c: [number, number]) => [c[1], c[0]] // flip lng,lat → lat,lng
         );
-        setRoute(coordinates);
+        const newRoute: Route = {
+          dispatcherId: dispatcherId? dispatcherId : oMarkers[0]?.dispatcherId!,
+          startPoint: startCoord,
+          endPoint: endCoord,
+          startAddress: startAddress,
+          endAddress: endAddress,
+          waypoints: sortedMarkers.map((m) => m.position),
+          waypointsAddresses: sortedMarkers.map((m) => m.address),
+          routeLine: coordinates,
+          segmentTimes: segmentTimes,
+          total_time: totalTime,
+        };
+        setRoutes?.((prev) => {
+          const existingIndex = prev.findIndex(
+            (r) => r.dispatcherId === newRoute.dispatcherId
+          );
+          if (existingIndex !== -1) {
+            // Overwrite the existing route
+            const updated = [...prev];
+            updated[existingIndex] = newRoute;
+            return updated;
+          } else {
+            return [...prev, newRoute];
+          }
+        });
       } else {
         message.error("No route found");
       }
@@ -313,9 +397,19 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
     }
   };
 
+  useImperativeHandle(ref, () => ({
+    triggerCalculate(dispatcherId: number) {
+      if (searchOptions === "normal") {
+        calculateRoute(dispatcherId);
+      } else {
+        calculateRoutebyTime(dispatcherId);
+      }
+    },
+  }));
+
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      {isRouteResults ? (
+      {isRouteResultsPage ? (
         <div
           style={{
             position: "absolute",
@@ -361,19 +455,19 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
               type="primary"
               shape="round"
               size="large"
-              disabled={isRouteMode}
+              disabled={(foundRoute || isAllRoutes) ? true : false}
               style={{
                 width: 120,
-                backgroundColor: isRouteMode ? "#E6E6E6" : "#1677ff",
+                backgroundColor: (foundRoute || isAllRoutes) ? "#E6E6E6" : "#1677ff",
                 border: "none",
               }}
-              onClick={
+              onClick={() => (
                 searchOptions === "normal"
-                  ? calculateRoute
-                  : calculateRoutebyTime
-              }
+                  ? calculateRoute()
+                  : calculateRoutebyTime()
+              )}
             >
-              Search
+              Calculate
             </Button>
           </Space>
         </div>
@@ -393,28 +487,18 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
 
         {/* Order Markers */}
         {orderMarkers.map((marker, index) => {
-          const isHovered = marker.id === hoveredOrderId;
-          const baseSize = marker.icon?.scaledSize || 25;
-          const baseHeight = 41;
-          const iconSize = isHovered ? baseSize * 1.5 : baseSize;
-          const iconHeight = isHovered ? baseHeight * 1.5 : baseHeight;
-
           const leafletIcon = marker.icon
             ? L.icon({
                 iconUrl: marker.icon.url,
-                iconSize: [iconSize, iconHeight],
-                iconAnchor: [iconSize / 2, iconHeight],
-                popupAnchor: [1, -iconHeight + 7],
+                iconSize: marker.icon.scaledSize
+                  ? [marker.icon.scaledSize, marker.icon.scaledSize]
+                  : [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
                 shadowUrl:
                   "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
               })
-            : L.icon({
-                iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-                iconSize: [iconSize, iconHeight],
-                iconAnchor: [iconSize / 2, iconHeight],
-                popupAnchor: [1, -iconHeight + 7],
-                shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-              });
+            : defaultIcon;
 
           return (
             <Marker
@@ -426,41 +510,94 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
             </Marker>
           );
         })}
+        {isAllRoutes
+          ? routes?.map((route, routeIndex) => (
+              <>
+                <Marker
+                  position={[route.startPoint.lat, route.startPoint.lng]}
+                  icon={startIcon}
+                >
+                  <Popup>
+                    Start ({routeIndex + 1}): {route.startAddress}
+                  </Popup>
+                </Marker>
+                {route.waypoints.map((waypoint, i) => (
+                  <Marker
+                    key={`${routeIndex}-waypoint-${i}`}
+                    position={[waypoint.lat, waypoint.lng]}
+                    icon={createNumberIcon(i + 1)}
+                  >
+                    <Popup>
+                      Stop {i + 1}: {route.waypointsAddresses[i]}
+                    </Popup>
+                  </Marker>
+                ))}
+                <Marker
+                  position={[route.endPoint.lat, route.endPoint.lng]}
+                  icon={endIcon}
+                >
+                  <Popup>
+                    End ({routeIndex + 1}): {route.endAddress}
+                  </Popup>
+                </Marker>
+                <Polyline
+                  positions={route.routeLine}
+                  pathOptions={{
+                    color: DISPATCHER_COLORS_MAP[route.dispatcherId].color,
+                    weight: 4,
+                  }}
+                />
+              </>
+            ))
+          : selectedDispatcher
+          ? (() => {
+              if (!foundRoute) return null;
+              const color = DISPATCHER_COLORS_MAP[foundRoute.dispatcherId].color
 
-        {sortedMarkers?.map((marker, i) => (
-          <Marker
-            key={i}
-            position={[marker.position.lat, marker.position.lng]}
-            icon={createNumberIcon(i + 1)}
-          >
-            <Popup>
-              Stop {i + 1}: {marker.address}
-            </Popup>
-          </Marker>
-        ))}
-
-        {startMarker ? (
-          <Marker
-            position={[startMarker.position.lat, startMarker.position.lng]}
-            icon={startIcon}
-          >
-            <Popup>Start: {startAddress}</Popup>
-          </Marker>
-        ) : null}
-
-        {endMarker ? (
-          <Marker
-            position={[endMarker.position.lat, endMarker.position.lng]}
-            icon={endIcon}
-          >
-            <Popup>End: {endAddress}</Popup>
-          </Marker>
-        ) : null}
-
-        {/* Route polyline */}
-        {route.length > 0 && <Polyline positions={route} color="blue" />}
+              return (
+                <>
+                  <Marker
+                    position={[
+                      foundRoute.startPoint.lat,
+                      foundRoute.startPoint.lng,
+                    ]}
+                    icon={startIcon}
+                  >
+                    <Popup>Start: {foundRoute.startAddress}</Popup>
+                  </Marker>
+                  {foundRoute.waypoints.map((wp, i) => (
+                    <Marker
+                      key={`wp-${i}`}
+                      position={[wp.lat, wp.lng]}
+                      icon={createNumberIcon(i + 1)}
+                    >
+                      <Popup>
+                        Stop {i + 1}: {foundRoute.waypointsAddresses[i]}
+                      </Popup>
+                    </Marker>
+                  ))}
+                  <Marker
+                    position={[
+                      foundRoute.endPoint.lat,
+                      foundRoute.endPoint.lng,
+                    ]}
+                    icon={endIcon}
+                  >
+                    <Popup>End: {foundRoute.endAddress}</Popup>
+                  </Marker>
+                  <Polyline
+                    positions={foundRoute.routeLine}
+                    pathOptions={{
+                      color,
+                      weight: 4,
+                    }}
+                  />
+                </>
+              );
+            })()
+          : null}
       </MapContainer>
-      {totalTime && (
+      {foundRoute && (
         <div
           style={{
             position: "absolute",
@@ -476,13 +613,13 @@ const OpenStreetMap: React.FC<NavigationMapProp> = ({ orderMarkers, setOrderMark
           }}
         >
           🕒 Total Time:{" "}
-          {totalTime >= 60
-            ? `${Math.floor(totalTime / 60)}h ${totalTime % 60}m`
-            : `${totalTime}m`}
+          {foundRoute.total_time >= 60
+            ? `${Math.floor(foundRoute.total_time / 60)}h ${foundRoute.total_time % 60}m`
+            : `${foundRoute.total_time}m`}
         </div>
       )}
     </div>
   );
-};
+});
 
 export default OpenStreetMap;
