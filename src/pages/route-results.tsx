@@ -274,7 +274,7 @@ export default function RouteResults() {
               {route ? (
                 <>
                   <Text type="secondary">
-                    {route.waypoints.length} Waypoints
+                    {route.orderSequence.length} Waypoints
                   </Text>
                   <Button
                     danger
@@ -321,7 +321,7 @@ export default function RouteResults() {
         children: route ? (
           <List
             size="small"
-            dataSource={route.waypointsAddresses}
+            dataSource={route.orderSequence.map(o => o.detailedAddress)}
             renderItem={(address, index) => (
               <List.Item style={{ paddingLeft: 8, paddingRight: 8 }}>
                 <div style={{ flex: 1, marginRight: 4 }}>
@@ -395,10 +395,10 @@ export default function RouteResults() {
               <Table
                 rowKey="id"
                 columns={routeModeColumns}
-                dataSource={foundRoute.waypointsAddresses.map(
-                  (address, index) => ({
+                dataSource={foundRoute.orderSequence.map(
+                  (o, index) => ({
                     order: index + 1,
-                    address,
+                    address: o.detailedAddress,
                     travelTime: foundRoute.segmentTimes[index],
                   })
                 )}

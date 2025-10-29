@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
-import { Input, Space, Button, Select, App } from "antd";
+import { Input, Space, Button, Select, App, TimePicker } from "antd";
 import {
   MapContainer,
   TileLayer,
@@ -18,6 +18,7 @@ import type { Dispatcher } from "../types/dispatchers";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store";
 import { generateDispatcherColorsMap } from "../utils/markersUtils";
+import dayjs, { Dayjs } from "dayjs";
 
 interface NavigationMapProp {
   orderMarkers: MarkerData[];
@@ -80,6 +81,7 @@ const OpenStreetMap = forwardRef(({
   const directionsServiceRef = useRef<google.maps.DirectionsService | null>(
     null
   );
+  const [startTime, setStartTime] = useState<Dayjs | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
   const SERVER_URL = import.meta.env.VITE_SERVER_URL;
@@ -87,15 +89,13 @@ const OpenStreetMap = forwardRef(({
   const settingInfo: any = localStorage.getItem("settings");
 
   const dispatchers = useSelector((state: RootState) => state.dispatcher.dispatchers);
+  const selectedOrders = useSelector((state: RootState) => state.order.selectedOrders);
 
   const DISPATCHER_COLORS_MAP = generateDispatcherColorsMap(dispatchers)
 
   const foundRoute = routes?.find(
     (route) => route.dispatcherId === selectedDispatcher?.id
   );
-
-  console.log("selectedDispatcher", selectedDispatcher)
-  console.log("foundRoute", foundRoute)
 
   const defaultIcon = new L.Icon({
     iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -159,6 +159,7 @@ const OpenStreetMap = forwardRef(({
     };
     segmentTimes: number[];
     totalTime: number;
+    totalDistance: number;
   };
 
   async function getOptimizedWaypointOrder(
@@ -201,9 +202,7 @@ const OpenStreetMap = forwardRef(({
               totalTime += leg.duration?.value ?? 0; // in seconds
             }
             totalTime = Math.round(totalTime / 60);
-            console.log("totalDistance", totalDistance);
-            console.log("totalTime", totalTime);
-            resolve({ order, startCoord, endCoord, segmentTimes, totalTime });
+            resolve({ order, startCoord, endCoord, segmentTimes, totalTime, totalDistance });
           } else {
             reject(status);
           }
@@ -220,12 +219,14 @@ const OpenStreetMap = forwardRef(({
       lng: number;
       open: string | null;
       close: string | null;
-    }[]
+    }[],
+    startTime: string | null
   ): Promise<any> {
     const payload = {
       startPoint,
       waypoints,
       endPoint,
+      startTime
     };
     console.log("payload: ", payload);
     const response = await fetch(`${SERVER_URL}/optimize-route`, {
@@ -258,14 +259,13 @@ const OpenStreetMap = forwardRef(({
       const optimizedRouteResult = await getOptimizedWaypointOrderByTime(
         startCoord,
         endCoord,
-        waypointsWithTimes
+        waypointsWithTimes,
+        startTime? startTime.format("HH:mm:ss") : null
       );
       if (!optimizedRouteResult.error) {
-        const { order, segment_times, total_time } = optimizedRouteResult;
-        const sortedMarkers = order.map((i: number, idx: number) => ({
-          ...oMarkers[i],
-          travelTime: segment_times[idx],
-        }));
+        const { order, segment_times, total_time, total_distance } = optimizedRouteResult;
+        const sortedOrders = order.map((i: number) => 
+          selectedOrders.find(o => o.id === oMarkers[i].id)!)
 
         setSelectedRowId?.((prev) => prev.filter(p => !oMarkers.map(m => m.id).includes(p)));
         setOrderMarkers((prev) => prev.filter(p => p.dispatcherId !== oMarkers[0]?.dispatcherId ));
@@ -289,17 +289,22 @@ const OpenStreetMap = forwardRef(({
             (c: [number, number]) => [c[1], c[0]] // flip lng,lat → lat,lng
           );
           const newRoute: Route = {
-          dispatcherId: oMarkers[0].dispatcherId!,
-          startPoint: startCoord,
-          endPoint: endCoord,
+          dispatcherId: dispatcherId? dispatcherId : oMarkers[0]?.dispatcherId!,
+          routeDate: dayjs().format('YYYY-MM-DD'),
+          optimizationMode: "normal",
           startAddress: startAddress,
           endAddress: endAddress,
-          waypoints: sortedMarkers.map((m: MarkerData & { travelTime: number }) => m.position),
-          waypointsAddresses: sortedMarkers.map((m: MarkerData & { travelTime: number }) => m.address),
-          routeLine: coordinates,
+          startLat: startCoord.lat,
+          startLng: startCoord.lng,
+          endLat: endCoord.lat,
+          endLng: endCoord.lng,
+          orderSequence: sortedOrders,
           segmentTimes: segment_times,
           total_time: total_time,
-        };
+          total_distance: total_distance,
+          polylineCoordinates: coordinates,
+          createBy: "Admin"
+        }
         setRoutes?.((prev) => {
           const existingIndex = prev.findIndex(
             (r) => r.dispatcherId === newRoute.dispatcherId
@@ -337,12 +342,11 @@ const OpenStreetMap = forwardRef(({
         endAddress,
         oMarkers.map((m) => m.position)
       );
-      const { order, startCoord, endCoord, segmentTimes, totalTime } =
+      const { order, startCoord, endCoord, segmentTimes, totalTime, totalDistance } =
         optimizedRouteResult;
-      const sortedMarkers = order.map((i: number, idx: number) => ({
-        ...oMarkers[i],
-        travelTime: segmentTimes[idx],
-      }));
+
+      const sortedOrders = order.map((i: number) => 
+        selectedOrders.find(o => o.id === oMarkers[i].id)!)
 
       setSelectedRowId?.((prev) => prev.filter(p => !oMarkers.map(m => m.id).includes(p)));
       setOrderMarkers((prev) => prev.filter(p => p.dispatcherId !== oMarkers[0]?.dispatcherId ));
@@ -365,16 +369,23 @@ const OpenStreetMap = forwardRef(({
         );
         const newRoute: Route = {
           dispatcherId: dispatcherId? dispatcherId : oMarkers[0]?.dispatcherId!,
-          startPoint: startCoord,
-          endPoint: endCoord,
+          routeDate: dayjs().format('YYYY-MM-DD'),
+        
+          optimizationMode: "normal",
           startAddress: startAddress,
           endAddress: endAddress,
-          waypoints: sortedMarkers.map((m) => m.position),
-          waypointsAddresses: sortedMarkers.map((m) => m.address),
-          routeLine: coordinates,
+          startLat: startCoord.lat,
+          startLng: startCoord.lng,
+          endLat: endCoord.lat,
+          endLng: endCoord.lng,
+          
+          orderSequence: sortedOrders,
           segmentTimes: segmentTimes,
           total_time: totalTime,
-        };
+          total_distance: totalDistance,
+          polylineCoordinates: coordinates,
+          createBy: "Admin"
+        }
         setRoutes?.((prev) => {
           const existingIndex = prev.findIndex(
             (r) => r.dispatcherId === newRoute.dispatcherId
@@ -406,6 +417,18 @@ const OpenStreetMap = forwardRef(({
       }
     },
   }));
+
+  const handleCalculate = () => {
+  if (searchOptions === "normal") {
+    calculateRoute();
+  } else {
+    if (!startTime) {
+      message.error("Please select a star time before calculating the route.");
+      return;
+    }
+    calculateRoutebyTime();
+  }
+};
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
@@ -451,6 +474,15 @@ const OpenStreetMap = forwardRef(({
               <Select.Option value="normal">Normal</Select.Option>
               <Select.Option value="byTime">Opening Time</Select.Option>
             </Select>
+            {searchOptions === "byTime" && (
+              <TimePicker
+                placeholder="Select Start Time"
+                value={startTime}
+                onChange={(value) => setStartTime(value)}
+                format="HH:mm:ss"
+                style={{ width: 160 }}
+              />
+            )}
             <Button
               type="primary"
               shape="round"
@@ -461,11 +493,7 @@ const OpenStreetMap = forwardRef(({
                 backgroundColor: (foundRoute || isAllRoutes) ? "#E6E6E6" : "#1677ff",
                 border: "none",
               }}
-              onClick={() => (
-                searchOptions === "normal"
-                  ? calculateRoute()
-                  : calculateRoutebyTime()
-              )}
+              onClick={handleCalculate}
             >
               Calculate
             </Button>
@@ -514,26 +542,26 @@ const OpenStreetMap = forwardRef(({
           ? routes?.map((route, routeIndex) => (
               <>
                 <Marker
-                  position={[route.startPoint.lat, route.startPoint.lng]}
+                  position={[route.startLat, route.startLng]}
                   icon={startIcon}
                 >
                   <Popup>
                     Start ({routeIndex + 1}): {route.startAddress}
                   </Popup>
                 </Marker>
-                {route.waypoints.map((waypoint, i) => (
+                {route.orderSequence.map((waypoint, i) => (
                   <Marker
                     key={`${routeIndex}-waypoint-${i}`}
                     position={[waypoint.lat, waypoint.lng]}
                     icon={createNumberIcon(i + 1)}
                   >
                     <Popup>
-                      Stop {i + 1}: {route.waypointsAddresses[i]}
+                      Stop {i + 1}: {waypoint.detailedAddress}
                     </Popup>
                   </Marker>
                 ))}
                 <Marker
-                  position={[route.endPoint.lat, route.endPoint.lng]}
+                  position={[route.endLat, route.endLng]}
                   icon={endIcon}
                 >
                   <Popup>
@@ -541,7 +569,7 @@ const OpenStreetMap = forwardRef(({
                   </Popup>
                 </Marker>
                 <Polyline
-                  positions={route.routeLine}
+                  positions={route.polylineCoordinates}
                   pathOptions={{
                     color: DISPATCHER_COLORS_MAP[route.dispatcherId].color,
                     weight: 4,
@@ -558,35 +586,35 @@ const OpenStreetMap = forwardRef(({
                 <>
                   <Marker
                     position={[
-                      foundRoute.startPoint.lat,
-                      foundRoute.startPoint.lng,
+                      foundRoute.startLat,
+                      foundRoute.startLng,
                     ]}
                     icon={startIcon}
                   >
                     <Popup>Start: {foundRoute.startAddress}</Popup>
                   </Marker>
-                  {foundRoute.waypoints.map((wp, i) => (
+                  {foundRoute.orderSequence.map((wp, i) => (
                     <Marker
                       key={`wp-${i}`}
                       position={[wp.lat, wp.lng]}
                       icon={createNumberIcon(i + 1)}
                     >
                       <Popup>
-                        Stop {i + 1}: {foundRoute.waypointsAddresses[i]}
+                        Stop {i + 1}: {wp.detailedAddress}
                       </Popup>
                     </Marker>
                   ))}
                   <Marker
                     position={[
-                      foundRoute.endPoint.lat,
-                      foundRoute.endPoint.lng,
+                      foundRoute.endLat,
+                      foundRoute.endLng,
                     ]}
                     icon={endIcon}
                   >
                     <Popup>End: {foundRoute.endAddress}</Popup>
                   </Marker>
                   <Polyline
-                    positions={foundRoute.routeLine}
+                    positions={foundRoute.polylineCoordinates}
                     pathOptions={{
                       color,
                       weight: 4,
