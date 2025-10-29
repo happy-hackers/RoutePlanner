@@ -365,6 +365,7 @@ export default function RouteResults() {
             }
             onChange={(id) => {
               if (id === -1) {
+                setSelectedDispatcher(null);
                 setIsAllRoutes(true);
               } else if (id) {
                 setIsAllRoutes(false);
