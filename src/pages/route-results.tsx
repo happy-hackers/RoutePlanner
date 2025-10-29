@@ -321,7 +321,7 @@ export default function RouteResults() {
         children: route ? (
           <List
             size="small"
-            dataSource={route.orderSequence.map(o => o.detailedAddress)}
+            dataSource={route.orderSequence.map((o) => o.detailedAddress)}
             renderItem={(address, index) => (
               <List.Item style={{ paddingLeft: 8, paddingRight: 8 }}>
                 <div style={{ flex: 1, marginRight: 4 }}>
@@ -395,13 +395,11 @@ export default function RouteResults() {
               <Table
                 rowKey="id"
                 columns={routeModeColumns}
-                dataSource={foundRoute.orderSequence.map(
-                  (o, index) => ({
-                    order: index + 1,
-                    address: o.detailedAddress,
-                    travelTime: foundRoute.segmentTimes[index],
-                  })
-                )}
+                dataSource={foundRoute.orderSequence.map((o, index) => ({
+                  order: index + 1,
+                  address: o.detailedAddress,
+                  travelTime: foundRoute.segmentTimes[index],
+                }))}
                 pagination={false}
                 size="small"
               />
