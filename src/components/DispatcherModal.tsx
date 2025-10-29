@@ -195,7 +195,7 @@ export default function DispatcherModal({
                     <div></div>
                     <div></div>
                     {periods.map((period) => (
-                      <div key={period} style={{ fontWeight: "bold", textAlign: "center", color: "#ff4d4f" }}>
+                      <div key={period} style={{ fontWeight: "bold", textAlign: "center", color: "black" }}>
                         {period}
                       </div>
                     ))}
@@ -213,7 +213,7 @@ export default function DispatcherModal({
                               onChange={(e) => handleDayCheckboxChange(day, e.target.checked)}
                             />
                           </div>
-                          <div key={`${day}-label`} style={{ fontWeight: "500", color: "#ff4d4f" }}>
+                          <div key={`${day}-label`} style={{ fontWeight: "500", color: "black" }}>
                             {day}
                           </div>
                           {periods.map((period) => (
