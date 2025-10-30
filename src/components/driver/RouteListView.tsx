@@ -44,11 +44,12 @@ export default function RouteListView({
           return (
             <List.Item
               onClick={() => onStopSelect(index)}
+              className={isCurrent ? 'route-item-selected' : ''}
               style={{
                 cursor: 'pointer',
                 padding: '16px',
                 backgroundColor: isCurrent ? '#e6f7ff' : 'transparent',
-                border: isNext ? '2px solid #1890ff' : '1px solid #f0f0f0',
+                border: isCurrent ? 'none' : '1px solid #f0f0f0',
                 borderRadius: 8,
                 marginBottom: 8,
                 opacity: isCompleted ? 0.6 : 1,
