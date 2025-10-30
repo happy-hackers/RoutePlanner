@@ -1,7 +1,6 @@
 import { supabase } from './dbUtils';
 import { supabaseAdmin } from './supabaseAdmin';
-import type { User, AuthError } from '@supabase/supabase-js';
-import type { Dispatcher } from '../types/dispatchers';
+import type { User } from '@supabase/supabase-js';
 
 export interface AuthResult {
   success: boolean;
@@ -19,63 +18,26 @@ export interface DriverAuthData {
 // Login driver with email and password
 export const loginDriver = async (
   email: string,
-  password: string,
-  rememberMe: boolean = false
+  password: string
 ): Promise<AuthResult> => {
-  console.log('[DEBUG] authUtils.loginDriver: Starting login...', {
-    email,
-    rememberMe,
-    timestamp: new Date().toISOString()
-  });
-
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      password,
-      options: {
-        // If remember me is checked, session persists for 30 days, otherwise 24 hours
-        ...(rememberMe && {
-          data: {
-            remember_me: true
-          }
-        })
-      }
-    });
-
-    console.log('[DEBUG] authUtils.loginDriver: Sign in result:', {
-      hasData: !!data,
-      hasUser: !!data?.user,
-      hasSession: !!data?.session,
-      userId: data?.user?.id,
-      userEmail: data?.user?.email,
-      hasError: !!error,
-      errorMessage: error?.message,
-      errorStatus: error?.status
+      password
     });
 
     if (error) {
-      console.error('[DEBUG] authUtils.loginDriver: Login error:', {
-        error,
-        message: error.message,
-        status: error.status,
-        name: error.name
-      });
       return {
         success: false,
         error: error.message
       };
     }
 
-    console.log('[DEBUG] authUtils.loginDriver: Login successful');
     return {
       success: true,
       user: data.user
     };
   } catch (error) {
-    console.error('[DEBUG] authUtils.loginDriver: Exception caught:', {
-      error,
-      errorMessage: error instanceof Error ? error.message : String(error)
-    });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Login failed'
@@ -106,32 +68,11 @@ export const logoutDriver = async (): Promise<{ success: boolean; error?: string
 
 // Get current authenticated user
 export const getCurrentUser = async (): Promise<User | null> => {
-  console.log('[DEBUG] authUtils.getCurrentUser: Starting...');
-
   try {
-    const { data: { user }, error } = await supabase.auth.getUser();
-
-    console.log('[DEBUG] authUtils.getCurrentUser: Result:', {
-      hasUser: !!user,
-      userId: user?.id,
-      userEmail: user?.email,
-      hasError: !!error,
-      errorMessage: error?.message
-    });
-
-    if (error) {
-      console.error('[DEBUG] authUtils.getCurrentUser: Error:', {
-        error,
-        message: error.message
-      });
-    }
-
+    const { data: { user } } = await supabase.auth.getUser();
     return user;
   } catch (error) {
-    console.error('[DEBUG] authUtils.getCurrentUser: Exception:', {
-      error,
-      errorMessage: error instanceof Error ? error.message : String(error)
-    });
+    console.error('Error getting current user:', error);
     return null;
   }
 };
@@ -186,35 +127,21 @@ export const updateDriverPassword = async (
   newPassword: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    console.log('[DEBUG] updateDriverPassword: Calling admin API...', {
-      authUserId,
-      timestamp: new Date().toISOString()
-    });
-
     // Use Supabase Admin API to update user password by ID
-    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(
       authUserId,
       { password: newPassword }
     );
 
     if (error) {
-      console.error('[DEBUG] updateDriverPassword: Error occurred:', {
-        error,
-        message: error.message
-      });
       return {
         success: false,
         error: error.message
       };
     }
 
-    console.log('[DEBUG] updateDriverPassword: Password reset successfully');
     return { success: true };
   } catch (error) {
-    console.error('[DEBUG] updateDriverPassword: Exception caught:', {
-      error,
-      errorMessage: error instanceof Error ? error.message : String(error)
-    });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update password'
@@ -224,34 +151,11 @@ export const updateDriverPassword = async (
 
 // Get session
 export const getSession = async () => {
-  console.log('[DEBUG] authUtils.getSession: Starting...');
-
   try {
-    const { data: { session }, error } = await supabase.auth.getSession();
-
-    console.log('[DEBUG] authUtils.getSession: Result:', {
-      hasSession: !!session,
-      hasAccessToken: !!session?.access_token,
-      userId: session?.user?.id,
-      userEmail: session?.user?.email,
-      expiresAt: session?.expires_at,
-      hasError: !!error,
-      errorMessage: error?.message
-    });
-
-    if (error) {
-      console.error('[DEBUG] authUtils.getSession: Error:', {
-        error,
-        message: error.message
-      });
-    }
-
+    const { data: { session } } = await supabase.auth.getSession();
     return session;
   } catch (error) {
-    console.error('[DEBUG] authUtils.getSession: Exception:', {
-      error,
-      errorMessage: error instanceof Error ? error.message : String(error)
-    });
+    console.error('Error getting session:', error);
     return null;
   }
 };

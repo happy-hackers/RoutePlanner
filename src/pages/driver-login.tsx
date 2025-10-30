@@ -23,7 +23,7 @@ export default function DriverLogin() {
     setLoading(true);
 
     try {
-      const result = await loginDriver(email, password, rememberMe);
+      const result = await loginDriver(email, password);
 
       if (result.success) {
         message.success('Login successful!');

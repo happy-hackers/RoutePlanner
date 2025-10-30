@@ -40,34 +40,16 @@ export default function DriverRoute() {
   // Fetch route data
   const fetchRouteData = async (date: string) => {
     if (!dispatcher) {
-      console.log('[DEBUG] fetchRouteData: No dispatcher available');
       return;
     }
-
-    console.log('[DEBUG] fetchRouteData: Starting...', {
-      dispatcherId: dispatcher.id,
-      dispatcherName: dispatcher.name,
-      date,
-      timestamp: new Date().toISOString()
-    });
 
     try {
       setLoading(true);
 
       // Get active route (orderSequence already contains full Order objects)
-      console.log('[DEBUG] fetchRouteData: Calling getDriverActiveRoute...');
       const routeData = await getDriverActiveRoute(dispatcher.id, date);
-      console.log('[DEBUG] fetchRouteData: getDriverActiveRoute returned:', {
-        hasData: !!routeData,
-        routeId: routeData?.id,
-        orderCount: routeData?.orderSequence?.length,
-        routeDate: routeData?.routeDate,
-        isActive: routeData?.isActive,
-        data: routeData
-      });
 
       if (!routeData) {
-        console.log('[DEBUG] fetchRouteData: No route data found');
         setDeliveryRoute(null);
         setOrders([]);
         return;
@@ -77,29 +59,15 @@ export default function DriverRoute() {
 
       // Orders are already in the route's orderSequence
       setOrders(routeData.orderSequence);
-      console.log('[DEBUG] fetchRouteData: Orders set:', {
-        orderCount: routeData.orderSequence.length,
-        orderIds: routeData.orderSequence.map(o => o.id),
-        orderStatuses: routeData.orderSequence.map(o => o.status)
-      });
 
       // Set current stop to first incomplete
       const firstIncomplete = routeData.orderSequence.findIndex(o => o.status !== 'Delivered');
       setCurrentStopIndex(firstIncomplete !== -1 ? firstIncomplete : 0);
-      console.log('[DEBUG] fetchRouteData: Current stop index set to:', firstIncomplete !== -1 ? firstIncomplete : 0);
 
     } catch (error) {
-      console.error('[DEBUG] fetchRouteData: Error occurred:', {
-        error,
-        errorMessage: error instanceof Error ? error.message : String(error),
-        errorStack: error instanceof Error ? error.stack : undefined,
-        dispatcherId: dispatcher.id,
-        date
-      });
       message.error('Failed to load route');
     } finally {
       setLoading(false);
-      console.log('[DEBUG] fetchRouteData: Complete');
     }
   };
 
@@ -114,47 +82,28 @@ export default function DriverRoute() {
   const handleDone = async () => {
     const currentOrder = orders[currentStopIndex];
 
-    console.log('[DEBUG] handleDone: Starting...', {
-      orderId: currentOrder.id,
-      currentStatus: currentOrder.status,
-      stopIndex: currentStopIndex,
-      timestamp: new Date().toISOString()
-    });
-
     try {
       // Update database
-      console.log('[DEBUG] handleDone: Calling updateOrderStatus...');
       await updateOrderStatus(currentOrder.id, 'Delivered');
-      console.log('[DEBUG] handleDone: Order status updated successfully');
 
       // Update local state
       setOrders(prev => prev.map(o =>
         o.id === currentOrder.id ? { ...o, status: 'Delivered' as const } : o
       ));
-      console.log('[DEBUG] handleDone: Local state updated');
 
       message.success('Delivery marked as complete!');
 
       // Auto-advance to next incomplete stop
       const nextIndex = getNextIncompleteStopIndex(orders, currentStopIndex);
-      console.log('[DEBUG] handleDone: Next incomplete stop index:', nextIndex);
 
       if (nextIndex !== -1) {
         setCurrentStopIndex(nextIndex);
-        console.log('[DEBUG] handleDone: Advanced to next stop:', nextIndex);
       } else {
         // All done!
-        console.log('[DEBUG] handleDone: All deliveries completed!');
         message.success('All deliveries completed!');
       }
 
     } catch (error) {
-      console.error('[DEBUG] handleDone: Error occurred:', {
-        error,
-        errorMessage: error instanceof Error ? error.message : String(error),
-        errorStack: error instanceof Error ? error.stack : undefined,
-        orderId: currentOrder.id
-      });
       message.error('Failed to update delivery status');
     }
   };
@@ -169,34 +118,18 @@ export default function DriverRoute() {
       return;
     }
 
-    console.log('[DEBUG] handleUndo: Starting...', {
-      orderId: currentOrder.id,
-      currentStatus: currentOrder.status,
-      stopIndex: currentStopIndex,
-      timestamp: new Date().toISOString()
-    });
-
     try {
       // Update database back to In Progress
-      console.log('[DEBUG] handleUndo: Calling updateOrderStatus to revert...');
       await updateOrderStatus(currentOrder.id, 'In Progress');
-      console.log('[DEBUG] handleUndo: Order status reverted successfully');
 
       // Update local state
       setOrders(prev => prev.map(o =>
         o.id === currentOrder.id ? { ...o, status: 'In Progress' as const } : o
       ));
-      console.log('[DEBUG] handleUndo: Local state updated');
 
       message.success('Delivery status reverted to In Progress');
 
     } catch (error) {
-      console.error('[DEBUG] handleUndo: Error occurred:', {
-        error,
-        errorMessage: error instanceof Error ? error.message : String(error),
-        errorStack: error instanceof Error ? error.stack : undefined,
-        orderId: currentOrder.id
-      });
       message.error('Failed to revert delivery status');
     }
   };

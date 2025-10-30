@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Modal, Form, Input, Select, Checkbox, Button, Space, App, Cascader, type CascaderProps } from "antd";
 import { CopyOutlined, ReloadOutlined } from "@ant-design/icons";
-import { addDispatcher, updateDispatchers, updateDispatcherAuth } from "../utils/dbUtils";
+import { addDispatcher, updateDispatchers } from "../utils/dbUtils";
 import { createDriverAuth, updateDriverPassword } from "../utils/authUtils";
 import type { Dispatcher } from "../types/dispatchers";
 import areaData from "../hong_kong_areas.json"

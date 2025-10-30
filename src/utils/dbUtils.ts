@@ -10,27 +10,7 @@ import type { Route } from "../types/route";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-console.log('[DEBUG] dbUtils: Initializing Supabase client...', {
-  hasUrl: !!supabaseUrl,
-  hasKey: !!supabaseAnonKey,
-  urlPrefix: supabaseUrl?.substring(0, 20),
-  timestamp: new Date().toISOString()
-});
-
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Log auth token status on every request
-supabase.auth.onAuthStateChange((event, session) => {
-  console.log('[DEBUG] dbUtils: Auth state changed', {
-    event,
-    hasSession: !!session,
-    hasAccessToken: !!session?.access_token,
-    userId: session?.user?.id,
-    userEmail: session?.user?.email,
-    expiresAt: session?.expires_at,
-    timestamp: new Date().toISOString()
-  });
-});
 
 export const createOrder = async (
   orderData: Omit<Order, "id">
@@ -560,12 +540,6 @@ export const getDriverActiveRoute = async (
 ): Promise<DeliveryRoute | null> => {
   const date = routeDate || new Date().toISOString().split('T')[0];
 
-  console.log('[DEBUG] getDriverActiveRoute: Starting query...', {
-    dispatcherId,
-    routeDate: date,
-    timestamp: new Date().toISOString()
-  });
-
   const { data, error } = await supabase
     .from('delivery_routes')
     .select('*')
@@ -574,36 +548,10 @@ export const getDriverActiveRoute = async (
     .eq('is_active', true)
     .single();
 
-  console.log('[DEBUG] getDriverActiveRoute: Query result:', {
-    hasData: !!data,
-    hasError: !!error,
-    error: error ? {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code
-    } : null,
-    dataKeys: data ? Object.keys(data) : null,
-    rawData: data
-  });
-
-  if (error || !data) {
-    console.log('[DEBUG] getDriverActiveRoute: Returning null due to error or no data');
-    return null;
-  }
+  if (error || !data) return null;
 
   const { created_time, ...rest } = data;
-  const result = camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
-
-  console.log('[DEBUG] getDriverActiveRoute: Returning data:', {
-    id: result.id,
-    routeDate: result.routeDate,
-    orderSequenceLength: result.orderSequence?.length,
-    isActive: result.isActive,
-    convertedData: result
-  });
-
-  return result;
+  return camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
 };
 
 // Update order status (mark as delivered)
@@ -611,31 +559,12 @@ export const updateOrderStatus = async (
   orderId: number,
   newStatus: OrderStatus
 ): Promise<void> => {
-  console.log('[DEBUG] updateOrderStatus: Starting update...', {
-    orderId,
-    newStatus,
-    timestamp: new Date().toISOString()
-  });
-
   const { error } = await supabase
     .from('orders')
     .update({ status: newStatus })
     .eq('id', orderId);
 
-  if (error) {
-    console.error('[DEBUG] updateOrderStatus: Error occurred:', {
-      error,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code,
-      orderId,
-      newStatus
-    });
-    throw error;
-  }
-
-  console.log('[DEBUG] updateOrderStatus: Successfully updated order status');
+  if (error) throw error;
 };
 
 // Get all upcoming active routes for driver
@@ -680,45 +609,16 @@ export const getDispatcherById = async (
 export const getDispatcherByAuthId = async (
   authUserId: string
 ): Promise<Dispatcher | null> => {
-  console.log('[DEBUG] getDispatcherByAuthId: Starting query...', {
-    authUserId,
-    timestamp: new Date().toISOString()
-  });
-
   const { data, error } = await supabase
     .from('dispatchers')
     .select('id, name, email, phone, auth_user_id, active_day, responsible_area, created_time')
     .eq('auth_user_id', authUserId)
     .single();
 
-  console.log('[DEBUG] getDispatcherByAuthId: Query result:', {
-    hasData: !!data,
-    hasError: !!error,
-    error: error ? {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code
-    } : null,
-    dispatcherId: data?.id,
-    dispatcherName: data?.name
-  });
-
-  if (error || !data) {
-    console.log('[DEBUG] getDispatcherByAuthId: Returning null due to error or no data');
-    return null;
-  }
+  if (error || !data) return null;
 
   const { created_time, ...rest } = data;
-  const result = camelcaseKeys(rest) as Dispatcher;
-
-  console.log('[DEBUG] getDispatcherByAuthId: Returning dispatcher:', {
-    id: result.id,
-    name: result.name,
-    email: result.email
-  });
-
-  return result;
+  return camelcaseKeys(rest) as Dispatcher;
 };
 
 // Update dispatcher with auth user ID (link auth account to dispatcher)
