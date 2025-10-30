@@ -6,6 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 import camelcaseKeys from "camelcase-keys";
 import snakecaseKeys from "snakecase-keys";
 import type { Route } from "../types/route";
+import { supabaseAdmin } from "./supabaseAdmin";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -420,7 +421,24 @@ export const deleteDispatcher = async (
   dispatcherId: number
 ): Promise<{ success: boolean; error?: string; orderCount?: number }> => {
   try {
-    // First, check how many orders are assigned to this dispatcher
+    // First, get the dispatcher to retrieve auth_user_id
+    const { data: dispatcher, error: fetchError } = await supabase
+      .from("dispatchers")
+      .select("auth_user_id")
+      .eq("id", dispatcherId)
+      .single();
+
+    if (fetchError) {
+      console.error("Error fetching dispatcher:", fetchError);
+      return {
+        success: false,
+        error: fetchError.message,
+      };
+    }
+
+    const authUserId = dispatcher?.auth_user_id;
+
+    // Check how many orders are assigned to this dispatcher
     const { count, error: countError } = await supabase
       .from("orders")
       .select("*", { count: "exact", head: true })
@@ -467,7 +485,7 @@ export const deleteDispatcher = async (
       }
     }
 
-    // Then delete the dispatcher
+    // Delete the dispatcher record
     const { error: deleteDispatcherError } = await supabase
       .from("dispatchers")
       .delete()
@@ -479,6 +497,20 @@ export const deleteDispatcher = async (
         success: false,
         error: deleteDispatcherError.message,
       };
+    }
+
+    // Delete associated auth user if exists
+    if (authUserId) {
+      const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(
+        authUserId
+      );
+
+      if (deleteAuthError) {
+        console.error("Error deleting auth user:", deleteAuthError);
+        // Don't fail the whole operation if auth deletion fails
+        // The dispatcher record is already deleted
+        console.warn(`Dispatcher deleted but auth user ${authUserId} could not be deleted`);
+      }
     }
 
     return {
