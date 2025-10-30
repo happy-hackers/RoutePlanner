@@ -4,6 +4,7 @@ import type { Customer } from "../types/customer";
 import { createClient } from "@supabase/supabase-js";
 import camelcaseKeys from "camelcase-keys";
 import snakecaseKeys from "snakecase-keys";
+import type { Route } from "../types/route";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -265,6 +266,59 @@ export const getAllDispatchers = async (): Promise<
   } catch (err) {
     console.error("Unexpected error during fetch:", err);
     return;
+  }
+};
+
+export const getAllRoutes = async (): Promise<
+  Route[] | undefined
+> => {
+  try {
+    const { data, error } = await supabase.from("delivery_routes").select("*");
+    if (error) {
+      console.error("Fetch error:", error);
+      return;
+    } else {
+      // Remove create_time from each object
+      const cleanedArray = data.map(({ created_time, updated_time, ...rest }) => ({
+        ...rest,
+      }));
+      // Change the key name xxx_axx to xxxAxx format
+      const camelData = camelcaseKeys(cleanedArray, { deep: true });
+      return camelData;
+    }
+  } catch (err) {
+    console.error("Unexpected error during fetch:", err);
+    return;
+  }
+};
+
+
+export const addRoutes = async (
+  routes: Omit<Route, "id">[]
+): Promise<{ success: boolean; data?: Route[]; error?: string }> => {
+  try {
+    console.log("payload", JSON.stringify(routes.map(r => snakecaseKeys(r)), null, 2));
+    const { data, error } = await supabase
+      .from("delivery_routes")
+      .insert(routes.map((r) => snakecaseKeys(r)))
+      .select();
+
+    if (error) {
+      console.error("Insert error:", error);
+      return { success: false, error: error.message };
+    }
+
+    if (!data || data.length === 0) {
+      return { success: false, error: "No data returned from insert" };
+    }
+
+    const camelData = data.map((item) => camelcaseKeys(item));
+    return { success: true, data: camelData };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Network error occurred",
+    };
   }
 };
 

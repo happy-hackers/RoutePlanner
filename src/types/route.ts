@@ -18,7 +18,10 @@ export interface Route {
   total_time: number;
   total_distance: number;
   polylineCoordinates: LatLngExpression[];
-  createBy: string;
+  createdBy: string;
+
+  version: number;
+  is_active: boolean;
 }
 
 //interface Coordinate { lat: number; lng: number; }

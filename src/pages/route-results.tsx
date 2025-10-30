@@ -9,13 +9,14 @@ import {
   Collapse,
   type CollapseProps,
   List,
+  App,
 } from "antd";
 import type { Order } from "../types/order.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MarkerData } from "../types/markers.ts";
 import type { Dispatcher } from "../types/dispatchers";
 import OpenStreetMap from "../components/OpenStreetMap";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../store/index.ts";
 import {
   addMarkerwithColor,
@@ -24,6 +25,8 @@ import {
 } from "../utils/markersUtils.ts";
 import type { Route } from "../types/route.ts";
 import type { ColumnsType } from "antd/es/table/index";
+import { addRoutes, getAllRoutes } from "../utils/dbUtils.ts";
+import { setSelectedOrders } from "../store/orderSlice.ts";
 
 const { Title, Text } = Typography;
 
@@ -83,8 +86,11 @@ const routeModeColumns: ColumnsType<RouteRow> = [
 ];
 
 export default function RouteResults() {
+  const dispatch = useDispatch();
+  const { message } = App.useApp();
   const [markers, setMarkers] = useState<MarkerData[]>([]);
-  const [routes, setRoutes] = useState<Route[]>([]);
+  const [allRoutes, setAllRoutes] = useState<Route[]>([]);
+  const [newRoutes, setNewRoutes] = useState<Route[]>([]);
   const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
   const [isAllRoutes, setIsAllRoutes] = useState<boolean>(false);
 
@@ -102,6 +108,8 @@ export default function RouteResults() {
     null
   );
 
+  console.log("all routes", allRoutes)
+
   const DISPATCHER_COLORS_MAP = generateDispatcherColorsMap(dispatchers);
 
   const dispatchersOption = [
@@ -113,14 +121,6 @@ export default function RouteResults() {
     })),
   ];
 
-  if (selectedOrders.length === 0) {
-    return (
-      <div>
-        <Title level={4}>No orders found</Title>
-      </div>
-    );
-  }
-
   const data = useMemo(
     () =>
       selectedOrders.filter(
@@ -129,11 +129,22 @@ export default function RouteResults() {
     [selectedOrders, selectedDispatcher]
   );
 
+  const fetchRoutes = async () => {
+    const routesData = await getAllRoutes();
+    if (routesData) {
+      setAllRoutes(routesData);
+    }
+  };
+
+  useEffect(() => {
+    fetchRoutes();
+  }, []);
+
   // Select all order at the beginning
   useEffect(() => {
     if (selectedDispatcher && !isAllRoutes) {
-      if (routes.length > 0) {
-        const routedDispatcherIds = routes.map((r) => r.dispatcherId);
+      if (newRoutes.length > 0) {
+        const routedDispatcherIds = newRoutes.map((r) => r.dispatcherId);
         const filteredOrders = data.filter(
           (order) =>
             order.dispatcherId !== undefined &&
@@ -161,8 +172,8 @@ export default function RouteResults() {
   // Work for all route option
   useEffect(() => {
     if (isAllRoutes && selectedOrders.length > 0) {
-      if (routes.length > 0) {
-        const routedDispatcherIds = routes.map((r) => r.dispatcherId);
+      if (newRoutes.length > 0) {
+        const routedDispatcherIds = newRoutes.map((r) => r.dispatcherId);
         const filteredOrders = selectedOrders.filter(
           (order) =>
             order.dispatcherId !== undefined &&
@@ -184,6 +195,16 @@ export default function RouteResults() {
       }
     }
   }, [isAllRoutes, selectedOrders, dispatchers]);
+
+  if (selectedOrders.length === 0) {
+    return (
+      <div>
+        <Title level={4}>No orders found</Title>
+      </div>
+    );
+  }
+
+  
 
   const addMarker = (marker: MarkerData) => {
     setMarkers((prev) => [...prev, marker]);
@@ -249,7 +270,7 @@ export default function RouteResults() {
 
   const dispatcherItems: CollapseProps["items"] = dispatchers.map(
     (dispatcher) => {
-      const route = routes.find((r) => r.dispatcherId === dispatcher.id);
+      const route = newRoutes.find((r) => r.dispatcherId === dispatcher.id);
       const data = selectedOrders.filter(
         (order) => order.dispatcherId === dispatcher.id
       );
@@ -290,7 +311,7 @@ export default function RouteResults() {
                         filteredOrders,
                         dispatchers
                       );
-                      setRoutes((prev) =>
+                      setNewRoutes((prev) =>
                         prev.filter((p) => p.dispatcherId !== dispatcher.id)
                       );
                       setSelectedRowIds((prev) => [...prev, ...newSelectedIds]);
@@ -350,8 +371,19 @@ export default function RouteResults() {
   );
 
   const foundRoute = selectedDispatcher
-    ? routes.find((r) => r.dispatcherId === selectedDispatcher.id)
+    ? newRoutes.find((r) => r.dispatcherId === selectedDispatcher.id)
     : null;
+
+  const saveRoutes = async () => {
+    const result = await addRoutes(newRoutes);
+    if (result.success) {
+      message.success("Routes have been save successfully and are active now ");
+      setNewRoutes([]);
+      dispatch(setSelectedOrders([]));
+    } else {
+      message.error(result.error);
+    }
+  };
 
   return (
     <Row gutter={[16, 16]} style={{ height: "100%" }}>
@@ -383,6 +415,13 @@ export default function RouteResults() {
           />
           {isAllRoutes ? (
             <>
+              <Row justify="space-between" align="middle">
+                <Col>
+                  <Button type="primary" onClick={saveRoutes}>
+                    Confirm & Save the Route
+                  </Button>
+                </Col>
+              </Row>
               <Collapse
                 items={dispatcherItems}
                 accordion
@@ -427,8 +466,8 @@ export default function RouteResults() {
           setOrderMarkers={setMarkers}
           setSelectedRowId={setSelectedRowIds}
           isRouteResultsPage={true}
-          routes={routes}
-          setRoutes={setRoutes}
+          routes={newRoutes}
+          setRoutes={setNewRoutes}
           isAllRoutes={isAllRoutes}
           selectedDispatcher={selectedDispatcher}
           ref={mapRef}

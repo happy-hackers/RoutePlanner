@@ -336,7 +336,10 @@ const OpenStreetMap = forwardRef(
               total_time: total_time,
               total_distance: total_distance,
               polylineCoordinates: coordinates,
-              createBy: "Admin",
+              createdBy: "Admin",
+
+              version: 1,
+              is_active: false
             };
             setRoutes?.((prev) => {
               const existingIndex = prev.findIndex(
@@ -433,7 +436,10 @@ const OpenStreetMap = forwardRef(
             total_time: totalTime,
             total_distance: totalDistance,
             polylineCoordinates: coordinates,
-            createBy: "Admin",
+            createdBy: "Admin",
+
+            version: 1,
+            is_active: false
           };
           setRoutes?.((prev) => {
             const existingIndex = prev.findIndex(
