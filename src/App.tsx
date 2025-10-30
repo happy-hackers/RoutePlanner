@@ -8,23 +8,56 @@ import RouteResults from "./pages/route-results";
 import ViewCustomers from "./pages/view-customers";
 import SetDispatcher from "./pages/set-dispatcher";
 import Settings from "./pages/settings";
+import DriverRoute from "./pages/driver-route";
+import DriverLogin from "./pages/driver-login";
 import OpenStreetMap from "./components/OpenStreetMap";
+import { AuthProvider } from "./contexts/AuthContext";
 import { useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { MarkerData } from "./types/markers";
+import { useDispatch } from "react-redux";
+import { getAllDispatchers } from "./utils/dbUtils";
+import { setDispatchers } from "./store/dispatcherSlice";
 
 const { Content } = Layout;
 const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
 
 function AppContent() {
+  const dispatch = useDispatch();
   const location = useLocation();
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [hoveredOrderId, setHoveredOrderId] = useState<number | null>(null);
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const dispatchersData = await getAllDispatchers();
+        if (dispatchersData)
+          dispatch(setDispatchers(dispatchersData));
+      } catch (err) {
+        console.error("Failed to fetch dispatchers:", err);
+      }
+    };
+    fetchData();
+  }, []);
+
 
   const needMap = ["/view-orders", "/assign-dispatcher"].some((path) => {
     const pattern = new RegExp("^" + path.replace(/:[^/]+/g, "[^/]+") + "$");
     return pattern.test(location.pathname);
   });
+
+  // Driver pages are fullscreen without navigation
+  const isDriverPage = location.pathname.startsWith("/driver-route") || location.pathname.startsWith("/driver-login");
+
+  if (isDriverPage) {
+    return (
+      <Routes>
+        <Route path="/driver-login" element={<DriverLogin />} />
+        <Route path="/driver-route" element={<DriverRoute />} />
+      </Routes>
+    );
+  }
 
   return (
     <Layout style={{ minHeight: "100vh", margin: 0, padding: 0 }}>
@@ -54,7 +87,7 @@ function AppContent() {
           </Col>
           {needMap && (
             <Col flex="auto">
-              <OpenStreetMap orderMarkers={markers} setOrderMarkers={setMarkers} hoveredOrderId={hoveredOrderId} />
+              <OpenStreetMap orderMarkers={markers} setOrderMarkers={setMarkers} />
             </Col>
           )}
         </Row>
@@ -69,7 +102,9 @@ function App() {
     googleMapsApiKey: apiKey || "",
   });
   return (
-    <AntApp>{isLoaded ? <AppContent /> : <div>Loading Map...</div>}</AntApp>
+    <AuthProvider>
+      <AntApp>{isLoaded ? <AppContent /> : <div>Loading Map...</div>}</AntApp>
+    </AuthProvider>
   );
 }
 

@@ -1,9 +1,11 @@
 import type { Dispatcher } from "../types/dispatchers";
-import type { Order } from "../types/order";
+import type { Order, OrderStatus } from "../types/order";
 import type { Customer } from "../types/customer";
+import type { DeliveryRoute } from "../types/delivery-route";
 import { createClient } from "@supabase/supabase-js";
 import camelcaseKeys from "camelcase-keys";
 import snakecaseKeys from "snakecase-keys";
+import type { Route } from "../types/route";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -249,7 +251,7 @@ export const getAllDispatchers = async (): Promise<
   Dispatcher[] | undefined
 > => {
   try {
-    const { data, error } = await supabase.from("dispatchers").select("*");
+    const { data, error } = await supabase.from("dispatchers").select("id, name, email, phone, auth_user_id, active_day, responsible_area, created_time");
     if (error) {
       console.error("Fetch error:", error);
       return;
@@ -268,6 +270,59 @@ export const getAllDispatchers = async (): Promise<
   }
 };
 
+export const getAllRoutes = async (): Promise<
+  Route[] | undefined
+> => {
+  try {
+    const { data, error } = await supabase.from("delivery_routes").select("*");
+    if (error) {
+      console.error("Fetch error:", error);
+      return;
+    } else {
+      // Remove create_time from each object
+      const cleanedArray = data.map(({ created_time, updated_time, ...rest }) => ({
+        ...rest,
+      }));
+      // Change the key name xxx_axx to xxxAxx format
+      const camelData = camelcaseKeys(cleanedArray, { deep: true });
+      return camelData;
+    }
+  } catch (err) {
+    console.error("Unexpected error during fetch:", err);
+    return;
+  }
+};
+
+
+export const addRoutes = async (
+  routes: Omit<Route, "id">[]
+): Promise<{ success: boolean; data?: Route[]; error?: string }> => {
+  try {
+    console.log("payload", JSON.stringify(routes.map(r => snakecaseKeys(r)), null, 2));
+    const { data, error } = await supabase
+      .from("delivery_routes")
+      .insert(routes.map((r) => snakecaseKeys(r)))
+      .select();
+
+    if (error) {
+      console.error("Insert error:", error);
+      return { success: false, error: error.message };
+    }
+
+    if (!data || data.length === 0) {
+      return { success: false, error: "No data returned from insert" };
+    }
+
+    const camelData = data.map((item) => camelcaseKeys(item));
+    return { success: true, data: camelData };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Network error occurred",
+    };
+  }
+};
+
 export const addDispatcher = async (
   dispatcherData: Omit<Dispatcher, "id">
 ): Promise<{ success: boolean; data?: Dispatcher; error?: string }> => {
@@ -277,6 +332,9 @@ export const addDispatcher = async (
       .insert([
         {
           name: dispatcherData.name,
+          email: dispatcherData.email,
+          phone: dispatcherData.phone,
+          auth_user_id: dispatcherData.authUserId,
           active_day: dispatcherData.activeDay,
           responsible_area: dispatcherData.responsibleArea,
         },
@@ -322,21 +380,13 @@ export const updateDispatchers = async (
     | string;
 }> => {
   try {
-    // Change the key name to match the column name in database
-    const cleanedUpdates = dispatcherData.map(
-      ({ activeDay, responsibleArea, ...rest }) => ({
-        ...rest,
-        active_day: activeDay,
-        responsible_area: responsibleArea,
-      })
-    );
     const results: any[] = [];
     const errors = [];
-    for (const item of cleanedUpdates) {
+    for (const item of dispatcherData) {
       const { id, ...fieldsToUpdate } = item;
       const { data, error } = await supabase
         .from("dispatchers")
-        .update(fieldsToUpdate)
+        .update(snakecaseKeys(fieldsToUpdate))
         .eq("id", id);
       if (error) {
         console.error("Error updating ID:", `${id}: ${error.message}`);
@@ -476,6 +526,128 @@ export const assignDispatcher = async (
     return {
       success: false,
       error: error instanceof Error ? error.message : "Network error occurred",
+    };
+  }
+};
+
+// ========== DeliveryRoute Functions ==========
+
+// Get driver's active route for a specific date
+// Note: orderSequence contains full Order objects, not just IDs
+export const getDriverActiveRoute = async (
+  dispatcherId: number,
+  routeDate?: string
+): Promise<DeliveryRoute | null> => {
+  const date = routeDate || new Date().toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('delivery_routes')
+    .select('*')
+    .eq('dispatcher_id', dispatcherId)
+    .eq('route_date', date)
+    .eq('is_active', true)
+    .single();
+
+  if (error || !data) return null;
+
+  const { created_time, ...rest } = data;
+  return camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
+};
+
+// Update order status (mark as delivered)
+export const updateOrderStatus = async (
+  orderId: number,
+  newStatus: OrderStatus
+): Promise<void> => {
+  const { error } = await supabase
+    .from('orders')
+    .update({ status: newStatus })
+    .eq('id', orderId);
+
+  if (error) throw error;
+};
+
+// Get all upcoming active routes for driver
+export const getDriverUpcomingRoutes = async (
+  dispatcherId: number
+): Promise<DeliveryRoute[]> => {
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('delivery_routes')
+    .select('*')
+    .eq('dispatcher_id', dispatcherId)
+    .eq('is_active', true)
+    .gte('route_date', today)
+    .order('route_date', { ascending: true });
+
+  if (error) throw error;
+
+  return data.map(row => {
+    const { created_time, ...rest } = row;
+    return camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
+  });
+};
+
+// Get dispatcher by ID
+export const getDispatcherById = async (
+  dispatcherId: number
+): Promise<Dispatcher | null> => {
+  const { data, error } = await supabase
+    .from('dispatchers')
+    .select('id, name, email, phone, auth_user_id, active_day, responsible_area, created_time')
+    .eq('id', dispatcherId)
+    .single();
+
+  if (error || !data) return null;
+
+  const { created_time, ...rest } = data;
+  return camelcaseKeys(rest) as Dispatcher;
+};
+
+// Get dispatcher by auth user ID (for session-based auth)
+export const getDispatcherByAuthId = async (
+  authUserId: string
+): Promise<Dispatcher | null> => {
+  const { data, error } = await supabase
+    .from('dispatchers')
+    .select('id, name, email, phone, auth_user_id, active_day, responsible_area, created_time')
+    .eq('auth_user_id', authUserId)
+    .single();
+
+  if (error || !data) return null;
+
+  const { created_time, ...rest } = data;
+  return camelcaseKeys(rest) as Dispatcher;
+};
+
+// Update dispatcher with auth user ID (link auth account to dispatcher)
+export const updateDispatcherAuth = async (
+  dispatcherId: number,
+  email: string,
+  authUserId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const { error } = await supabase
+      .from('dispatchers')
+      .update({
+        email,
+        auth_user_id: authUserId
+      })
+      .eq('id', dispatcherId);
+
+    if (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update dispatcher auth'
     };
   }
 };
