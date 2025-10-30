@@ -38,6 +38,7 @@ class RouteInput(BaseModel):
     startPoint: Point
     waypoints: List[WayPoint]
     endPoint: Point
+    startTime: Optional[str] = None
 
 
 
@@ -86,7 +87,7 @@ def time_to_seconds(t: str) -> int:
 
 def get_current_time_in_seconds():
     now = datetime.now()
-    return 10 * 3600 + now.minute * 60 + now.second
+    return now.hour * 3600 + now.minute * 60 + now.second
 
 @app.post("/optimize-route")
 async def time_consider_route(data: RouteInput):
@@ -103,21 +104,21 @@ async def time_consider_route(data: RouteInput):
     matrix = get_time_matrix_routes_api(all_points, google_api_key)
     num_points = 2 + len(data.waypoints)
     time_matrix, distance_matrix = build_time_and_distance_matrices(matrix, num_points)
-    data = {
+    routing_data = {
         "time_matrix": time_matrix,
         "num_vehicles": 1,
         "starts": [0],
         "ends": [len(time_matrix) - 1],
     }
     manager = pywrapcp.RoutingIndexManager(
-        len(data["time_matrix"]), data["num_vehicles"], data["starts"], data["ends"]
+        len(routing_data["time_matrix"]), routing_data["num_vehicles"], routing_data["starts"], routing_data["ends"]
     )
     routing = pywrapcp.RoutingModel(manager)
 
     def time_callback(from_index, to_index):
         from_node = manager.IndexToNode(from_index)
         to_node = manager.IndexToNode(to_index)
-        return data["time_matrix"][from_node][to_node]
+        return routing_data["time_matrix"][from_node][to_node]
 
     transit_callback_index = routing.RegisterTransitCallback(
         time_callback
@@ -137,12 +138,16 @@ async def time_consider_route(data: RouteInput):
 
     for location_idx, (open_time, close_time) in enumerate(time_windows):
         # Skip setting time windows for the end node
-        if location_idx in data["ends"]:
+        if location_idx in routing_data["ends"]:
             continue
         index = manager.NodeToIndex(location_idx)
         time_dimension.CumulVar(index).SetRange(open_time, close_time)
     start_index = routing.Start(0)
-    time_dimension.CumulVar(start_index).SetValue(get_current_time_in_seconds()) # Set the set off time
+    if data.startTime:
+        start_seconds = time_to_seconds(data.startTime)
+    else:
+        start_seconds = get_current_time_in_seconds()
+    time_dimension.CumulVar(start_index).SetValue(start_seconds) # Set the set off time
     search_parameters = (
         pywrapcp.DefaultRoutingSearchParameters()
     )  # creates a configuration object that controls how the solver works
@@ -159,7 +164,7 @@ async def time_consider_route(data: RouteInput):
     solution = routing.SolveWithParameters(search_parameters)
     if not solution:
         return {"error": "No feasible solution found within the opening time of these customers. Please select other ways"}
-    route, segment_times, total_time = [], [], 0
+    route, segment_times, total_time, total_distance = [], [], 0, 0
     index = routing.Start(0)  # get the starting routing index for vehicle 0
     while not routing.IsEnd(index): # this will make "route" variable not contain the the index of the end node
         route.append(manager.IndexToNode(index))
@@ -168,6 +173,10 @@ async def time_consider_route(data: RouteInput):
         travel_time = routing.GetArcCostForVehicle(
             previous_index, index, 0
         )  # get the travel time between current and next node
+        from_node = manager.IndexToNode(previous_index)
+        to_node = manager.IndexToNode(index)
+        travel_distance = distance_matrix[from_node][to_node]
+        total_distance += travel_distance
         segment_times.append(round(travel_time / 60))
         total_time += travel_time
     # Now route has start point but not end point
@@ -175,7 +184,7 @@ async def time_consider_route(data: RouteInput):
     index = [x - 1 for x in route]
     total_time = round(total_time / 60)
     # Return the order of waypoints, the estimated time between each waypoints and the total time of the route
-    return { "order": index, "segment_times": segment_times, "total_time": total_time }
+    return { "order": index, "segment_times": segment_times, "total_time": total_time, "total_distance": total_distance }
 
 @app.get("/")
 async def root():

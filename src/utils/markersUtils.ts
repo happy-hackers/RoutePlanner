@@ -10,7 +10,7 @@ import violetIconImage from "../assets/icons/marker-icon-2x-violet.png"
 import greenIconImage from "../assets/icons/marker-icon-2x-green.png"
 import type { Dispatcher } from "../types/dispatchers";
 
-const generateDispatcherColors = (dispatchers: { id: number }[]) => {
+const generateDispatcherColorsMap = (dispatchers: Dispatcher[]) => {
   const map: Record<number, { url: string; color: string }> = {};
   
   dispatchers.forEach((dispatcher, index) => {
@@ -22,7 +22,7 @@ const generateDispatcherColors = (dispatchers: { id: number }[]) => {
 
 const greyIcon = {
   url: greyIconImage,
-  color: "red",
+  color: "grey",
 }
 
 const redIcon = {
@@ -63,26 +63,26 @@ const greenIcon = {
 const ICONS = [redIcon, blueIcon, orangeIcon, blackIcon, goldIcon, violetIcon, greenIcon];
 
 const setMarkersList = (orders: Order[], dispatchers: Dispatcher[]): MarkerData[] => {
-  const DISPATCHER_COLORS = generateDispatcherColors(dispatchers);
+  const DISPATCHER_COLORS_MAP = generateDispatcherColorsMap(dispatchers);
   return orders.map((order) => ({
     id: order.id,
     position: { lat: order.lat, lng: order.lng },
     address: `${order.detailedAddress}, ${order.area}`,
-    icon: order.dispatcherId? DISPATCHER_COLORS[order.dispatcherId] : greyIcon,
+    icon: order.dispatcherId? DISPATCHER_COLORS_MAP[order.dispatcherId] : greyIcon,
     dispatcherId: order.dispatcherId,
   }));
 };
 
 const addMarkerwithColor = (order: Order, dispatchers: Dispatcher[]): MarkerData => {
-  const DISPATCHER_COLORS = generateDispatcherColors(dispatchers);
+  const DISPATCHER_COLORS_MAP = generateDispatcherColorsMap(dispatchers);
   return {
     id: order.id,
     position: { lat: order.lat, lng: order.lng },
     address: `${order.detailedAddress}, ${order.area}`,
-    icon: order.dispatcherId? DISPATCHER_COLORS[order.dispatcherId] : greyIcon,
+    icon: order.dispatcherId? DISPATCHER_COLORS_MAP[order.dispatcherId] : greyIcon,
     customer: order.customer,
     dispatcherId: order.dispatcherId,
   };
 };
 
-export { addMarkerwithColor, setMarkersList };
+export { generateDispatcherColorsMap, addMarkerwithColor, setMarkersList };

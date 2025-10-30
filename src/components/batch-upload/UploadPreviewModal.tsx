@@ -1,6 +1,6 @@
 import { Modal, Button, Table, Alert, Space, Typography } from "antd";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import type { Customer } from "../types/customer";
+import type { Customer } from "../../types/customer";
 
 const { Title, Text } = Typography;
 
@@ -13,6 +13,16 @@ interface UploadPreviewModalProps {
   newCustomers: NewCustomerData[];
   ordersCount: number;
   failedAddresses: { address: string; error: string }[];
+  ordersWithDefaults?: {
+    orderId: number;
+    usedDefaultDate: boolean;
+    usedDefaultTime: boolean;
+  }[];
+  invalidDateFormats?: {
+    orderId: number;
+    originalDate: string;
+    rowNumber: number;
+  }[];
   onConfirm: () => void;
   onCancel: () => void;
   loading?: boolean;
@@ -23,6 +33,8 @@ function UploadPreviewModal({
   newCustomers,
   ordersCount,
   failedAddresses,
+  ordersWithDefaults = [],
+  invalidDateFormats = [],
   onConfirm,
   onCancel,
   loading = false,
@@ -92,7 +104,8 @@ function UploadPreviewModal({
         <div>
           <Title level={5}>Summary</Title>
           <Text>
-            <strong>{newCustomers.length}</strong> new customer(s) will be created
+            <strong>{newCustomers.length}</strong> new customer(s) will be
+            created
           </Text>
           <br />
           <Text>
@@ -107,18 +120,54 @@ function UploadPreviewModal({
             description={
               <div>
                 <Text>
-                  The following {failedAddresses.length} address(es) failed geocoding and will be skipped:
+                  The following {failedAddresses.length} address(es) failed
+                  geocoding and will be skipped:
                 </Text>
                 <ul style={{ marginTop: 8, marginBottom: 0 }}>
                   {failedAddresses.map((failed, index) => (
                     <li key={index}>
-                      <Text strong>{failed.address}</Text> - <Text type="danger">{failed.error}</Text>
+                      <Text strong>{failed.address}</Text> -{" "}
+                      <Text type="danger">{failed.error}</Text>
                     </li>
                   ))}
                 </ul>
               </div>
             }
             type="warning"
+            showIcon
+            icon={<ExclamationCircleOutlined />}
+          />
+        )}
+
+        {/* Invalid Date Format Warning */}
+        {invalidDateFormats.length > 0 && (
+          <Alert
+            message="Invalid Date Format - Rows Skipped"
+            description={
+              <div>
+                <Text>
+                  The following {invalidDateFormats.length} row(s) had invalid
+                  date formats and will be <strong>skipped</strong>. Only{" "}
+                  <strong>YYYY-MM-DD</strong> format is accepted (e.g.,
+                  2025-01-20):
+                </Text>
+                <ul style={{ marginTop: 8, marginBottom: 0 }}>
+                  {invalidDateFormats.map((invalid, index) => (
+                    <li key={index}>
+                      <Text strong>Row {invalid.rowNumber}</Text>
+                      {invalid.orderId > 0 && (
+                        <Text> (Order {invalid.orderId})</Text>
+                      )}
+                      <Text> - Invalid format: </Text>
+                      <Text type="danger" code>
+                        {invalid.originalDate}
+                      </Text>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            }
+            type="error"
             showIcon
             icon={<ExclamationCircleOutlined />}
           />
@@ -137,6 +186,38 @@ function UploadPreviewModal({
               size="small"
             />
           </div>
+        )}
+
+        {/* Orders with Default Values */}
+        {ordersWithDefaults.length > 0 && (
+          <Alert
+            message={`Auto-filled Data (${ordersWithDefaults.length} order(s))`}
+            description={
+              <div>
+                <Text>
+                  The following orders had missing date/time data that was
+                  auto-filled with your defaults:
+                </Text>
+                <ul style={{ marginTop: 8, marginBottom: 0 }}>
+                  {ordersWithDefaults.map((defaultInfo, index) => (
+                    <li key={index}>
+                      <Text strong>Order {defaultInfo.orderId}</Text> -
+                      {defaultInfo.usedDefaultDate && (
+                        <Text> Used default date</Text>
+                      )}
+                      {defaultInfo.usedDefaultDate &&
+                        defaultInfo.usedDefaultTime && <Text>, </Text>}
+                      {defaultInfo.usedDefaultTime && (
+                        <Text> Used default time period</Text>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            }
+            type="info"
+            showIcon
+          />
         )}
 
         {/* No Data Warning */}
