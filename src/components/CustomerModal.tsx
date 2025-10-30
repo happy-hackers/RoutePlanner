@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Modal,
   Form as AntForm,
@@ -14,6 +14,9 @@ import { addCustomer, updateCustomer } from "../utils/dbUtils";
 import type { Customer } from "../types/customer.ts";
 import dayjs from "dayjs";
 import areaData from "../hong_kong_areas.json"
+import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
+
+const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 
 interface CustomerModalProps {
   visible: boolean;
@@ -39,6 +42,70 @@ export default function CustomerModal({
   
   const [form] = AntForm.useForm();
   const { message } = App.useApp();
+
+  const [addressValue, setAddressValue] = useState<string>("");
+  const [suggestions, setSuggestions] = useState<
+    {
+      value: string;
+      label: string;
+      subdistrict?: string;
+    }[]
+  >([]);
+
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
+  const autocompleteService =
+    useRef<google.maps.places.AutocompleteSuggestion | null>(null);
+  const sessionToken = useRef<
+    google.maps.places.AutocompleteSessionToken | undefined
+  >(undefined);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setOptions({ key: GOOGLE_API_KEY });
+    (async () => {
+      await importLibrary("places");
+      await importLibrary("geocoding");
+      geocoderRef.current = new google.maps.Geocoder();
+      autocompleteService.current =
+        new google.maps.places.AutocompleteSuggestion();
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!autocompleteService.current) return;
+    if (!addressValue) {
+      setSuggestions([]);
+      return;
+    }
+
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(async () => {
+      if (!sessionToken.current) {
+        sessionToken.current =
+          new google.maps.places.AutocompleteSessionToken();
+      }
+
+      const results =
+        await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(
+          {
+            input: addressValue,
+            region: "HK",
+            locationBias: {
+              center: { lat: 22.3193, lng: 114.1694 },
+              radius: 50000,
+            },
+          }
+        );
+
+      setSuggestions(
+        results.suggestions.map((s) => ({
+          value: s.placePrediction?.placeId ?? "",
+          label: s.placePrediction?.text.text ?? "",
+          subdistrict: s.placePrediction?.secondaryText?.text ?? "",
+        }))
+      );
+    }, 300);
+  }, [addressValue]);
 
   useEffect(() => {
     if (visible) {
@@ -133,6 +200,62 @@ export default function CustomerModal({
     onCancel();
   };
 
+  async function geocodeAddress(
+    placeId: string
+  ): Promise<{ lat: number; lng: number }> {
+    return new Promise((resolve, reject) => {
+      geocoderRef.current?.geocode({ placeId }, (results, status) => {
+        if (
+          status === google.maps.GeocoderStatus.OK &&
+          results &&
+          results.length > 0
+        ) {
+          const loc = results[0].geometry.location;
+          resolve({ lat: loc.lat(), lng: loc.lng() });
+        } else {
+          reject(`Geocode failed: ${status}`);
+        }
+      });
+    });
+  }
+
+  const handleSelect = async (
+    value: string,
+    option: (typeof suggestions)[0]
+  ) => {
+    if (!value) return;
+
+    try {
+      const latLng = await geocodeAddress(value);
+      let area = "";
+      let district = "";
+
+      // Find area/district from subdistrict
+      if (option.subdistrict) {
+        for (const [a, districtsObj] of Object.entries(areaData)) {
+          for (const [d, subdistricts] of Object.entries(districtsObj)) {
+            if ((subdistricts as string[]).includes(option.subdistrict!)) {
+              area = a;
+              district = d;
+            }
+          }
+        }
+      }
+
+      form.setFieldsValue({
+        detailedAddress: option.label,
+        area,
+        district,
+        lat: latLng.lat,
+        lng: latLng.lng,
+      });
+
+      setSelectedArea(area as keyof typeof areaData);
+    } catch (err) {
+      console.error("Error fetching place details:", err);
+    }
+  };
+
   return (
     <Modal
       title={mode === "add" ? "Add New Customer" : "Edit Customer"}
@@ -214,18 +337,28 @@ export default function CustomerModal({
         <AntForm.Item
           label="Detailed Address"
           name="detailedAddress"
-          rules={[
-            {
-              required: true,
-              message: "Please input the detailed address of the customer!",
-            },
-          ]}
+          rules={[{ required: true, message: "Please input the detailed address of the customer!" }]}
         >
-          <Input placeholder="Address" />
+          <Select
+            showSearch
+            placeholder="Search address"
+            filterOption={false}
+            onSearch={(value) => {
+              setAddressValue(value);
+            }}
+            options={suggestions}
+            onSelect={handleSelect}
+            onChange={(value) => {
+              form.setFieldsValue({ detailedAddress: value });
+              // Clear lat/lng if manually typing
+              form.setFieldsValue({ lat: undefined, lng: undefined });
+            }}
+          />
         </AntForm.Item>
         <AntForm.Item
           label="Longitude"
           name="lng"
+          hidden
           rules={[
             {
               required: true,
@@ -238,6 +371,7 @@ export default function CustomerModal({
         <AntForm.Item
           label="Latitude"
           name="lat"
+          hidden
           rules={[
             {
               required: true,

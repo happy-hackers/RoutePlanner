@@ -31,8 +31,8 @@ interface NavigationMapProp {
   setOrderMarkers: React.Dispatch<React.SetStateAction<MarkerData[]>>;
   setSelectedRowId?: React.Dispatch<React.SetStateAction<number[]>>;
   isRouteResultsPage?: boolean;
-  routes?: Route[];
-  setRoutes?: React.Dispatch<React.SetStateAction<Route[]>>;
+  newRoutes?: Omit<Route, "id">[];
+  setNewRoutes?: React.Dispatch<React.SetStateAction<Omit<Route, "id">[]>>;
   isAllRoutes?: boolean;
   selectedDispatcher?: Dispatcher | null;
 }
@@ -78,8 +78,8 @@ const OpenStreetMap = forwardRef(
       setOrderMarkers,
       setSelectedRowId,
       isRouteResultsPage,
-      routes,
-      setRoutes,
+      newRoutes,
+      setNewRoutes,
       isAllRoutes,
       selectedDispatcher,
     }: NavigationMapProp,
@@ -107,7 +107,7 @@ const OpenStreetMap = forwardRef(
 
     const DISPATCHER_COLORS_MAP = generateDispatcherColorsMap(dispatchers);
 
-    const foundRoute = routes?.find(
+    const foundRoute = newRoutes?.find(
       (route) => route.dispatcherId === selectedDispatcher?.id
     );
 
@@ -319,7 +319,7 @@ const OpenStreetMap = forwardRef(
             const coordinates = data.routes[0].geometry.coordinates.map(
               (c: [number, number]) => [c[1], c[0]] // flip lng,lat → lat,lng
             );
-            const newRoute: Route = {
+            const newRoute: Omit<Route, "id"> = {
               dispatcherId: dispatcherId
                 ? dispatcherId
                 : oMarkers[0]?.dispatcherId!,
@@ -339,9 +339,9 @@ const OpenStreetMap = forwardRef(
               createdBy: "Admin",
 
               version: 1,
-              is_active: false
+              is_active: true
             };
-            setRoutes?.((prev) => {
+            setNewRoutes?.((prev) => {
               const existingIndex = prev.findIndex(
                 (r) => r.dispatcherId === newRoute.dispatcherId
               );
@@ -417,7 +417,7 @@ const OpenStreetMap = forwardRef(
           const coordinates = data.routes[0].geometry.coordinates.map(
             (c: [number, number]) => [c[1], c[0]] // flip lng,lat → lat,lng
           );
-          const newRoute: Route = {
+          const newRoute: Omit<Route, "id"> = {
             dispatcherId: dispatcherId
               ? dispatcherId
               : oMarkers[0]?.dispatcherId!,
@@ -439,9 +439,9 @@ const OpenStreetMap = forwardRef(
             createdBy: "Admin",
 
             version: 1,
-            is_active: false
+            is_active: true
           };
-          setRoutes?.((prev) => {
+          setNewRoutes?.((prev) => {
             const existingIndex = prev.findIndex(
               (r) => r.dispatcherId === newRoute.dispatcherId
             );
@@ -597,7 +597,7 @@ const OpenStreetMap = forwardRef(
             );
           })}
           {isAllRoutes
-            ? routes?.map((route, routeIndex) => (
+            ? newRoutes?.map((route, routeIndex) => (
                 <>
                   <Marker
                     position={[route.startLat, route.startLng]}
