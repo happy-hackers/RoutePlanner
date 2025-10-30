@@ -565,7 +565,7 @@ export const assignDispatcher = async (
 // ========== DeliveryRoute Functions ==========
 
 // Get driver's active route for a specific date
-// Note: orderSequence contains full Order objects, not just IDs
+// Note: Fetches fresh order data to ensure current status is reflected
 export const getDriverActiveRoute = async (
   dispatcherId: number,
   routeDate?: string
@@ -582,8 +582,36 @@ export const getDriverActiveRoute = async (
 
   if (error || !data) return null;
 
+  // Extract order IDs from the route's order_sequence
+  const orderIds = data.order_sequence.map((order: any) => order.id);
+
+  // Fetch fresh order data from orders table with current statuses
+  const { data: freshOrders, error: ordersError } = await supabase
+    .from('orders')
+    .select('*, customers(*)')
+    .in('id', orderIds);
+
+  if (ordersError || !freshOrders) {
+    // Fallback to stale data if fresh fetch fails
+    const { created_time, ...rest } = data;
+    return camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
+  }
+
+  // Clean and convert fresh orders
+  const cleanedOrders = freshOrders.map(({ created_time, ...rest }) => ({ ...rest }));
+  const camelOrders = camelcaseKeys(cleanedOrders, { deep: true });
+
+  // Merge: maintain route's sequence order but use fresh order data
+  const freshOrderSequence = orderIds.map((id: number) =>
+    camelOrders.find((order: any) => order.id === id)
+  ).filter(Boolean); // Remove any null entries
+
+  // Update route with fresh order sequence
   const { created_time, ...rest } = data;
-  return camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
+  const route = camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
+  route.orderSequence = freshOrderSequence as any;
+
+  return route;
 };
 
 // Update order status (mark as delivered)
