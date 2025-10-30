@@ -400,21 +400,13 @@ export const updateDispatchers = async (
     | string;
 }> => {
   try {
-    // Change the key name to match the column name in database
-    const cleanedUpdates = dispatcherData.map(
-      ({ activeDay, responsibleArea, ...rest }) => ({
-        ...rest,
-        active_day: activeDay,
-        responsible_area: responsibleArea,
-      })
-    );
     const results: any[] = [];
     const errors = [];
-    for (const item of cleanedUpdates) {
+    for (const item of dispatcherData) {
       const { id, ...fieldsToUpdate } = item;
       const { data, error } = await supabase
         .from("dispatchers")
-        .update(fieldsToUpdate)
+        .update(snakecaseKeys(fieldsToUpdate))
         .eq("id", id);
       if (error) {
         console.error("Error updating ID:", `${id}: ${error.message}`);

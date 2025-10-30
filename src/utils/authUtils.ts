@@ -1,4 +1,5 @@
 import { supabase } from './dbUtils';
+import { supabaseAdmin } from './supabaseAdmin';
 import type { User, AuthError } from '@supabase/supabase-js';
 import type { Dispatcher } from '../types/dispatchers';
 
@@ -179,28 +180,41 @@ export const createDriverAuth = async (
 };
 
 // Update driver password (called by admin)
+// ⚠️ Uses admin client with service role key
 export const updateDriverPassword = async (
-  userId: string,
+  authUserId: string,
   newPassword: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    // Note: This requires the user to be logged in
-    // For admin to reset another user's password, we'd need the admin API
-    // For now, this is a placeholder - you may need to implement password reset via email
-
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword
+    console.log('[DEBUG] updateDriverPassword: Calling admin API...', {
+      authUserId,
+      timestamp: new Date().toISOString()
     });
 
+    // Use Supabase Admin API to update user password by ID
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+      authUserId,
+      { password: newPassword }
+    );
+
     if (error) {
+      console.error('[DEBUG] updateDriverPassword: Error occurred:', {
+        error,
+        message: error.message
+      });
       return {
         success: false,
         error: error.message
       };
     }
 
+    console.log('[DEBUG] updateDriverPassword: Password reset successfully');
     return { success: true };
   } catch (error) {
+    console.error('[DEBUG] updateDriverPassword: Exception caught:', {
+      error,
+      errorMessage: error instanceof Error ? error.message : String(error)
+    });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update password'
