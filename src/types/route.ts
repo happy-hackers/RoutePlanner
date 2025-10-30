@@ -24,5 +24,3 @@ export interface Route {
   version: number;
   is_active: boolean;
 }
-
-//interface Coordinate { lat: number; lng: number; }
