@@ -18,6 +18,11 @@ interface UploadPreviewModalProps {
     usedDefaultDate: boolean;
     usedDefaultTime: boolean;
   }[];
+  invalidDateFormats?: {
+    orderId: number;
+    originalDate: string;
+    rowNumber: number;
+  }[];
   onConfirm: () => void;
   onCancel: () => void;
   loading?: boolean;
@@ -29,6 +34,7 @@ function UploadPreviewModal({
   ordersCount,
   failedAddresses,
   ordersWithDefaults = [],
+  invalidDateFormats = [],
   onConfirm,
   onCancel,
   loading = false,
@@ -128,6 +134,40 @@ function UploadPreviewModal({
               </div>
             }
             type="warning"
+            showIcon
+            icon={<ExclamationCircleOutlined />}
+          />
+        )}
+
+        {/* Invalid Date Format Warning */}
+        {invalidDateFormats.length > 0 && (
+          <Alert
+            message="Invalid Date Format - Rows Skipped"
+            description={
+              <div>
+                <Text>
+                  The following {invalidDateFormats.length} row(s) had invalid
+                  date formats and will be <strong>skipped</strong>. Only{" "}
+                  <strong>YYYY-MM-DD</strong> format is accepted (e.g.,
+                  2025-01-20):
+                </Text>
+                <ul style={{ marginTop: 8, marginBottom: 0 }}>
+                  {invalidDateFormats.map((invalid, index) => (
+                    <li key={index}>
+                      <Text strong>Row {invalid.rowNumber}</Text>
+                      {invalid.orderId > 0 && (
+                        <Text> (Order {invalid.orderId})</Text>
+                      )}
+                      <Text> - Invalid format: </Text>
+                      <Text type="danger" code>
+                        {invalid.originalDate}
+                      </Text>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            }
+            type="error"
             showIcon
             icon={<ExclamationCircleOutlined />}
           />
