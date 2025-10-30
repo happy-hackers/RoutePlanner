@@ -1,6 +1,7 @@
 import type { Dispatcher } from "../types/dispatchers";
-import type { Order } from "../types/order";
+import type { Order, OrderStatus } from "../types/order";
 import type { Customer } from "../types/customer";
+import type { DeliveryRoute } from "../types/delivery-route";
 import { createClient } from "@supabase/supabase-js";
 import camelcaseKeys from "camelcase-keys";
 import snakecaseKeys from "snakecase-keys";
@@ -9,7 +10,27 @@ import type { Route } from "../types/route";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+console.log('[DEBUG] dbUtils: Initializing Supabase client...', {
+  hasUrl: !!supabaseUrl,
+  hasKey: !!supabaseAnonKey,
+  urlPrefix: supabaseUrl?.substring(0, 20),
+  timestamp: new Date().toISOString()
+});
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Log auth token status on every request
+supabase.auth.onAuthStateChange((event, session) => {
+  console.log('[DEBUG] dbUtils: Auth state changed', {
+    event,
+    hasSession: !!session,
+    hasAccessToken: !!session?.access_token,
+    userId: session?.user?.id,
+    userEmail: session?.user?.email,
+    expiresAt: session?.expires_at,
+    timestamp: new Date().toISOString()
+  });
+});
 
 export const createOrder = async (
   orderData: Omit<Order, "id">
@@ -250,7 +271,7 @@ export const getAllDispatchers = async (): Promise<
   Dispatcher[] | undefined
 > => {
   try {
-    const { data, error } = await supabase.from("dispatchers").select("*");
+    const { data, error } = await supabase.from("dispatchers").select("id, name, email, phone, auth_user_id, active_day, responsible_area, created_time");
     if (error) {
       console.error("Fetch error:", error);
       return;
@@ -331,6 +352,9 @@ export const addDispatcher = async (
       .insert([
         {
           name: dispatcherData.name,
+          email: dispatcherData.email,
+          phone: dispatcherData.phone,
+          auth_user_id: dispatcherData.authUserId,
           active_day: dispatcherData.activeDay,
           responsible_area: dispatcherData.responsibleArea,
         },
@@ -530,6 +554,208 @@ export const assignDispatcher = async (
     return {
       success: false,
       error: error instanceof Error ? error.message : "Network error occurred",
+    };
+  }
+};
+
+// ========== DeliveryRoute Functions ==========
+
+// Get driver's active route for a specific date
+// Note: orderSequence contains full Order objects, not just IDs
+export const getDriverActiveRoute = async (
+  dispatcherId: number,
+  routeDate?: string
+): Promise<DeliveryRoute | null> => {
+  const date = routeDate || new Date().toISOString().split('T')[0];
+
+  console.log('[DEBUG] getDriverActiveRoute: Starting query...', {
+    dispatcherId,
+    routeDate: date,
+    timestamp: new Date().toISOString()
+  });
+
+  const { data, error } = await supabase
+    .from('delivery_routes')
+    .select('*')
+    .eq('dispatcher_id', dispatcherId)
+    .eq('route_date', date)
+    .eq('is_active', true)
+    .single();
+
+  console.log('[DEBUG] getDriverActiveRoute: Query result:', {
+    hasData: !!data,
+    hasError: !!error,
+    error: error ? {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    } : null,
+    dataKeys: data ? Object.keys(data) : null,
+    rawData: data
+  });
+
+  if (error || !data) {
+    console.log('[DEBUG] getDriverActiveRoute: Returning null due to error or no data');
+    return null;
+  }
+
+  const { created_time, ...rest } = data;
+  const result = camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
+
+  console.log('[DEBUG] getDriverActiveRoute: Returning data:', {
+    id: result.id,
+    routeDate: result.routeDate,
+    orderSequenceLength: result.orderSequence?.length,
+    isActive: result.isActive,
+    convertedData: result
+  });
+
+  return result;
+};
+
+// Update order status (mark as delivered)
+export const updateOrderStatus = async (
+  orderId: number,
+  newStatus: OrderStatus
+): Promise<void> => {
+  console.log('[DEBUG] updateOrderStatus: Starting update...', {
+    orderId,
+    newStatus,
+    timestamp: new Date().toISOString()
+  });
+
+  const { error } = await supabase
+    .from('orders')
+    .update({ status: newStatus })
+    .eq('id', orderId);
+
+  if (error) {
+    console.error('[DEBUG] updateOrderStatus: Error occurred:', {
+      error,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+      orderId,
+      newStatus
+    });
+    throw error;
+  }
+
+  console.log('[DEBUG] updateOrderStatus: Successfully updated order status');
+};
+
+// Get all upcoming active routes for driver
+export const getDriverUpcomingRoutes = async (
+  dispatcherId: number
+): Promise<DeliveryRoute[]> => {
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('delivery_routes')
+    .select('*')
+    .eq('dispatcher_id', dispatcherId)
+    .eq('is_active', true)
+    .gte('route_date', today)
+    .order('route_date', { ascending: true });
+
+  if (error) throw error;
+
+  return data.map(row => {
+    const { created_time, ...rest } = row;
+    return camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
+  });
+};
+
+// Get dispatcher by ID
+export const getDispatcherById = async (
+  dispatcherId: number
+): Promise<Dispatcher | null> => {
+  const { data, error } = await supabase
+    .from('dispatchers')
+    .select('id, name, email, phone, auth_user_id, active_day, responsible_area, created_time')
+    .eq('id', dispatcherId)
+    .single();
+
+  if (error || !data) return null;
+
+  const { created_time, ...rest } = data;
+  return camelcaseKeys(rest) as Dispatcher;
+};
+
+// Get dispatcher by auth user ID (for session-based auth)
+export const getDispatcherByAuthId = async (
+  authUserId: string
+): Promise<Dispatcher | null> => {
+  console.log('[DEBUG] getDispatcherByAuthId: Starting query...', {
+    authUserId,
+    timestamp: new Date().toISOString()
+  });
+
+  const { data, error } = await supabase
+    .from('dispatchers')
+    .select('id, name, email, phone, auth_user_id, active_day, responsible_area, created_time')
+    .eq('auth_user_id', authUserId)
+    .single();
+
+  console.log('[DEBUG] getDispatcherByAuthId: Query result:', {
+    hasData: !!data,
+    hasError: !!error,
+    error: error ? {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    } : null,
+    dispatcherId: data?.id,
+    dispatcherName: data?.name
+  });
+
+  if (error || !data) {
+    console.log('[DEBUG] getDispatcherByAuthId: Returning null due to error or no data');
+    return null;
+  }
+
+  const { created_time, ...rest } = data;
+  const result = camelcaseKeys(rest) as Dispatcher;
+
+  console.log('[DEBUG] getDispatcherByAuthId: Returning dispatcher:', {
+    id: result.id,
+    name: result.name,
+    email: result.email
+  });
+
+  return result;
+};
+
+// Update dispatcher with auth user ID (link auth account to dispatcher)
+export const updateDispatcherAuth = async (
+  dispatcherId: number,
+  email: string,
+  authUserId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const { error } = await supabase
+      .from('dispatchers')
+      .update({
+        email,
+        auth_user_id: authUserId
+      })
+      .eq('id', dispatcherId);
+
+    if (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update dispatcher auth'
     };
   }
 };

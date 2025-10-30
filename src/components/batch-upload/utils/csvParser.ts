@@ -17,7 +17,6 @@ export const parseCSV = (
 ): ParseResult => {
   const lines = csvText.trim().split("\n");
   const headers = parseCSVLine(lines[0]).map((h) => h.trim());
-  console.log("headers", headers);
 
   const orders: Order[] = [];
   const usedDefaults: {

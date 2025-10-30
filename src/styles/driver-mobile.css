@@ -1,0 +1,57 @@
+/* Mobile-first styles for driver interface */
+
+/* Prevent zoom on input focus */
+input, select, textarea, button {
+  font-size: 16px !important;
+}
+
+/* Touch-friendly elements */
+.ant-btn-lg {
+  min-height: 56px;
+  font-size: 18px;
+}
+
+.ant-list-item {
+  min-height: 80px;
+}
+
+/* Full viewport height on mobile browsers */
+@supports (-webkit-touch-callout: none) {
+  .map-container {
+    height: -webkit-fill-available;
+  }
+}
+
+/* Responsive breakpoints */
+@media (max-width: 768px) {
+  /* Hide unnecessary elements on mobile */
+  .ant-layout-header {
+    padding: 0 12px;
+  }
+
+  /* Larger touch targets */
+  .ant-checkbox-wrapper {
+    padding: 12px;
+    min-height: 44px;
+  }
+
+  /* Optimize map size */
+  .leaflet-container {
+    height: 60vh;
+  }
+}
+
+@media (min-width: 769px) {
+  /* Desktop: side-by-side layout */
+  .driver-layout {
+    display: flex;
+  }
+
+  .driver-map {
+    flex: 1;
+  }
+
+  .driver-sidebar {
+    width: 400px;
+  }
+}
