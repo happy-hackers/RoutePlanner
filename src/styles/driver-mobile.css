@@ -15,6 +15,10 @@ input, select, textarea, button {
   min-height: 80px;
 }
 
+.route-item-selected {
+  border: 2px solid #1890ff !important;
+}
+
 /* Full viewport height on mobile browsers */
 @supports (-webkit-touch-callout: none) {
   .map-container {

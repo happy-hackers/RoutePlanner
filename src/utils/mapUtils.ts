@@ -10,9 +10,16 @@ export const generateGoogleMapsUrl = (
   const origin = encodeURIComponent(deliveryRoute.startAddress);
   const destination = encodeURIComponent(deliveryRoute.endAddress);
 
-  // Waypoints are all the delivery addresses
+  // Waypoints use addresses with Hong Kong context to avoid ambiguity
   const waypoints = orders
-    .map(order => encodeURIComponent(order.detailedAddress))
+    .map(order => {
+      const address = order.detailedAddress;
+      // Add Hong Kong if not already present to prevent geocoding to wrong country
+      const addressWithContext = address.toLowerCase().includes('hong kong')
+        ? address
+        : `${address}, Hong Kong`;
+      return encodeURIComponent(addressWithContext);
+    })
     .join('|');
 
   // Generate Google Maps directions URL
