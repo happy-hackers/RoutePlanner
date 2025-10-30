@@ -1,5 +1,5 @@
 import { Card, Button, Space, Typography, Tag } from 'antd';
-import { CheckOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { CheckOutlined, UnorderedListOutlined, UndoOutlined } from '@ant-design/icons';
 import type { Order } from '../../types/order';
 
 const { Title, Text } = Typography;
@@ -10,6 +10,7 @@ interface NextStopCardProps {
   totalStops: number;
   segmentTime: number;
   onDone: () => void;
+  onUndo: () => void;
   onViewAll: () => void;
 }
 
@@ -19,6 +20,7 @@ export default function NextStopCard({
   totalStops,
   segmentTime,
   onDone,
+  onUndo,
   onViewAll
 }: NextStopCardProps) {
   const isCompleted = order.status === 'Delivered';
@@ -78,16 +80,26 @@ export default function NextStopCard({
           >
             View All
           </Button>
-          <Button
-            type="primary"
-            size="large"
-            icon={<CheckOutlined />}
-            onClick={onDone}
-            disabled={isCompleted}
-            style={{ flex: 2, height: 56 }}
-          >
-            {isCompleted ? 'Done' : 'Mark as Done'}
-          </Button>
+          {isCompleted ? (
+            <Button
+              size="large"
+              icon={<UndoOutlined />}
+              onClick={onUndo}
+              style={{ flex: 2, height: 56 }}
+            >
+              Undo
+            </Button>
+          ) : (
+            <Button
+              type="primary"
+              size="large"
+              icon={<CheckOutlined />}
+              onClick={onDone}
+              style={{ flex: 2, height: 56 }}
+            >
+              Mark as Done
+            </Button>
+          )}
         </Space>
       </Space>
     </Card>

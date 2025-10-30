@@ -159,6 +159,48 @@ export default function DriverRoute() {
     }
   };
 
+  // Handle undo (revert delivered status)
+  const handleUndo = async () => {
+    const currentOrder = orders[currentStopIndex];
+
+    // Only allow undo for delivered orders
+    if (currentOrder.status !== 'Delivered') {
+      message.warning('This delivery has not been marked as complete yet');
+      return;
+    }
+
+    console.log('[DEBUG] handleUndo: Starting...', {
+      orderId: currentOrder.id,
+      currentStatus: currentOrder.status,
+      stopIndex: currentStopIndex,
+      timestamp: new Date().toISOString()
+    });
+
+    try {
+      // Update database back to In Progress
+      console.log('[DEBUG] handleUndo: Calling updateOrderStatus to revert...');
+      await updateOrderStatus(currentOrder.id, 'In Progress');
+      console.log('[DEBUG] handleUndo: Order status reverted successfully');
+
+      // Update local state
+      setOrders(prev => prev.map(o =>
+        o.id === currentOrder.id ? { ...o, status: 'In Progress' as const } : o
+      ));
+      console.log('[DEBUG] handleUndo: Local state updated');
+
+      message.success('Delivery status reverted to In Progress');
+
+    } catch (error) {
+      console.error('[DEBUG] handleUndo: Error occurred:', {
+        error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+        orderId: currentOrder.id
+      });
+      message.error('Failed to revert delivery status');
+    }
+  };
+
   // Handle stop selection from list
   const handleStopSelect = (index: number) => {
     setCurrentStopIndex(index);
@@ -264,6 +306,7 @@ export default function DriverRoute() {
               totalStops={orders.length}
               segmentTime={deliveryRoute.segmentTimes[currentStopIndex] || 0}
               onDone={handleDone}
+              onUndo={handleUndo}
               onViewAll={() => setViewMode('list')}
             />
 
@@ -292,6 +335,7 @@ export default function DriverRoute() {
               segmentTimes={deliveryRoute.segmentTimes}
               currentStopIndex={currentStopIndex}
               onStopSelect={handleStopSelect}
+              onUndo={handleUndo}
             />
 
             {/* Back to Map Button */}

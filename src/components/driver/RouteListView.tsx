@@ -1,5 +1,5 @@
-import { List, Space, Typography, Tag, Progress } from 'antd';
-import { CheckCircleFilled, ClockCircleOutlined } from '@ant-design/icons';
+import { List, Space, Typography, Tag, Progress, Button } from 'antd';
+import { CheckCircleFilled, ClockCircleOutlined, UndoOutlined } from '@ant-design/icons';
 import type { Order } from '../../types/order';
 
 const { Text } = Typography;
@@ -9,13 +9,15 @@ interface RouteListViewProps {
   segmentTimes: number[];
   currentStopIndex: number;
   onStopSelect: (index: number) => void;
+  onUndo: () => void;
 }
 
 export default function RouteListView({
   orders,
   segmentTimes,
   currentStopIndex,
-  onStopSelect
+  onStopSelect,
+  onUndo
 }: RouteListViewProps) {
   const completedCount = orders.filter(o => o.status === 'Delivered').length;
   const progressPercent = (completedCount / orders.length) * 100;
@@ -53,58 +55,74 @@ export default function RouteListView({
                 minHeight: 80,
               }}
             >
-              <Space style={{ width: '100%' }} size="middle">
-                {/* Status Icon */}
-                <div style={{ fontSize: 24 }}>
-                  {isCompleted ? (
-                    <CheckCircleFilled style={{ color: '#52c41a' }} />
-                  ) : isNext ? (
-                    <ClockCircleOutlined style={{ color: '#1890ff' }} />
-                  ) : (
-                    <div style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: '50%',
-                      border: '2px solid #d9d9d9',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 14,
-                      color: '#8c8c8c'
-                    }}>
-                      {index + 1}
-                    </div>
-                  )}
-                </div>
-
-                {/* Stop Details */}
-                <Space direction="vertical" size="small" style={{ flex: 1 }}>
-                  <Text
-                    strong
-                    delete={isCompleted}
-                    style={{ fontSize: 16 }}
-                  >
-                    {index + 1}. {order.customer?.name || 'Customer'}
-                  </Text>
-                  <Text
-                    type="secondary"
-                    delete={isCompleted}
-                  >
-                    {order.detailedAddress}
-                  </Text>
-                  <Space>
-                    <Text strong style={{ color: '#52c41a' }}>
-                      {segmentTimes[index] || 0} mins
-                    </Text>
-                    {isNext && <Tag color="blue">NEXT</Tag>}
-                    {isCompleted && <Tag color="success">DONE</Tag>}
-                    {order.customer?.openTime && (
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {order.customer.openTime}-{order.customer.closeTime}
-                      </Text>
+              <Space style={{ width: '100%', justifyContent: 'space-between' }} size="middle">
+                <Space size="middle" style={{ flex: 1 }}>
+                  {/* Status Icon */}
+                  <div style={{ fontSize: 24 }}>
+                    {isCompleted ? (
+                      <CheckCircleFilled style={{ color: '#52c41a' }} />
+                    ) : isNext ? (
+                      <ClockCircleOutlined style={{ color: '#1890ff' }} />
+                    ) : (
+                      <div style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        border: '2px solid #d9d9d9',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 14,
+                        color: '#8c8c8c'
+                      }}>
+                        {index + 1}
+                      </div>
                     )}
+                  </div>
+
+                  {/* Stop Details */}
+                  <Space direction="vertical" size="small" style={{ flex: 1 }}>
+                    <Text
+                      strong
+                      delete={isCompleted}
+                      style={{ fontSize: 16 }}
+                    >
+                      {index + 1}. {order.customer?.name || 'Customer'}
+                    </Text>
+                    <Text
+                      type="secondary"
+                      delete={isCompleted}
+                    >
+                      {order.detailedAddress}
+                    </Text>
+                    <Space>
+                      <Text strong style={{ color: '#52c41a' }}>
+                        {segmentTimes[index] || 0} mins
+                      </Text>
+                      {isNext && <Tag color="blue">NEXT</Tag>}
+                      {isCompleted && <Tag color="success">DONE</Tag>}
+                      {order.customer?.openTime && (
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          {order.customer.openTime}-{order.customer.closeTime}
+                        </Text>
+                      )}
+                    </Space>
                   </Space>
                 </Space>
+
+                {/* Undo Button for completed items */}
+                {isCompleted && isCurrent && (
+                  <Button
+                    icon={<UndoOutlined />}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent triggering onStopSelect
+                      onUndo();
+                    }}
+                    size="small"
+                  >
+                    Undo
+                  </Button>
+                )}
               </Space>
             </List.Item>
           );
