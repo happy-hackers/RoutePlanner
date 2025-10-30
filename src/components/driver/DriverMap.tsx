@@ -73,7 +73,7 @@ export default function DriverMap({ deliveryRoute, orders, currentStopIndex, onS
       center={[22.3165316829187, 114.182081980287]}
       zoom={13}
       scrollWheelZoom={true}
-      style={{ height: '60vh', width: '100%' }}
+      style={{ height: '100%', width: '100%' }}
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
