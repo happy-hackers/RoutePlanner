@@ -25,7 +25,7 @@ import {
 } from "../utils/markersUtils.ts";
 import type { Route } from "../types/route.ts";
 import type { ColumnsType } from "antd/es/table/index";
-import { addRoutes, getAllRoutes } from "../utils/dbUtils.ts";
+import { addRoute, getAllRoutes, updateRouteIsActive } from "../utils/dbUtils.ts";
 import { setSelectedOrders } from "../store/orderSlice.ts";
 
 const { Title, Text } = Typography;
@@ -90,11 +90,10 @@ export default function RouteResults() {
   const { message } = App.useApp();
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [allRoutes, setAllRoutes] = useState<Route[]>([]);
-  const [newRoutes, setNewRoutes] = useState<Route[]>([]);
+  const [newRoutes, setNewRoutes] = useState<Omit<Route, "id">[]>([]);
   const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
   const [isAllRoutes, setIsAllRoutes] = useState<boolean>(false);
 
-  // 这里的Dispatcher并没有被定义，只是去掉redux之后还没有写获取，如何获取可以参考assign-disparture.tsx
   const [selectedDispatcher, setSelectedDispatcher] =
     useState<Dispatcher | null>(null);
   const dispatchers = useSelector(
@@ -375,13 +374,73 @@ export default function RouteResults() {
     : null;
 
   const saveRoutes = async () => {
-    const result = await addRoutes(newRoutes);
-    if (result.success) {
-      message.success("Routes have been save successfully and are active now ");
+    let allSuccess = true;
+    let errorMsg = "";
+
+    for (const nr of newRoutes) {
+      const matchedRoutes = allRoutes.filter(
+        (r) =>
+          r.dispatcherId === nr.dispatcherId && r.routeDate === nr.routeDate
+      );
+
+      try {
+        if (matchedRoutes.length > 0) {
+          const highestVersionRoute = matchedRoutes.reduce((prev, curr) =>
+            curr.version > prev.version ? curr : prev
+          );
+
+          // update the route active state to false locally
+          setAllRoutes((prevRoutes) =>
+            prevRoutes.map((route) =>
+              route.id === highestVersionRoute.id
+                ? { ...route, is_active: false }
+                : route
+            )
+          );
+
+          // update the route in database (update first then add because table only allow one active route of the same dispatcher in same date)
+          await updateRouteIsActive(false, highestVersionRoute.id);
+
+          // add new route with incremented version
+          const newRouteWithVersion: Omit<Route, "id"> = {
+            ...nr,
+            version: highestVersionRoute.version + 1,
+          };
+          const result = await addRoute(newRouteWithVersion);
+
+          if (result.success) {
+            const newRouteWithId = result.data?.[0];
+            if (newRouteWithId)
+              setAllRoutes((prev) => [...prev, newRouteWithId]);
+          } else {
+            allSuccess = false;
+            errorMsg = result.error || "Failed to save a route.";
+          }
+        } else {
+          const result = await addRoute(nr);
+          if (result.success) {
+            const newRouteWithId = result.data?.[0];
+            if (newRouteWithId)
+              setAllRoutes((prev) => [...prev, newRouteWithId]);
+          } else {
+            allSuccess = false;
+            errorMsg = result.error || "Failed to save a route.";
+          }
+        }
+      } catch (err: any) {
+        allSuccess = false;
+        errorMsg = err.message || "An unexpected error occurred.";
+      }
+    }
+
+    if (allSuccess) {
+      message.success(
+        "All routes have been saved successfully and are active now."
+      );
       setNewRoutes([]);
       dispatch(setSelectedOrders([]));
     } else {
-      message.error(result.error);
+      message.error(errorMsg);
     }
   };
 
@@ -466,8 +525,8 @@ export default function RouteResults() {
           setOrderMarkers={setMarkers}
           setSelectedRowId={setSelectedRowIds}
           isRouteResultsPage={true}
-          routes={newRoutes}
-          setRoutes={setNewRoutes}
+          newRoutes={newRoutes}
+          setNewRoutes={setNewRoutes}
           isAllRoutes={isAllRoutes}
           selectedDispatcher={selectedDispatcher}
           ref={mapRef}

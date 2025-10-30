@@ -7,9 +7,11 @@ import snakecaseKeys from "snakecase-keys";
 import type { Route } from "../types/route";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+//const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export const createOrder = async (
   orderData: Omit<Order, "id">
@@ -292,6 +294,76 @@ export const getAllRoutes = async (): Promise<
   }
 };
 
+export const addRoute = async (
+  route: Omit<Route, "id">
+): Promise<{ success: boolean; data?: Route[]; error?: string }> => {
+  try {
+    const { data, error } = await supabase
+      .from("delivery_routes")
+      .insert(snakecaseKeys(route))
+      .select();
+
+    if (error) {
+      console.error("Insert error:", error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    } else {
+      const { created_time, updated_time, ...rest } = data[0];
+      const newRoute = {
+        ...rest,
+      };
+      // Change the key name xxx_axx to xxxAxx format
+      const camelData = camelcaseKeys(newRoute);
+      return {
+        success: true,
+        data: camelData,
+      };
+    }
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Network error occurred",
+    };
+  }
+};
+
+export const updateRouteIsActive = async (
+  isActive: boolean,
+  routeId: number
+): Promise<{ success: boolean; data?: Route; error?: string }> => {
+  try {
+    const { data, error } = await supabase
+      .from("delivery_routes")
+      .update({ is_active: isActive })
+      .eq("id", routeId)
+      .select();
+
+    if (error) {
+      console.error("Update error:", error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    } else {
+      // Transform the response to match our Order type
+      const { created_time, updated_time, ...rest } = data[0];
+      const updatedRoute = {
+        ...rest,
+      };
+      return {
+        success: true,
+        data: updatedRoute,
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Network error occurred",
+    };
+  }
+};
 
 export const addRoutes = async (
   routes: Omit<Route, "id">[]

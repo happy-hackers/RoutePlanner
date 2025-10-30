@@ -2,6 +2,7 @@ import type { LatLngExpression } from "leaflet";
 import type { Order } from "./order";
 
 export interface Route {
+  id: number;
   dispatcherId: number;
   routeDate: string; // format: YYYY-MM-DD
 
