@@ -35,6 +35,9 @@ export default function BatchUploadModal({
   const [ordersWithDefaults, setOrdersWithDefaults] = useState<
     { orderId: number; usedDefaultDate: boolean; usedDefaultTime: boolean }[]
   >([]);
+  const [invalidDateFormats, setInvalidDateFormats] = useState<
+    { orderId: number; originalDate: string; rowNumber: number }[]
+  >([]);
   const [isCreating, setIsCreating] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
@@ -60,6 +63,7 @@ export default function BatchUploadModal({
     setProcessedOrders([]);
     setFailedAddresses([]);
     setOrdersWithDefaults([]);
+    setInvalidDateFormats([]);
     setIsProcessing(false);
     setDefaultDate(getCurrentDateHK());
     setDefaultTimePeriod(getCurrentTimePeriod());
@@ -98,6 +102,7 @@ export default function BatchUploadModal({
           const csvResult = parseCSV(fileContent, fallbackDate, fallbackTime);
           orders = csvResult.orders;
           setOrdersWithDefaults(csvResult.usedDefaults);
+          setInvalidDateFormats(csvResult.invalidDateFormats);
         }
 
         // validate basic fields
@@ -228,6 +233,7 @@ export default function BatchUploadModal({
         ordersCount={processedOrders.length}
         failedAddresses={failedAddresses}
         ordersWithDefaults={ordersWithDefaults}
+        invalidDateFormats={invalidDateFormats}
         onConfirm={confirmUpload}
         onCancel={() => setShowPreview(false)}
         loading={isCreating}

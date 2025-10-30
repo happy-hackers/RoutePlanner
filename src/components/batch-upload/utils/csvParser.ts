@@ -8,7 +8,25 @@ export interface ParseResult {
     usedDefaultDate: boolean;
     usedDefaultTime: boolean;
   }[];
+  invalidDateFormats: {
+    orderId: number;
+    originalDate: string;
+    rowNumber: number;
+  }[];
 }
+
+// Validate date is in YYYY-MM-DD format only
+const normalizeDateFormat = (dateStr: string): string | null => {
+  if (!dateStr) return null;
+
+  // Only accept YYYY-MM-DD format with proper padding
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+
+  // All other formats are invalid
+  return null;
+};
 
 export const parseCSV = (
   csvText: string,
@@ -23,6 +41,11 @@ export const parseCSV = (
     orderId: number;
     usedDefaultDate: boolean;
     usedDefaultTime: boolean;
+  }[] = [];
+  const invalidDateFormats: {
+    orderId: number;
+    originalDate: string;
+    rowNumber: number;
   }[] = [];
 
   for (let i = 1; i < lines.length; i++) {
@@ -43,7 +66,19 @@ export const parseCSV = (
             order.date = fallbackDate;
             usedDefaultDate = true;
           } else {
-            order.date = value;
+            const normalizedDate = normalizeDateFormat(value);
+            if (normalizedDate) {
+              order.date = normalizedDate;
+            } else {
+              // Invalid format detected - skip this row by not setting date
+              console.warn(`Row ${i + 1}: Invalid date format '${value}' - expected YYYY-MM-DD, row will be skipped`);
+              invalidDateFormats.push({
+                orderId: order.id || 0,
+                originalDate: value,
+                rowNumber: i + 1,
+              });
+              // Don't set order.date - this will cause the row to be filtered out
+            }
           }
           break;
         case "time":
@@ -106,7 +141,7 @@ export const parseCSV = (
     }
   }
 
-  return { orders, usedDefaults };
+  return { orders, usedDefaults, invalidDateFormats };
 };
 
 const parseCSVLine = (line: string): string[] => {
