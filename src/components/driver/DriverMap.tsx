@@ -21,6 +21,7 @@ interface DriverMapProps {
   deliveryRoute: DeliveryRoute;
   orders: Order[];
   currentStopIndex: number;
+  onStopSelect: (index: number) => void;
 }
 
 // Auto-fit bounds component
@@ -37,7 +38,7 @@ function AutoFitBounds({ orders }: { orders: Order[] }) {
   return null;
 }
 
-export default function DriverMap({ deliveryRoute, orders, currentStopIndex }: DriverMapProps) {
+export default function DriverMap({ deliveryRoute, orders, currentStopIndex, onStopSelect }: DriverMapProps) {
   // Create numbered icons for markers
   const createNumberedIcon = (number: number, isCompleted: boolean, isCurrent: boolean) => {
     const color = isCompleted ? '#52c41a' : isCurrent ? '#1890ff' : '#000000';
@@ -102,6 +103,9 @@ export default function DriverMap({ deliveryRoute, orders, currentStopIndex }: D
             order.status === 'Delivered',
             index === currentStopIndex
           )}
+          eventHandlers={{
+            click: () => onStopSelect(index)
+          }}
         />
       ))}
     </MapContainer>

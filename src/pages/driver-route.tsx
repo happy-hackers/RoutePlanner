@@ -230,6 +230,7 @@ export default function DriverRoute() {
               deliveryRoute={deliveryRoute}
               orders={orders}
               currentStopIndex={currentStopIndex}
+              onStopSelect={handleStopSelect}
             />
 
             {/* Next Stop Card (overlay at bottom) */}
