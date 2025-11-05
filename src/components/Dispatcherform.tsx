@@ -198,13 +198,13 @@ export default function Dispatcherform({
             dataSource={dispatcherOrders}
             rowKey="id"
             pagination={{
-              pageSize: 10,
+              pageSize: 20,
               showSizeChanger: true,
               showQuickJumper: true,
               showTotal: (total, range) =>
                 `${range[0]}-${range[1]} of ${total} orders`,
             }}
-            scroll={{ y: 380 }}
+            scroll={{ y: "calc(100vh - 380px)" }}
             onRow={(record) => ({
               onMouseEnter: () => setHoveredOrderId(record.id),
               onMouseLeave: () => setHoveredOrderId(null),
@@ -217,25 +217,6 @@ export default function Dispatcherform({
           <Text type="secondary">
             Select a dispatcher to view their assigned orders
           </Text>
-          {/*<p style={{ marginTop: 8 }}>
-            <Text strong>Current Time Period: </Text>
-            <Text type="secondary">{date?.format("YYYY-MM-DD")} </Text>
-            {timePeriod.map((period) => (
-              <Tag
-                key={period}
-                color={
-                  period === "Morning"
-                    ? "gold"
-                    : period === "Afternoon"
-                    ? "cyan"
-                    : "purple"
-                }
-                style={{ textTransform: "capitalize" }}
-              >
-                {period}
-              </Tag>
-            ))}
-          </p>*/}
           <Table
             columns={columns}
             dataSource={orders}
@@ -247,7 +228,7 @@ export default function Dispatcherform({
               showTotal: (total, range) =>
                 `${range[0]}-${range[1]} of ${total} orders`,
             }}
-            scroll={{ y: 440 }}
+            scroll={{ y: "calc(100vh - 280px)" }}
             style={{ marginTop: 8 }}
             onRow={(record) => ({
               onMouseEnter: () => setHoveredOrderId(record.id),

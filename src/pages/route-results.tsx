@@ -519,7 +519,7 @@ export default function RouteResults() {
       </Col>
 
       {/* Map Section */}
-      <Col xs={24} sm={24} md={24} lg={16} style={{ height: "100vh" }}>
+      <Col xs={24} sm={24} md={24} lg={16} style={{ height: "100%" }}>
         <OpenStreetMap
           orderMarkers={markers}
           setOrderMarkers={setMarkers}
