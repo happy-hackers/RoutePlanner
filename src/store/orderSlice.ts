@@ -13,9 +13,9 @@ interface OrderState {
 
 const initialState: OrderState = {
   selectedOrders: [],
-  status: ["In Progress"],
+  status: ["Pending"],
   date: dayjs(),
-  timePeriod: ["Afternoon"],
+  timePeriod: [],
 };
 
 const orderSlice = createSlice({

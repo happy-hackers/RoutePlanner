@@ -149,20 +149,19 @@ export default function ViewOrders({
 
   // Use useMemo to cache filtered orders and prevent infinite re-renders
   const filteredOrders = useMemo(() => {
-    if (date === null) 
-      return orders.filter((order) => {
-      const isSameTimePeriod = timePeriod.includes(order.time);
-      const isSameStatus = status.includes(order.status);
-      return isSameTimePeriod && isSameStatus;
+    return orders.filter((order) => {
+      const orderDate = dayjs(order.date);
+
+      const matchesDate = date ? orderDate.isSame(date, "day") : true;
+      const matchesTimePeriod =
+        timePeriod && timePeriod.length > 0
+          ? timePeriod.includes(order.time)
+          : true;
+      const matchesStatus =
+        status && status.length > 0 ? status.includes(order.status) : true;
+
+      return matchesDate && matchesTimePeriod && matchesStatus;
     });
-    else 
-      return orders.filter((order) => {
-        const orderDate = dayjs(order.date);
-        const isSameDate = orderDate.isSame(date, "day");
-        const isSameTimePeriod = timePeriod.includes(order.time);
-        const isSameStatus = status.includes(order.status);
-        return isSameDate && isSameTimePeriod && isSameStatus;
-      });
   }, [orders, date, timePeriod, status]);
 
   const sortedOrders = sortOrders(filteredOrders);
