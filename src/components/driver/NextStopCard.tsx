@@ -27,6 +27,7 @@ export default function NextStopCard({
 
   return (
     <Card
+      id="next-stop-card"
       style={{
         position: 'fixed',
         bottom: 0,

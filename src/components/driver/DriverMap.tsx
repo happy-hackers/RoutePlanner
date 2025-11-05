@@ -1,6 +1,6 @@
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L, { type LatLngExpression } from 'leaflet';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { Order } from '../../types/order';
 import type { DeliveryRoute } from '../../types/delivery-route';
 import { CompassOutlined } from '@ant-design/icons';
@@ -45,6 +45,25 @@ function AutoFitBounds({ points }: { points: [number, number][] }) {
 
 function RecenterButton({ points }: { points: [number, number][] }) {
   const map = useMap();
+  const [bottomOffset, setBottomOffset] = useState(220);
+
+  // Dynamically measure the card height
+  useEffect(() => {
+    const card = document.getElementById('next-stop-card');
+    if (!card) return;
+
+    const observer = new ResizeObserver(() => {
+      const rect = card.getBoundingClientRect();
+      setBottomOffset(rect.height + 20);
+    });
+
+    observer.observe(card);
+
+    const rect = card.getBoundingClientRect();
+    setBottomOffset(rect.height + 20);
+
+    return () => observer.disconnect();
+  }, []);
 
   const handleRecenter = () => {
     if (points.length) {
@@ -62,10 +81,12 @@ function RecenterButton({ points }: { points: [number, number][] }) {
       icon={<CompassOutlined />}
       style={{
         position: "fixed",
-        bottom: 300,
+        bottom: bottomOffset,
         right: 16,
         zIndex: 1001,
         boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+        width: 48,
+        height: 48,
       }}
     />
   );
