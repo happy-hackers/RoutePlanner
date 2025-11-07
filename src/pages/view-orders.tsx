@@ -152,13 +152,13 @@ export default function ViewOrders({
     return orders.filter((order) => {
       const orderDate = dayjs(order.date);
 
-      const matchesDate = date ? orderDate.isSame(date, "day") : true;
+      const matchesDate = date ? orderDate.isSame(date, "day") : true; // If there is a date selected, filter by the selected date. OtherWise, show the orders in all date
       const matchesTimePeriod =
         timePeriod && timePeriod.length > 0
           ? timePeriod.includes(order.time)
-          : true;
+          : true; // If there is/are time period ticked, filter by the ticked one. OtherWise, show the orders in all time period
       const matchesStatus =
-        status && status.length > 0 ? status.includes(order.status) : true;
+        status && status.length > 0 ? status.includes(order.status) : true; // If there is/are status ticked, filter by the ticked one. OtherWise, show the orders in all status
 
       return matchesDate && matchesTimePeriod && matchesStatus;
     });
