@@ -149,20 +149,19 @@ export default function ViewOrders({
 
   // Use useMemo to cache filtered orders and prevent infinite re-renders
   const filteredOrders = useMemo(() => {
-    if (date === null) 
-      return orders.filter((order) => {
-      const isSameTimePeriod = timePeriod.includes(order.time);
-      const isSameStatus = status.includes(order.status);
-      return isSameTimePeriod && isSameStatus;
+    return orders.filter((order) => {
+      const orderDate = dayjs(order.date);
+
+      const matchesDate = date ? orderDate.isSame(date, "day") : true; // If there is a date selected, filter by the selected date. OtherWise, show the orders in all date
+      const matchesTimePeriod =
+        timePeriod && timePeriod.length > 0
+          ? timePeriod.includes(order.time)
+          : true; // If there is/are time period ticked, filter by the ticked one. OtherWise, show the orders in all time period
+      const matchesStatus =
+        status && status.length > 0 ? status.includes(order.status) : true; // If there is/are status ticked, filter by the ticked one. OtherWise, show the orders in all status
+
+      return matchesDate && matchesTimePeriod && matchesStatus;
     });
-    else 
-      return orders.filter((order) => {
-        const orderDate = dayjs(order.date);
-        const isSameDate = orderDate.isSame(date, "day");
-        const isSameTimePeriod = timePeriod.includes(order.time);
-        const isSameStatus = status.includes(order.status);
-        return isSameDate && isSameTimePeriod && isSameStatus;
-      });
   }, [orders, date, timePeriod, status]);
 
   const sortedOrders = sortOrders(filteredOrders);
@@ -178,9 +177,16 @@ export default function ViewOrders({
   }, [selectedOrders, setMarkers]);
 
   return (
-    <Row style={{ height: "100%" }}>
-      <Col style={{ width: "100%" }}>
-        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+    <Row style={{ height: "100vh" }}>
+      <Col style={{ width: "100%", display: "flex", flexDirection: "column" }}>
+        <Space
+          direction="vertical"
+          size="middle"
+          style={{
+            width: "100%",
+            flexShrink: 0,
+          }}
+        >
           <Space direction="horizontal" size="middle">
             <NewOrderModal
               date={date}
@@ -203,7 +209,7 @@ export default function ViewOrders({
             format="YYYY-MM-DD"
           />
           <Row>
-            <Text strong style={{ marginRight: "20px" }}>
+            <Text strong style={{ marginRight: 20 }}>
               Time:
             </Text>
             <Checkbox.Group
@@ -214,8 +220,9 @@ export default function ViewOrders({
               }
             />
           </Row>
+
           <Row>
-            <Text strong style={{ marginRight: "20px" }}>
+            <Text strong style={{ marginRight: 20 }}>
               Status:
             </Text>
             <Checkbox.Group
@@ -224,50 +231,61 @@ export default function ViewOrders({
               onChange={(values: OrderStatus[]) => dispatch(setStatus(values))}
             />
           </Row>
-          <Space direction="vertical" style={{ width: "100%" }}>
-            <Row justify="end">
-              <Badge
-                count={selectedOrders.length}
-                offset={[-2, 2]}
-                style={{
-                  fontSize: "10px",
-                  height: "16px",
-                  width: "18px",
-                  minWidth: "10px",
-                  lineHeight: "16px",
-                }}
+        </Space>
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <Row justify="end" style={{ marginBottom: 8 }}>
+            <Badge
+              count={selectedOrders.length}
+              offset={[-2, 2]}
+              style={{
+                fontSize: "10px",
+                height: "16px",
+                width: "18px",
+                minWidth: "10px",
+                lineHeight: "16px",
+              }}
+            >
+              <Button
+                type="primary"
+                onClick={() => setIsSelectedOrderModal(true)}
               >
-                <Button
-                  type="primary"
-                  onClick={() => setIsSelectedOrderModal(true)}
-                >
-                  Selected Orders
-                </Button>
-              </Badge>
-            </Row>
-            <SelectedOrderModal
-              orders={selectedOrders}
-              isVisible={isSelectedOrderModal}
-              setVisibility={setIsSelectedOrderModal}
-              setSelectedRowIds={setSelectedRowIds}
-            />
+                Selected Orders
+              </Button>
+            </Badge>
+          </Row>
+
+          <SelectedOrderModal
+            orders={selectedOrders}
+            isVisible={isSelectedOrderModal}
+            setVisibility={setIsSelectedOrderModal}
+            setSelectedRowIds={setSelectedRowIds}
+          />
+
+          <div style={{ flex: 1, overflow: "auto" }}>
             <Table
               rowKey="id"
               columns={columns}
               dataSource={sortedOrders}
               rowSelection={rowSelection}
-              scroll={{ y: 380 }}
+              scroll={{ y: "calc(100vh - 330px)" }}
               pagination={{
                 pageSize: 20,
                 showSizeChanger: true,
                 showQuickJumper: true,
                 showTotal: (total, range) =>
                   `${range[0]}-${range[1]} of ${total} orders`,
+                position: ["bottomCenter"],
               }}
-              style={{ maxWidth: "650px" }}
+              style={{ maxWidth: 650 }}
             />
-          </Space>
-        </Space>
+          </div>
+        </div>
       </Col>
     </Row>
   );

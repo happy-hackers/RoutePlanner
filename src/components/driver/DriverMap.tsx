@@ -1,13 +1,15 @@
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L, { type LatLngExpression } from 'leaflet';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { Order } from '../../types/order';
 import type { DeliveryRoute } from '../../types/delivery-route';
+import { CompassOutlined } from '@ant-design/icons';
 
 // Fix Leaflet default icon issue
 import 'leaflet/dist/leaflet.css';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import { Button } from 'antd';
 
 const DefaultIcon = L.icon({
   iconUrl: icon,
@@ -25,17 +27,69 @@ interface DriverMapProps {
 }
 
 // Auto-fit bounds component
-function AutoFitBounds({ orders }: { orders: Order[] }) {
+function AutoFitBounds({ points }: { points: [number, number][] }) {
   const map = useMap();
 
   useEffect(() => {
-    if (orders.length > 0) {
-      const bounds = orders.map(o => [o.lat, o.lng] as [number, number]);
-      map.fitBounds(bounds, { padding: [50, 50] });
+    if (points.length > 0) {
+      const bounds = L.latLngBounds(points);
+      map.fitBounds(bounds, {
+        paddingTopLeft: [5, 5],
+        paddingBottomRight: [5, 260],
+      });
     }
-  }, [orders, map]);
+  }, [points, map]);
 
   return null;
+}
+
+function RecenterButton({ points }: { points: [number, number][] }) {
+  const map = useMap();
+  const [bottomOffset, setBottomOffset] = useState(220);
+
+  // Dynamically measure the card height
+  useEffect(() => {
+    const card = document.getElementById('next-stop-card');
+    if (!card) return;
+
+    const observer = new ResizeObserver(() => {
+      const rect = card.getBoundingClientRect();
+      setBottomOffset(rect.height + 20);
+    });
+
+    observer.observe(card);
+
+    const rect = card.getBoundingClientRect();
+    setBottomOffset(rect.height + 20);
+
+    return () => observer.disconnect();
+  }, []);
+
+  const handleRecenter = () => {
+    if (points.length) {
+      const bounds = L.latLngBounds(points);
+      map.fitBounds(bounds, {
+        paddingTopLeft: [5, 5],
+        paddingBottomRight: [5, 260],
+      });
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleRecenter}
+      icon={<CompassOutlined />}
+      style={{
+        position: "fixed",
+        bottom: bottomOffset,
+        right: 16,
+        zIndex: 1001,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+        width: 48,
+        height: 48,
+      }}
+    />
+  );
 }
 
 export default function DriverMap({ deliveryRoute, orders, currentStopIndex, onStopSelect }: DriverMapProps) {
@@ -64,6 +118,12 @@ export default function DriverMap({ deliveryRoute, orders, currentStopIndex, onS
     });
   };
 
+  const points: [number, number][] = [
+    [deliveryRoute.startLat, deliveryRoute.startLng],
+    [deliveryRoute.endLat, deliveryRoute.endLng],
+    ...deliveryRoute.orderSequence.map((o) => [o.lat, o.lng] as [number, number]),
+  ];
+
   // Polyline coordinates
   const polylineCoords: LatLngExpression[] = deliveryRoute.polylineCoordinates ||
     orders.map(o => [o.lat, o.lng]);
@@ -81,7 +141,9 @@ export default function DriverMap({ deliveryRoute, orders, currentStopIndex, onS
       />
 
       {/* Auto-fit bounds */}
-      <AutoFitBounds orders={orders} />
+      <AutoFitBounds points={points} />
+      <RecenterButton points={points} />
+      
 
       {/* Route polyline */}
       {polylineCoords.length > 0 && (

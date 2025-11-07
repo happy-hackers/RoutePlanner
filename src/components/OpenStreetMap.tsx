@@ -498,10 +498,11 @@ const OpenStreetMap = forwardRef(
               transform: "translateX(-50%)",
               zIndex: 1000,
               background: "rgba(255, 255, 255, 0.6)",
+              marginRight: 0,
               padding: "16px 20px",
               borderRadius: "10px",
               boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-              maxWidth: "95%",
+              maxWidth: "100%",
             }}
           >
             <Space
@@ -563,7 +564,7 @@ const OpenStreetMap = forwardRef(
           center={[22.3165316829187, 114.182081980287]}
           zoom={13}
           scrollWheelZoom={true}
-          style={{ height: "100vh", width: "100%" }}
+          style={{ height: "100vh", width: "100%", marginTop: -10, marginBottom: -10}}
         >
           {/* OpenStreetMap tiles */}
           <TileLayer
