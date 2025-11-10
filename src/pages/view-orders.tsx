@@ -37,6 +37,7 @@ import {
 import type { RootState } from "../store";
 import SelectedOrderModal from "../components/SelectedOrderModal.tsx";
 import { sortOrders } from "../utils/sortingUtils.ts";
+import { useTranslation } from "react-i18next";
 
 type TimePeriod = "Morning" | "Afternoon" | "Evening";
 
@@ -48,6 +49,7 @@ export default function ViewOrders({
 }: {
   setMarkers: (markers: MarkerData[]) => void;
 }) {
+  const { t } = useTranslation("ViewOrdersPage");
   const dispatch = useDispatch();
   const selectedOrders = useSelector(
     (state: RootState) => state.order.selectedOrders
@@ -67,13 +69,13 @@ export default function ViewOrders({
 
   const columns = [
     {
-      title: "ID",
+      title: t("table_id"),
       dataIndex: "id",
       key: "id",
       width: "10%",
     },
     {
-      title: "Delivery Time",
+      title: t("table_delivery_time"),
       dataIndex: "time",
       key: "deliveryTime",
       width: "20%",
@@ -84,7 +86,7 @@ export default function ViewOrders({
       },
     },
     {
-      title: "Address",
+      title: t("table_address"),
       dataIndex: "detailedAddress",
       key: "detailedAddress",
       width: "50%",
@@ -93,7 +95,7 @@ export default function ViewOrders({
       },
     },
     {
-      title: "Status",
+      title: t("table_status"),
       dataIndex: "status",
       key: "status",
       render: (status: string) => {
@@ -163,6 +165,17 @@ export default function ViewOrders({
   };
   const timeOptions: TimePeriod[] = ["Morning", "Afternoon", "Evening"];
   const statusOptions = ["All", "Complete", "Incomplete"];
+
+  const translatedTimeOptions = timeOptions.map(time => ({
+    label: t(`time_period_${time.toLowerCase()}`),
+    value: time,
+  }));
+
+  //need check
+  // const translatedStateOptions = stateOptions.map(status => ({
+  //   label: t(`status_${status.toLowerCase().replace(' ', '_')}`),
+  //   value: status,
+  // }));
 
   // Fetch orders and customers from Supabase
   useEffect(() => {
@@ -274,7 +287,7 @@ export default function ViewOrders({
               fetchOrders={fetchOrders}
             />
             <Button type="primary" onClick={() => setIsUploadModalOpen(true)}>
-              Bulk Import Orders (Upload JSON/CSV)
+              {t("button_bulk_import")}
             </Button>
             <BatchUploadModal
               isOpen={isUploadModalOpen}
@@ -290,10 +303,10 @@ export default function ViewOrders({
           />
           <Row>
             <Text strong style={{ marginRight: 20 }}>
-              Time:
+              {t("label_time")}:
             </Text>
             <Checkbox.Group
-              options={timeOptions}
+              options={translatedTimeOptions}
               defaultValue={timePeriod}
               onChange={(values: TimePeriod[]) =>
                 dispatch(setTimePeriod(values))
@@ -303,7 +316,7 @@ export default function ViewOrders({
 
           <Row>
             <Text strong style={{ marginRight: 20 }}>
-              Status:
+              {t("label_status")}:
             </Text>
             <Radio.Group
               options={statusOptions}
@@ -362,7 +375,7 @@ export default function ViewOrders({
                 type="primary"
                 onClick={() => setIsSelectedOrderModal(true)}
               >
-                Selected Orders
+                {t("button_selected_orders")}
               </Button>
             </Badge>
           </Row>

@@ -1,9 +1,10 @@
 import { Card, Button, Form, Input, App, Checkbox } from "antd";
 import { useEffect, useState } from "react";
 import { getSettingInfo, updateSettingInfo } from "../utils/configuration";
+import LanguageSwitcher from "../components/LanguageSwitcher.tsx";
 
 export default function Setting() {
-    const [useDefaultAddr, setUseDefaultAddr] = useState(false);
+  const [useDefaultAddr, setUseDefaultAddr] = useState(false);
   const settingInfo: any = getSettingInfo();
   const { startAddress, endAddress, useDefaultAddress } = settingInfo;
   const { message } = App.useApp();
@@ -46,6 +47,9 @@ export default function Setting() {
         </Form.Item>
         <Form.Item label="Default End Address" name="endAddress">
           <Input disabled={!useDefaultAddr} />
+        </Form.Item>
+        <Form.Item label="Language">
+          <LanguageSwitcher />
         </Form.Item>
         <Form.Item wrapperCol={{ offset: 6, span: 16 }}>
           <Button type="primary" htmlType="submit">

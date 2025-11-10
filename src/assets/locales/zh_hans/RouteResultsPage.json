@@ -1,0 +1,17 @@
+{
+    "title_no_orders_found": "未找到任何订单",
+    "title_select_dispatcher": "请选择一位调度员",
+    "select_placeholder": "选择调度员",
+    "option_all_routes": "所有路线",
+    "table_order_id": "订单编号",
+    "table_address": "地址",
+    "table_travel_time": "行驶时间",
+    "unit_mins": "分钟",
+    "button_confirm_save_route": "确认并保存路线",
+    "button_clear_route": "清除路线",
+    "button_calculate": "计算",
+    "text_waypoints": "途经点",
+    "text_no_route_found": "未找到路线",
+    "message_success_all_routes_saved": "所有路线已成功保存并激活。",
+    "message_error_save_route_failed": "保存路线失败：{{error}}"
+  }
