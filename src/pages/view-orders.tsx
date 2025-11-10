@@ -1,16 +1,16 @@
 import NewOrderModal from "../components/NewOrderModal";
-import { DatePicker, Row, Col, Space, Checkbox, Typography, Button, Badge, Table } from "antd";
+import { DatePicker, Row, Col, Space, Checkbox, Typography, Button, Badge, Table, Radio } from "antd";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo } from "react";
 import { getAllCustomers, getAllDispatchers, getAllOrders } from "../utils/dbUtils";
-import type { Order, OrderStatus } from "../types/order.ts";
+import type { Order } from "../types/order.ts";
 import type { MarkerData } from "../types/markers";
 import { setMarkersList } from "../utils/markersUtils.ts";
 import type { Customer } from "../types/customer.ts";
 
 import { BatchUploadModal } from "../components/batch-upload";
 import { useSelector, useDispatch } from "react-redux";
-import { setDate, setTimePeriod, setStatus, setSelectedOrders } from "../store/orderSlice.ts";
+import { setDate, setTimePeriod, setSelectedOrders } from "../store/orderSlice.ts";
 import type { RootState } from "../store";
 import SelectedOrderModal from "../components/SelectedOrderModal.tsx";
 import {sortOrders} from "../utils/sortingUtils.ts";
@@ -28,7 +28,7 @@ export default function ViewOrders({
   const selectedOrders = useSelector((state: RootState) => state.order.selectedOrders);
   const date = useSelector((state: RootState) => state.order.date);
   const timePeriod = useSelector((state: RootState) => state.order.timePeriod);
-  const status = useSelector((state: RootState) => state.order.status);
+  const [status, setStatus] = useState("All");
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -69,13 +69,10 @@ export default function ViewOrders({
       dataIndex: "status",
       key: "status",
       render: (status: string) => {
-        let color = "";
-        if (status === "In Progress") color = "orange";
-        else if (status === "Delivered") color = "#53CC3F";
-
-        return <span style={{ color }}>{status}</span>;
+        if (status === "Delivered") return <span>✔️</span>;
+        else return <span>❌</span>;
       },
-      width: "20%",
+      width: "15%",
     },
   ];
 
@@ -135,7 +132,7 @@ export default function ViewOrders({
     }
   };
   const timeOptions: TimePeriod[] = ["Morning", "Afternoon", "Evening"]
-  const stateOptions: OrderStatus[] = ["Pending", "In Progress", "Delivered"];
+  const statusOptions = ["All", "Complete", "Incomplete"];
 
   // Fetch orders and customers from Supabase
   useEffect(() => {
@@ -157,9 +154,20 @@ export default function ViewOrders({
         timePeriod && timePeriod.length > 0
           ? timePeriod.includes(order.time)
           : true; // If there is/are time period ticked, filter by the ticked one. OtherWise, show the orders in all time period
-      const matchesStatus =
-        status && status.length > 0 ? status.includes(order.status) : true; // If there is/are status ticked, filter by the ticked one. OtherWise, show the orders in all status
+      
+      // Regard "Delivered" orders as completed orders and others as incompleted orders
+      const isComplete = order.status === "Delivered";
+      const isIncomplete = order.status !== "Delivered";
 
+      let matchesStatus = true;
+      if (status === "Complete") {
+        matchesStatus = isComplete;
+      } else if (status === "Incomplete") {
+        matchesStatus = isIncomplete;
+      } else {
+        // If selected "All"
+        matchesStatus = true;
+      }
       return matchesDate && matchesTimePeriod && matchesStatus;
     });
   }, [orders, date, timePeriod, status]);
@@ -225,10 +233,10 @@ export default function ViewOrders({
             <Text strong style={{ marginRight: 20 }}>
               Status:
             </Text>
-            <Checkbox.Group
-              options={stateOptions}
-              defaultValue={status}
-              onChange={(values: OrderStatus[]) => dispatch(setStatus(values))}
+            <Radio.Group
+              options={statusOptions}
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
             />
           </Row>
         </Space>
