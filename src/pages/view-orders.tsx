@@ -1,5 +1,5 @@
 import NewOrderModal from "../components/NewOrderModal";
-import { DatePicker, Row, Col, Space, Checkbox, Typography, Button, Badge, Table, Radio } from "antd";
+import { DatePicker, Row, Col, Space, Checkbox, Typography, Button, Badge, Table, Radio, Input } from "antd";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo } from "react";
 import { getAllCustomers, getAllDispatchers, getAllOrders } from "../utils/dbUtils";
@@ -34,6 +34,7 @@ export default function ViewOrders({
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isSelectedOrderModal, setIsSelectedOrderModal] = useState(false);
   const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
+  const [searchText, setSearchText] = useState("");
 
   console.log("selectedOrders", JSON.parse(JSON.stringify(selectedOrders)))
 
@@ -154,7 +155,7 @@ export default function ViewOrders({
         timePeriod && timePeriod.length > 0
           ? timePeriod.includes(order.time)
           : true; // If there is/are time period ticked, filter by the ticked one. OtherWise, show the orders in all time period
-      
+
       // Regard "Delivered" orders as completed orders and others as incompleted orders
       const isComplete = order.status === "Delivered";
       const isIncomplete = order.status !== "Delivered";
@@ -168,9 +169,17 @@ export default function ViewOrders({
         // If selected "All"
         matchesStatus = true;
       }
-      return matchesDate && matchesTimePeriod && matchesStatus;
+
+      // Search filtering
+      const normalizedSearch = searchText.toLowerCase();
+      const matchesSearch =
+        !searchText ||
+        String(order.id).toLowerCase().includes(normalizedSearch) || // Meter ID
+        (order.detailedAddress || "").toLowerCase().includes(normalizedSearch); // Address
+
+      return matchesDate && matchesTimePeriod && matchesStatus && matchesSearch;
     });
-  }, [orders, date, timePeriod, status]);
+  }, [orders, date, timePeriod, status, searchText]);
 
   const sortedOrders = sortOrders(filteredOrders);
 
@@ -237,6 +246,18 @@ export default function ViewOrders({
               options={statusOptions}
               value={status}
               onChange={(e) => setStatus(e.target.value)}
+            />
+          </Row>
+          <Row>
+            <Text strong style={{ marginRight: 20 }}>
+              Search:
+            </Text>
+            <Input.Search
+              placeholder="Search by Address or Meter ID"
+              allowClear
+              style={{ width: 350 }}
+              onSearch={(value) => setSearchText(value.trim())}
+              onChange={(e) => setSearchText(e.target.value.trim())}
             />
           </Row>
         </Space>
