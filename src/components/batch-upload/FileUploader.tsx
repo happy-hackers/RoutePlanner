@@ -1,6 +1,7 @@
 import { Upload, App } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
 import type { UploadProps } from "antd";
+import { useTranslation } from 'react-i18next';
 
 const { Dragger } = Upload;
 
@@ -10,6 +11,8 @@ interface FileUploaderProps {
 }
 
 export default function FileUploader({ selectedFile, onFileSelect }: FileUploaderProps) {
+  const { t } = useTranslation('uploadComponent');
+  const keyPath = "fileUploader";
   const { message } = App.useApp();
 
   const props: UploadProps = {
@@ -21,12 +24,12 @@ export default function FileUploader({ selectedFile, onFileSelect }: FileUploade
       const isCsv = file.type === "text/csv" || file.name.endsWith(".csv");
 
       if (!isJson && !isCsv) {
-        message.error("Only JSON and CSV files are allowed");
+        message.error(t(`${keyPath}.error_file_type`));
         return Upload.LIST_IGNORE;
       }
 
       onFileSelect(file);
-      message.success("File selected, please click the upload button");
+      message.success(t(`${keyPath}.success_file_select`));
       return Upload.LIST_IGNORE;
     },
   };
@@ -38,16 +41,16 @@ export default function FileUploader({ selectedFile, onFileSelect }: FileUploade
           <InboxOutlined />
         </p>
         <p className="ant-upload-text">
-          Click or drag JSON/CSV file to this area to upload
+          {t(`${keyPath}.text_drag_prompt`)}
         </p>
         <p className="ant-upload-hint">
-          Upload a JSON or CSV file to import orders in bulk.
+          {t(`${keyPath}.text_hint`)}
         </p>
       </Dragger>
       {selectedFile && (
         <div style={{ marginTop: 16, textAlign: "center" }}>
           <p style={{ color: "#52c41a" }}>
-            Selected file: {selectedFile.name}
+            {t(`${keyPath}.text_selected_file`)}: {selectedFile.name}
           </p>
         </div>
       )}

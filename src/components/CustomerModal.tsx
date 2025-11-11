@@ -15,6 +15,7 @@ import type { Customer } from "../types/customer.ts";
 import dayjs from "dayjs";
 import areaData from "../hong_kong_areas.json"
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
+import { useTranslation } from "react-i18next";
 
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 
@@ -33,13 +34,14 @@ export default function CustomerModal({
   customer,
   mode,
 }: CustomerModalProps) {
+  const { t } = useTranslation(["addCustomerComponent", 'hongkongArea']);
   type Area = keyof typeof areaData;
-  
+
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
 
   const areas = Object.keys(areaData);
   const districts = selectedArea ? Object.keys(areaData[selectedArea]) : [];
-  
+
   const [form] = AntForm.useForm();
   const { message } = App.useApp();
 
@@ -110,7 +112,6 @@ export default function CustomerModal({
   useEffect(() => {
     if (visible) {
       if (mode === "edit" && customer) {
-        console.log("customer", customer)
         // edit mode: fill existing data
         form.setFieldsValue({
           name: customer.name,
@@ -156,13 +157,12 @@ export default function CustomerModal({
         const result = await addCustomer(newCustomer);
 
         if (result.success && result.data) {
-          message.success("Customer created successfully!");
-          //message.success("Customer added successfully!");
+          message.success(t(`msg_add_success`));
           onSuccess();
           setSelectedArea(null);
           onCancel();
         } else {
-          message.error(`Failed to add customer: ${result.error}`);
+          message.error(t(`msg_add_fail`, { error: result.error }));
         }
       } else if (mode === "edit") {
         if (!customer) return;
@@ -181,16 +181,16 @@ export default function CustomerModal({
 
         const result = await updateCustomer(updatedCustomer);
         if (result.success) {
-          message.success("Customer updated successfully!");
+          message.success(t(`msg_edit_success`));
           onSuccess();
           onCancel();
         } else {
-          message.error(`Failed to update customer: ${result.error}`);
+          message.error(t(`msg_edit_fail`, { error: result.error }));
         }
       }
     } catch (error) {
       console.error("Network error:", error);
-      message.error("Network error occurred");
+      message.error(t(`msg_network_error`));
     }
   };
 
@@ -213,7 +213,7 @@ export default function CustomerModal({
           const loc = results[0].geometry.location;
           resolve({ lat: loc.lat(), lng: loc.lng() });
         } else {
-          reject(`Geocode failed: ${status}`);
+          reject(t(`msg_geocode_fail`, { status }));
         }
       });
     });
@@ -253,12 +253,17 @@ export default function CustomerModal({
       setSelectedArea(area as keyof typeof areaData);
     } catch (err) {
       console.error("Error fetching place details:", err);
+      message.error(t(`msg_geocode_select_fail`));
     }
   };
 
   return (
     <Modal
-      title={mode === "add" ? "Add New Customer" : "Edit Customer"}
+      title={
+        mode === "add"
+          ? t(`modal_title_add`)
+          : t(`modal_title_edit`)
+      }
       open={visible}
       onCancel={handleCancel}
       footer={null}
@@ -266,40 +271,40 @@ export default function CustomerModal({
     >
       <AntForm form={form} layout="vertical" onFinish={handleSubmit}>
         <AntForm.Item
-          label="Name"
+          label={t(`label_name`)}
           name="name"
           rules={[
             {
               required: true,
-              message: "Please input the name of the customer!",
+              message: t(`validation_name_required`),
             },
           ]}
         >
-          <Input placeholder="Name" />
+          <Input placeholder={t(`placeholder_name`)} />
         </AntForm.Item>
         <AntForm.Item
-          label="Open Time"
+          label={t(`label_open_time`)}
           name="openTime"
-          rules={[{ required: true, message: "Please select a time!" }]}
+          rules={[{ required: true, message: t(`validation_time_required`) }]}
         >
           <TimePicker style={{ width: "100%" }} />
         </AntForm.Item>
         <AntForm.Item
-          label="Close Time"
+          label={t(`label_close_time`)}
           name="closeTime"
-          rules={[{ required: true, message: "Please select a time!" }]}
+          rules={[{ required: true, message: t(`validation_time_required`) }]}
         >
           <TimePicker style={{ width: "100%" }} />
         </AntForm.Item>
         <Row gutter={20}>
           <Col span={10}>
             <AntForm.Item
-              label="Area"
+              label={t(`label_area`)}
               name="area"
-              rules={[{ required: true, message: "Please select an area!" }]}
+              rules={[{ required: true, message: t(`validation_area_required`) }]}
             >
               <Select
-                placeholder="Select Area"
+                placeholder={t(`placeholder_select_area`)}
                 onChange={(value) => {
                   setSelectedArea(value);
                   form.setFieldsValue({
@@ -307,9 +312,10 @@ export default function CustomerModal({
                   });
                 }}
                 options={areas.map((area) => ({
-                    value: area,
-                    label: area,
-                  }))}
+                  value: area,
+                  // 修正：将 area 中的空格替换为下划线，然后使用 'hongkongArea:region_' 前缀
+                  label: t('hongkongArea:region_' + area.replace(/ /g, '_'), { defaultValue: area }),
+                }))}
                 optionFilterProp="label"
                 showSearch
               />
@@ -317,17 +323,18 @@ export default function CustomerModal({
           </Col>
           <Col span={10}>
             <AntForm.Item
-              label="District"
+              label={t(`label_district`)}
               name="district"
-              rules={[{ required: true, message: "Please select a district!" }]}
+              rules={[{ required: true, message: t(`validation_district_required`) }]}
             >
               <Select
-                placeholder="Select District"
+                placeholder={t(`placeholder_select_district`)}
                 disabled={!selectedArea}
                 options={districts.map((district) => ({
-                    value: district,
-                    label: district,
-                  }))}
+                  value: district,
+                  // 修正：将 district 中的空格替换为下划线，然后使用 'hongkongArea:area_' 前缀
+                  label: t('hongkongArea:area_' + district.replace(/ /g, '_'), { defaultValue: district }),
+                }))}
                 optionFilterProp="label"
                 showSearch
               />
@@ -335,13 +342,13 @@ export default function CustomerModal({
           </Col>
         </Row>
         <AntForm.Item
-          label="Detailed Address"
+          label={t(`label_detailed_address`)}
           name="detailedAddress"
-          rules={[{ required: true, message: "Please input the detailed address of the customer!" }]}
+          rules={[{ required: true, message: t(`validation_address_required`) }]}
         >
           <Select
             showSearch
-            placeholder="Search address"
+            placeholder={t(`placeholder_search_address`)}
             filterOption={false}
             onSearch={(value) => {
               setAddressValue(value);
@@ -356,37 +363,39 @@ export default function CustomerModal({
           />
         </AntForm.Item>
         <AntForm.Item
-          label="Longitude"
+          label={t(`label_lng`)}
           name="lng"
           hidden
           rules={[
             {
               required: true,
-              message: "Please input the longitude of the customer!",
+              message: t(`validation_lng_required`),
             },
           ]}
         >
-          <Input placeholder="Longitude" />
+          <Input placeholder={t(`placeholder_lng`)} />
         </AntForm.Item>
         <AntForm.Item
-          label="Latitude"
+          label={t(`label_lat`)}
           name="lat"
           hidden
           rules={[
             {
               required: true,
-              message: "Please input the latitude of the customer!",
+              message: t(`validation_lat_required`),
             },
           ]}
         >
-          <Input placeholder="Latitude" />
+          <Input placeholder={t(`placeholder_lat`)} />
         </AntForm.Item>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <Button onClick={onCancel} style={{ marginRight: 8 }}>
-            Cancel
+            {t(`button_cancel`)}
           </Button>
           <Button type="primary" htmlType="submit">
-            {mode === "add" ? "Add Customer" : "Update Customer"}
+            {mode === "add"
+              ? t(`button_add_customer`)
+              : t(`button_update_customer`)}
           </Button>
         </div>
       </AntForm>

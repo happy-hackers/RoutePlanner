@@ -11,18 +11,36 @@ i18n
   .init({
 
     ns: [
-      'AssignDispatchersPage',
-      'HongkongArea',
-      'RouteResultsPage',
+      'assignDispatchersPage',
+      'hongkongArea',
+      'routeResultsPage',
       'setDispatcherPage',
-      'ViewOrdersPage'
+      'viewOrdersPage',
+      'viewCustomerPage',
+      'settingsPage',
+      "driverLoginPage",
+      "driverRoutePage",
+      "uploadComponent",
+      "driverRouteComponent",
+      "addCustomerComponent",
+      "viewDispatcherComponent",
+      "addDispatcherComponent",
+      "addOrderComponent",
     ],
 
-    defaultNS: 'ViewOrdersPage',
+    defaultNS: 'viewOrdersPage',
 
-    lng: 'zh_hant',
+    //default language
+    lng: 'zh-HK',
+    supportedLngs: ['zh-HK', 'zh-CN', 'en'],
+
     debug: false,
-    fallbackLng: "en",
+    fallbackLng: ['en'],
+
+    detection: {
+      order: ['navigator'],
+    },
+
     interpolation: {
       escapeValue: false,
     },

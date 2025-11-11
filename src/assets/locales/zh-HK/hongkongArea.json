@@ -1,8 +1,7 @@
 {
-    "region_Hong_Kong_Island": "香港島",
+  "region_Hong_Kong_Island": "香港島",
   "region_Kowloon": "九龍",
   "region_New_Territories": "新界",
-
   "area_Central_and_Western": "中西區",
   "area_Wan_Chai": "灣仔區",
   "area_Eastern": "東區",
@@ -21,7 +20,6 @@
   "area_Sha_Tin": "沙田區",
   "area_Sai_Kung": "西貢區",
   "area_Islands": "離島區",
-
   "subarea_Kennedy_Town": "堅尼地城",
   "subarea_Shek_Tong_Tsui": "石塘咀",
   "subarea_Sai_Ying_Pun": "西營盤",

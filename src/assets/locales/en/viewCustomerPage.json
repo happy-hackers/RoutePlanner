@@ -1,0 +1,20 @@
+{
+  "card_title": "Customers",
+  "header_id": "ID",
+  "header_name": "Name",
+  "header_address": "Address",
+  "header_open_time": "Open Time",
+  "header_close_time": "Close Time",
+  "header_action": "Action",
+  "button_edit": "Edit",
+  "button_delete": "Delete",
+  "button_cancel": "Cancel",
+  "button_add_customer": "Add Customer",
+  "modal_delete_title": "Delete Customer",
+  "modal_delete_content_main": "Are you sure you want to delete **{{name}}**?",
+  "modal_delete_warning_label": "Warning",
+  "modal_delete_warning_text": "This will permanently delete the customer and all their associated orders. This action cannot be undone.",
+  "message_success_deleted_with_orders": "Customer deleted successfully ({{count}} order(s) also deleted)",
+  "message_success_deleted_no_orders": "Customer deleted successfully",
+  "message_error_delete_failed": "Failed to delete customer: {{error}}"
+}

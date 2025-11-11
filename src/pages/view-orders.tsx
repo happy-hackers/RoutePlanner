@@ -49,7 +49,7 @@ export default function ViewOrders({
 }: {
   setMarkers: (markers: MarkerData[]) => void;
 }) {
-  const { t } = useTranslation("ViewOrdersPage");
+  const { t } = useTranslation("viewOrdersPage");
   const dispatch = useDispatch();
   const selectedOrders = useSelector(
     (state: RootState) => state.order.selectedOrders

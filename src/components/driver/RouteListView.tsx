@@ -1,6 +1,7 @@
 import { List, Space, Typography, Tag, Progress, Button } from 'antd';
 import { CheckCircleFilled, ClockCircleOutlined, UndoOutlined } from '@ant-design/icons';
 import type { Order } from '../../types/order';
+import { useTranslation } from 'react-i18next';
 
 const { Text } = Typography;
 
@@ -19,6 +20,8 @@ export default function RouteListView({
   onStopSelect,
   onUndo
 }: RouteListViewProps) {
+  const { t } = useTranslation('driverRouteComponent');
+  const keyPath = "routeListView";
   const completedCount = orders.filter(o => o.status === 'Delivered').length;
   const progressPercent = (completedCount / orders.length) * 100;
   const nextIncompleteIndex = orders.findIndex(o => o.status !== 'Delivered');
@@ -28,7 +31,7 @@ export default function RouteListView({
       {/* Progress Header */}
       <Space direction="vertical" size="middle" style={{ width: '100%', marginBottom: 16 }}>
         <Text strong style={{ fontSize: 18 }}>
-          Progress: {completedCount} of {orders.length} completed
+          {t(`${keyPath}.progress_header_text`)}: {completedCount} {t(`${keyPath}.progress_header_of`)} {orders.length} {t(`${keyPath}.progress_header_completed`)}
         </Text>
         <Progress percent={Math.round(progressPercent)} status="active" />
       </Space>
@@ -88,7 +91,7 @@ export default function RouteListView({
                       delete={isCompleted}
                       style={{ fontSize: 16 }}
                     >
-                      {index + 1}. {order.customer?.name || 'Customer'}
+                      {index + 1}. {order.customer?.name || t(`${keyPath}.placeholder_customer`)}
                     </Text>
                     <Text
                       type="secondary"
@@ -98,10 +101,10 @@ export default function RouteListView({
                     </Text>
                     <Space>
                       <Text strong style={{ color: '#52c41a' }}>
-                        {segmentTimes[index] || 0} mins
+                        {t(`${keyPath}.text_time_mins`, { segmentTime: segmentTimes[index] || 0 })}
                       </Text>
-                      {isNext && <Tag color="blue">NEXT</Tag>}
-                      {isCompleted && <Tag color="success">DONE</Tag>}
+                      {isNext && <Tag color="blue">{t(`${keyPath}.tag_next`)}</Tag>}
+                      {isCompleted && <Tag color="success">{t(`${keyPath}.tag_done`)}</Tag>}
                       {order.customer?.openTime && (
                         <Text type="secondary" style={{ fontSize: 12 }}>
                           {order.customer.openTime}-{order.customer.closeTime}
@@ -121,7 +124,7 @@ export default function RouteListView({
                     }}
                     size="small"
                   >
-                    Undo
+                    {t(`${keyPath}.button_undo`)}
                   </Button>
                 )}
               </Space>

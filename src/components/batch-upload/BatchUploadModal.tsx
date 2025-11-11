@@ -5,6 +5,7 @@ import type { Order } from "../../types/order";
 import UploadPreviewModal, { type NewCustomerData } from "./UploadPreviewModal";
 import type { TimePeriod } from "../../store/orderSlice";
 import { getCurrentTimePeriod, getCurrentDateHK } from "../../utils/timeUtils";
+import { useTranslation } from 'react-i18next';
 
 import UploadInstructions from "./AutoFillControls";
 import FileUploader from "./FileUploader";
@@ -22,6 +23,8 @@ export default function BatchUploadModal({
   setOpen,
   onUploadComplete,
 }: BatchUploadModalProps) {
+  const { t } = useTranslation('uploadComponent'); 
+  const keyPath = "batchUploadModel";
   const { message } = App.useApp();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -71,12 +74,12 @@ export default function BatchUploadModal({
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      message.error("Please select a file");
+      message.error(t(`${keyPath}.error_select_file`));
       return;
     }
 
     if (!geocoderRef.current) {
-      message.error("Google Maps is not loaded. Please try again.");
+      message.error(t(`${keyPath}.error_maps_not_loaded`));
       return;
     }
 
@@ -115,12 +118,12 @@ export default function BatchUploadModal({
         });
 
         if (validOrders.length === 0) {
-          message.error("No valid orders found in the file");
+          message.error(t(`${keyPath}.error_no_valid_orders`));
           return;
         }
 
         if (!geocoderRef.current) {
-          message.error("Google Maps geocoder not available. Please try again.");
+          message.error(t(`${keyPath}.error_geocoder_not_available`));
           return;
         }
 
@@ -133,9 +136,9 @@ export default function BatchUploadModal({
         setShowPreview(true);
       } catch (err) {
         message.error(
-          `Error processing file: ${
-            err instanceof Error ? err.message : "Unknown error"
-          }`
+          t(`${keyPath}.error_processing_file`, {
+            error: err instanceof Error ? err.message : t('common.unknown_error', { ns: 'common' })
+          })
         );
       } finally {
         setIsProcessing(false);
@@ -158,7 +161,9 @@ export default function BatchUploadModal({
           customerIdMap.set(addressKey, result.data.id);
         } else {
           message.error(
-            `Failed to create customer: ${result.error || "Unknown error"}`
+            t(`${keyPath}.error_create_customer`, {
+              error: result.error || t('common.unknown_error', { ns: 'common' })
+            })
           );
         }
       }
@@ -167,9 +172,8 @@ export default function BatchUploadModal({
       let successCount = 0;
       for (const order of processedOrders) {
         if (order.customerId === 0) {
-          const addressKey = `${order.detailedAddress}|${order.area || ""}|${
-            order.district || ""
-          }`;
+          const addressKey = `${order.detailedAddress}|${order.area || ""}|${order.district || ""
+            }`;
           const newCustomerId = customerIdMap.get(addressKey);
           if (newCustomerId) {
             order.customerId = newCustomerId;
@@ -183,15 +187,18 @@ export default function BatchUploadModal({
       }
 
       message.success(
-        `Successfully created ${newCustomers.length} customer(s) and ${successCount} order(s)`
+        t(`${keyPath}.success_upload`, {
+          customerCount: newCustomers.length,
+          orderCount: successCount
+        })
       );
       onUploadComplete();
       handleClose();
     } catch (err) {
       message.error(
-        `Error creating records: ${
-          err instanceof Error ? err.message : "Unknown error"
-        }`
+        t(`${keyPath}.error_creating_records`, {
+          error: err instanceof Error ? err.message : t('common.unknown_error', { ns: 'common' })
+        })
       );
     } finally {
       setIsCreating(false);
@@ -201,12 +208,12 @@ export default function BatchUploadModal({
   return (
     <>
       <Modal
-        title="Upload JSON/CSV File"
+        title={t(`${keyPath}.modal_title`)}
         open={isOpen && !showPreview}
         onCancel={handleClose}
         footer={[
           <Button key="cancel" onClick={handleClose} disabled={isProcessing}>
-            Cancel
+            {t(`${keyPath}.button_cancel`)}
           </Button>,
           <Button
             key="upload"
@@ -215,7 +222,7 @@ export default function BatchUploadModal({
             disabled={!selectedFile || isProcessing}
             loading={isProcessing}
           >
-            Upload
+            {t(`${keyPath}.button_upload`)}
           </Button>,
         ]}
       >

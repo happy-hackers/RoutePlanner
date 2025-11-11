@@ -1,0 +1,14 @@
+{
+  "app_name": "路線規劃器",
+  "portal_title": "司機入口",
+  "placeholder_email": "電子郵件",
+  "placeholder_password": "密碼",
+  "checkbox_remember_me": "記住我",
+  "button_login": "登入",
+  "help_text": "如果需要登入協助，請聯繫您的管理員",
+  "message_error_required": "請輸入電子郵件和密碼",
+  "message_login_success": "登入成功！",
+  "message_login_failed_generic": "登入失敗",
+  "message_error_occurred": "登入時發生錯誤",
+  "language_select": "語言:"
+}

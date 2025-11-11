@@ -1,6 +1,7 @@
 import { Card, Button, Space, Typography, Tag } from 'antd';
 import { CheckOutlined, UnorderedListOutlined, UndoOutlined } from '@ant-design/icons';
 import type { Order } from '../../types/order';
+import { useTranslation } from 'react-i18next';
 
 const { Title, Text } = Typography;
 
@@ -23,6 +24,8 @@ export default function NextStopCard({
   onUndo,
   onViewAll
 }: NextStopCardProps) {
+  const { t } = useTranslation('driverRouteComponent');
+  const keyPath = "nextStopCard";
   const isCompleted = order.status === 'Delivered';
 
   return (
@@ -42,17 +45,20 @@ export default function NextStopCard({
         {/* Header */}
         <Space style={{ width: '100%', justifyContent: 'space-between' }}>
           <Text strong style={{ fontSize: 16 }}>
-            {isCompleted ? 'Completed' : 'Next'}: Stop {stopNumber} of {totalStops}
+            {isCompleted
+              ? t(`${keyPath}.header_completed`)
+              : t(`${keyPath}.header_next`)}
+            : {t(`${keyPath}.text_stop`, { stopNumber })} {t(`${keyPath}.text_of`)} {totalStops}
           </Text>
           <Tag color={isCompleted ? 'success' : 'processing'}>
-            {isCompleted ? 'DONE' : 'IN PROGRESS'}
+            {isCompleted ? t(`${keyPath}.tag_done`) : t(`${keyPath}.tag_in_progress`)}
           </Tag>
         </Space>
 
         {/* Customer & Address */}
         <div>
           <Title level={4} style={{ margin: 0 }}>
-            {order.customer?.name || 'Customer'}
+            {order.customer?.name || t(`${keyPath}.placeholder_customer`)}
           </Title>
           <Text type="secondary" style={{ fontSize: 16 }}>
             {order.detailedAddress}, {order.area}
@@ -62,11 +68,11 @@ export default function NextStopCard({
         {/* Time & Customer Hours */}
         <Space>
           <Text strong style={{ color: '#52c41a' }}>
-            {segmentTime} mins
+            {t(`${keyPath}.text_time_mins`, { segmentTime })}
           </Text>
           {order.customer?.openTime && (
             <Text type="secondary">
-              Open: {order.customer.openTime} - {order.customer.closeTime}
+              {t(`${keyPath}.text_open`)}: {order.customer.openTime} - {order.customer.closeTime}
             </Text>
           )}
         </Space>
@@ -79,7 +85,7 @@ export default function NextStopCard({
             onClick={onViewAll}
             style={{ flex: 1 }}
           >
-            View All
+            {t(`${keyPath}.button_view_all`)}
           </Button>
           {isCompleted ? (
             <Button
@@ -88,7 +94,7 @@ export default function NextStopCard({
               onClick={onUndo}
               style={{ flex: 2, height: 56 }}
             >
-              Undo
+              {t(`${keyPath}.button_undo`)}
             </Button>
           ) : (
             <Button
@@ -98,7 +104,7 @@ export default function NextStopCard({
               onClick={onDone}
               style={{ flex: 2, height: 56 }}
             >
-              Mark as Done
+              {t(`${keyPath}.button_mark_done`)}
             </Button>
           )}
         </Space>
