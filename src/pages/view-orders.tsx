@@ -1,23 +1,47 @@
 import NewOrderModal from "../components/NewOrderModal";
-import { DatePicker, Row, Col, Space, Checkbox, Typography, Button, Badge, Table } from "antd";
+import {
+  DatePicker,
+  Row,
+  Col,
+  Space,
+  Checkbox,
+  Typography,
+  Button,
+  Badge,
+  Table,
+  Radio,
+  Input,
+  Switch,
+  Collapse,
+  Pagination,
+} from "antd";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo } from "react";
-import { getAllCustomers, getAllDispatchers, getAllOrders } from "../utils/dbUtils";
-import type { Order, OrderStatus } from "../types/order.ts";
+import {
+  getAllCustomers,
+  getAllDispatchers,
+  getAllOrders,
+} from "../utils/dbUtils";
+import type { Order } from "../types/order.ts";
 import type { MarkerData } from "../types/markers";
 import { setMarkersList } from "../utils/markersUtils.ts";
 import type { Customer } from "../types/customer.ts";
 
 import { BatchUploadModal } from "../components/batch-upload";
 import { useSelector, useDispatch } from "react-redux";
-import { setDate, setTimePeriod, setStatus, setSelectedOrders } from "../store/orderSlice.ts";
+import {
+  setDate,
+  setTimePeriod,
+  setSelectedOrders,
+} from "../store/orderSlice.ts";
 import type { RootState } from "../store";
 import SelectedOrderModal from "../components/SelectedOrderModal.tsx";
-import {sortOrders} from "../utils/sortingUtils.ts";
+import { sortOrders } from "../utils/sortingUtils.ts";
 
 type TimePeriod = "Morning" | "Afternoon" | "Evening";
 
 const { Text } = Typography;
+const { Panel } = Collapse;
 
 export default function ViewOrders({
   setMarkers,
@@ -25,17 +49,21 @@ export default function ViewOrders({
   setMarkers: (markers: MarkerData[]) => void;
 }) {
   const dispatch = useDispatch();
-  const selectedOrders = useSelector((state: RootState) => state.order.selectedOrders);
+  const selectedOrders = useSelector(
+    (state: RootState) => state.order.selectedOrders
+  );
   const date = useSelector((state: RootState) => state.order.date);
   const timePeriod = useSelector((state: RootState) => state.order.timePeriod);
-  const status = useSelector((state: RootState) => state.order.status);
+  const [status, setStatus] = useState("All");
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isSelectedOrderModal, setIsSelectedOrderModal] = useState(false);
   const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
-
-  console.log("selectedOrders", JSON.parse(JSON.stringify(selectedOrders)))
+  const [searchText, setSearchText] = useState("");
+  const [groupView, setGroupView] = useState(true);
+  const [groupPage, setGroupPage] = useState(1);
+  const groupsPerPage = 20;
 
   const columns = [
     {
@@ -69,25 +97,24 @@ export default function ViewOrders({
       dataIndex: "status",
       key: "status",
       render: (status: string) => {
-        let color = "";
-        if (status === "In Progress") color = "orange";
-        else if (status === "Delivered") color = "#53CC3F";
-
-        return <span style={{ color }}>{status}</span>;
+        if (status === "Delivered") return <span>✔️</span>;
+        else return <span>❌</span>;
       },
-      width: "20%",
+      width: "15%",
     },
   ];
 
   const handleRowSelect = (record: Order, selected: boolean) => {
     if (selected) {
       setSelectedRowIds((prev) => [...prev, record.id]);
-      const sortedOrders = sortOrders([...selectedOrders, record])
+      const sortedOrders = sortOrders([...selectedOrders, record]);
       dispatch(setSelectedOrders(sortedOrders));
     } else {
       setSelectedRowIds(selectedRowIds.filter((id) => id !== record.id));
       dispatch(
-        setSelectedOrders(selectedOrders.filter((order) => order.id !== record.id))
+        setSelectedOrders(
+          selectedOrders.filter((order) => order.id !== record.id)
+        )
       );
     }
   };
@@ -103,7 +130,7 @@ export default function ViewOrders({
             setSelectedRowIds((prev) => [...prev, record.id]);
           });*/
       setSelectedRowIds((prev) => [...prev, ...changedId]);
-      const sortedOrders = sortOrders([...selectedOrders, ...changeRows])
+      const sortedOrders = sortOrders([...selectedOrders, ...changeRows]);
       dispatch(setSelectedOrders(sortedOrders));
     } else {
       setSelectedRowIds((prev) => prev.filter((id) => !changedId.includes(id)));
@@ -134,8 +161,8 @@ export default function ViewOrders({
       setCustomers(customersData);
     }
   };
-  const timeOptions: TimePeriod[] = ["Morning", "Afternoon", "Evening"]
-  const stateOptions: OrderStatus[] = ["Pending", "In Progress", "Delivered"];
+  const timeOptions: TimePeriod[] = ["Morning", "Afternoon", "Evening"];
+  const statusOptions = ["All", "Complete", "Incomplete"];
 
   // Fetch orders and customers from Supabase
   useEffect(() => {
@@ -144,8 +171,12 @@ export default function ViewOrders({
   }, [isUploadModalOpen]);
 
   useEffect(() => {
-    setSelectedRowIds(selectedOrders.map(order => order.id));
+    setSelectedRowIds(selectedOrders.map((order) => order.id));
   }, [selectedOrders]);
+
+  useEffect(() => {
+    setGroupPage(1);
+  }, [status, searchText, date, timePeriod]);
 
   // Use useMemo to cache filtered orders and prevent infinite re-renders
   const filteredOrders = useMemo(() => {
@@ -157,12 +188,54 @@ export default function ViewOrders({
         timePeriod && timePeriod.length > 0
           ? timePeriod.includes(order.time)
           : true; // If there is/are time period ticked, filter by the ticked one. OtherWise, show the orders in all time period
-      const matchesStatus =
-        status && status.length > 0 ? status.includes(order.status) : true; // If there is/are status ticked, filter by the ticked one. OtherWise, show the orders in all status
 
-      return matchesDate && matchesTimePeriod && matchesStatus;
+      // Regard "Delivered" orders as completed orders and others as incompleted orders
+      const isComplete = order.status === "Delivered";
+      const isIncomplete = order.status !== "Delivered";
+
+      let matchesStatus = true;
+      if (status === "Complete") {
+        matchesStatus = isComplete;
+      } else if (status === "Incomplete") {
+        matchesStatus = isIncomplete;
+      } else {
+        // If selected "All"
+        matchesStatus = true;
+      }
+
+      // Search filtering
+      const normalizedSearch = searchText.toLowerCase();
+      const matchesSearch =
+        !searchText ||
+        String(order.id).toLowerCase().includes(normalizedSearch) || // Meter ID
+        (order.detailedAddress || "").toLowerCase().includes(normalizedSearch); // Address
+
+      return matchesDate && matchesTimePeriod && matchesStatus && matchesSearch;
     });
-  }, [orders, date, timePeriod, status]);
+  }, [orders, date, timePeriod, status, searchText]);
+
+  const groupedOrders = useMemo(() => {
+    const groups: Record<string, Order[]> = {};
+
+    filteredOrders.forEach((order) => {
+      const buildingKey = order.detailedAddress || "Unknown Address";
+      if (!groups[buildingKey]) groups[buildingKey] = [];
+      groups[buildingKey].push(order);
+    });
+
+    return groups;
+  }, [filteredOrders]);
+
+  const groupedEntries = useMemo(() => {
+    const entries = Object.entries(groupedOrders);
+    return entries;
+  }, [groupedOrders]);
+
+  const paginatedGroups = useMemo(() => {
+    const startIndex = (groupPage - 1) * groupsPerPage;
+    const endIndex = startIndex + groupsPerPage;
+    return groupedEntries.slice(startIndex, endIndex);
+  }, [groupPage, groupsPerPage, groupedEntries]);
 
   const sortedOrders = sortOrders(filteredOrders);
 
@@ -178,7 +251,14 @@ export default function ViewOrders({
 
   return (
     <Row style={{ height: "100vh" }}>
-      <Col style={{ width: "100%", display: "flex", flexDirection: "column" }}>
+      <Col
+        style={{
+          height: "100vh",
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <Space
           direction="vertical"
           size="middle"
@@ -225,10 +305,22 @@ export default function ViewOrders({
             <Text strong style={{ marginRight: 20 }}>
               Status:
             </Text>
-            <Checkbox.Group
-              options={stateOptions}
-              defaultValue={status}
-              onChange={(values: OrderStatus[]) => dispatch(setStatus(values))}
+            <Radio.Group
+              options={statusOptions}
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            />
+          </Row>
+          <Row>
+            <Text strong style={{ marginRight: 20 }}>
+              Search:
+            </Text>
+            <Input.Search
+              placeholder="Search by Address or Meter ID"
+              allowClear
+              style={{ width: 350 }}
+              onSearch={(value) => setSearchText(value.trim())}
+              onChange={(e) => setSearchText(e.target.value.trim())}
             />
           </Row>
         </Space>
@@ -239,7 +331,22 @@ export default function ViewOrders({
             flexDirection: "column",
           }}
         >
-          <Row justify="end" style={{ marginBottom: 8 }}>
+          <Row
+            justify="space-between"
+            style={{ marginBottom: 8, marginTop: 8 }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span>View Mode:</span>
+              <Switch
+                checked={groupView}
+                onChange={() => setGroupView(!groupView)}
+                checkedChildren="Grouped View"
+                unCheckedChildren="Table View"
+                style={{
+                  backgroundColor: groupView ? "#31694E" : "#B87C4C",
+                }}
+              />
+            </div>
             <Badge
               count={selectedOrders.length}
               offset={[-2, 2]}
@@ -266,25 +373,103 @@ export default function ViewOrders({
             setVisibility={setIsSelectedOrderModal}
             setSelectedRowIds={setSelectedRowIds}
           />
+          {groupView ? (
+            <>
+              <div
+                style={{
+                  flex: 1,
+                  maxHeight: "calc(100vh - 320px)",
+                  minHeight: 0,
+                  overflowY: "auto",
+                  paddingTop: 8,
+                }}
+              >
+                <Collapse accordion>
+                  {paginatedGroups.map(([address, ordersInGroup]) => {
+                    const completedCount = ordersInGroup.filter(
+                      (o) => o.status === "Delivered"
+                    ).length;
+                    const incompleteCount =
+                      ordersInGroup.length - completedCount;
 
-          <div style={{ flex: 1, overflow: "auto" }}>
-            <Table
-              rowKey="id"
-              columns={columns}
-              dataSource={sortedOrders}
-              rowSelection={rowSelection}
-              scroll={{ y: "calc(100vh - 330px)" }}
-              pagination={{
-                pageSize: 20,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total, range) =>
-                  `${range[0]}-${range[1]} of ${total} orders`,
-                position: ["bottomCenter"],
-              }}
-              style={{ maxWidth: 650 }}
-            />
-          </div>
+                    return (
+                      <Panel
+                        key={address}
+                        header={
+                          <Row
+                            justify="space-between"
+                            style={{ width: "100%" }}
+                          >
+                            <Text strong>{address}</Text>
+                            <Text>
+                              ✔️ {completedCount} | ❌ {incompleteCount}
+                            </Text>
+                          </Row>
+                        }
+                        style={{
+                          background:
+                            incompleteCount > 0 ? "#fff2f0" : "#f6ffed",
+                          borderRadius: 6,
+                          marginBottom: 8,
+                        }}
+                      >
+                        <Table
+                          rowKey="id"
+                          dataSource={ordersInGroup}
+                          size="small"
+                          pagination={false}
+                          columns={[
+                            { title: "ID", dataIndex: "id" },
+                            {
+                              title: "Address",
+                              dataIndex: "detailedAddress",
+                            },
+                            {
+                              title: "Status",
+                              dataIndex: "status",
+                              render: (s: string) =>
+                                s === "Delivered"
+                                  ? "✔️ Complete"
+                                  : "❌ Incomplete",
+                            },
+                          ]}
+                        />
+                      </Panel>
+                    );
+                  })}
+                </Collapse>
+              </div>
+              <Pagination
+                current={groupPage}
+                pageSize={groupsPerPage}
+                total={groupedEntries.length}
+                onChange={(page) => setGroupPage(page)}
+                showSizeChanger={false}
+                style={{ marginTop: 16, textAlign: "center" }}
+              />
+            </>
+          ) : (
+            <div style={{ flex: 1, overflow: "auto" }}>
+              <Table
+                rowKey="id"
+                columns={columns}
+                dataSource={sortedOrders}
+                rowSelection={rowSelection}
+                scroll={{ y: "calc(100vh - 390px)" }}
+                pagination={{
+                  pageSize: 20,
+                  showSizeChanger: true,
+                  showQuickJumper: true,
+                  showTotal: (total, range) =>
+                    `${range[0]}-${range[1]} of ${total} orders`,
+                  position: ["bottomCenter"],
+                  showLessItems: true,
+                  size: "small",
+                }}
+                style={{ maxWidth: 650, height: "100%" }}
+              />
+            </div>
+          )}
         </div>
       </Col>
     </Row>
