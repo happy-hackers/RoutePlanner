@@ -1,0 +1,15 @@
+{
+  "modalTitle": "已選訂單",
+  "tableColumnId": "編號",
+  "tableColumnAddress": "地址",
+  "tableColumnTime": "時間",
+  "tableColumnAction": "操作",
+  "actionDelete": "刪除",
+  "buttonDeleteAll": "全部刪除",
+  "confirmDescription": "您確定要移除所有已選訂單嗎",
+  "confirmAction": "是",
+  "confirmCancel": "否",
+  "timeMorning": "早上",
+  "timeAfternoon": "下午",
+  "timeEvening": "晚上"
+}

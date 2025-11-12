@@ -1,0 +1,15 @@
+{
+  "modalTitle": "已选订单",
+  "tableColumnId": "编号",
+  "tableColumnAddress": "地址",
+  "tableColumnTime": "时间",
+  "tableColumnAction": "操作",
+  "actionDelete": "删除",
+  "buttonDeleteAll": "全部删除",
+  "confirmDescription": "您确定要移除所有已选订单吗",
+  "confirmAction": "是",
+  "confirmCancel": "否",
+  "timeMorning": "早上",
+  "timeAfternoon": "下午",
+  "timeEvening": "晚上"
+}

@@ -313,7 +313,6 @@ export default function CustomerModal({
                 }}
                 options={areas.map((area) => ({
                   value: area,
-                  // 修正：将 area 中的空格替换为下划线，然后使用 'hongkongArea:region_' 前缀
                   label: t('hongkongArea:region_' + area.replace(/ /g, '_'), { defaultValue: area }),
                 }))}
                 optionFilterProp="label"
@@ -332,7 +331,6 @@ export default function CustomerModal({
                 disabled={!selectedArea}
                 options={districts.map((district) => ({
                   value: district,
-                  // 修正：将 district 中的空格替换为下划线，然后使用 'hongkongArea:area_' 前缀
                   label: t('hongkongArea:area_' + district.replace(/ /g, '_'), { defaultValue: district }),
                 }))}
                 optionFilterProp="label"

@@ -1,0 +1,18 @@
+{
+    "inputStartPlaceholder": "输入起点 (经度,纬度)",
+    "inputEndPlaceholder": "输入终点 (经度,纬度)",
+    "selectOptionPlaceholder": "选择选项",
+    "optionNormal": "普通",
+    "optionByTime": "营业时间",
+    "selectStartTimePlaceholder": "选择开始时间",
+    "calculateButton": "计算",
+    "errorStartEndRequired": "请输入起点和终点位置",
+    "errorStartTimeRequired": "请在计算路线前选择一个开始时间。",
+    "errorNoRouteFound": "未找到路线",
+    "errorRouteCalculationFailed": "路线计算失败",
+    "geocodeError": "地理编码失败：",
+    "popupStart": "起点",
+    "popupEnd": "终点",
+    "popupStop": "停靠点",
+    "footerTotalTime": "总耗时"
+}

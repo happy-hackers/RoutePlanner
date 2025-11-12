@@ -26,6 +26,8 @@ i18n
       "viewDispatcherComponent",
       "addDispatcherComponent",
       "addOrderComponent",
+      "openStreetMapComponent",
+      "selectOrderComponent",
     ],
 
     defaultNS: 'viewOrdersPage',

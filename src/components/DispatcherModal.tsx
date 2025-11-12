@@ -18,15 +18,6 @@ interface Option {
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const periods = ["Morning", "Afternoon", "Evening"];
 
-const options: Option[] = Object.entries(areaData).map(([region, districts]) => ({
-  label: region,
-  value: region,
-  children: Object.keys(districts).map((district) => ({
-    label: district,
-    value: district,
-  })),
-}));
-
 interface DispatcherModalProps {
   visible: boolean;
   onCancel: () => void;
@@ -47,7 +38,7 @@ export default function DispatcherModal({
   const [password, setPassword] = useState('');
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { t } = useTranslation("addDispatcherComponent");
+  const { t } = useTranslation(["addDispatcherComponent", 'hongkongArea']);
 
   const generateRandomPassword = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
@@ -187,6 +178,15 @@ export default function DispatcherModal({
   const onChange: CascaderProps<Option, 'value', true>['onChange'] = (value) => {
     console.log(value);
   };
+
+  const options: Option[] = Object.entries(areaData).map(([region, districts]) => ({
+    label: t(`region_${region}`.replace(/ /g, '_'), { ns: 'hongkongArea' }),
+    value: region,
+    children: Object.keys(districts).map((district) => ({
+      label: t(`area_${district}`.replace(/ /g, '_'), { ns: 'hongkongArea' }),
+      value: district,
+    })),
+  }));
 
   return (
     <Modal
