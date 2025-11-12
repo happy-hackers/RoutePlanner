@@ -24,7 +24,7 @@ import {
 } from "../utils/dbUtils";
 import type { Order } from "../types/order.ts";
 import type { MarkerData } from "../types/markers";
-import { setMarkersList } from "../utils/markersUtils.ts";
+import { getMarkerWithMultiMeters } from "../utils/markersUtils.ts";
 import type { Customer } from "../types/customer.ts";
 
 import { BatchUploadModal } from "../components/batch-upload";
@@ -61,7 +61,7 @@ export default function ViewOrders({
   const [isSelectedOrderModal, setIsSelectedOrderModal] = useState(false);
   const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
   const [searchText, setSearchText] = useState("");
-  const [groupView, setGroupView] = useState(true);
+  const [groupView, setGroupView] = useState(false);
   const [groupPage, setGroupPage] = useState(1);
   const groupsPerPage = 20;
 
@@ -240,14 +240,32 @@ export default function ViewOrders({
   const sortedOrders = sortOrders(filteredOrders);
 
   useEffect(() => {
-    const fetchAndSetMarkers = async () => {
-      const dispatchersData = await getAllDispatchers();
-      if (dispatchersData)
-        setMarkers(setMarkersList(selectedOrders, dispatchersData));
-    };
+  const fetchAndSetMarkers = async () => {
+    const dispatchersData = await getAllDispatchers();
+    if (!dispatchersData) return;
 
-    fetchAndSetMarkers();
-  }, [selectedOrders, setMarkers]);
+    const normalizeDispatcherId = (id: number | null | undefined) =>
+      id == null ? "null" : id.toString(); // null and undefined are treated as the same group "null"
+
+    // Group orders by lat, lng and dispatcherId
+    const grouped = selectedOrders.reduce((acc, order) => {
+      // Treat null and undefined as equal
+      const key = `${order.lat},${order.lng},${normalizeDispatcherId(order.dispatcherId)}`;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(order);
+      return acc;
+    }, {} as Record<string, Order[]>);
+
+    // Convert grouped orders into markers
+    const markers = Object.values(grouped).map((orders) =>
+      getMarkerWithMultiMeters(orders, dispatchersData)
+    );
+
+    setMarkers(markers);
+  };
+
+  fetchAndSetMarkers();
+}, [selectedOrders, setMarkers]);
 
   return (
     <Row style={{ height: "100vh" }}>

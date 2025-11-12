@@ -6,7 +6,7 @@ import type { RootState } from "../store";
 import { updateOrder } from "../utils/dbUtils";
 import { setSelectedOrders } from "../store/orderSlice";
 import type { MarkerData } from "../types/markers";
-import { setMarkersList } from "../utils/markersUtils";
+import { getGroupedMarkers } from "../utils/markersUtils";
 
 const { Title, Text } = Typography;
 
@@ -54,8 +54,9 @@ export default function Dispatcherform({
           order.id === updatedOrder.id ? {...updatedOrder, customer} : order
         );
         dispatch(setSelectedOrders(newOrders));
-        const newMarkers = setMarkersList(newOrders, dispatchers)
-        setMarkers(newMarkers);
+        const markers = getGroupedMarkers(newOrders, dispatchers);
+          
+        setMarkers(markers);
         message.success(`Order ${order.id} is not assigned`);
       } else {
         message.error(`Failed to update order ${order.id}: ${result.error}`);
@@ -75,9 +76,9 @@ export default function Dispatcherform({
         let newMarkers;
         if (selectedDispatcher) {
           const newOrderData = newOrders.filter(order => order.dispatcherId === selectedDispatcher.id);
-          newMarkers = setMarkersList(newOrderData, dispatchers)
+          newMarkers = getGroupedMarkers(newOrderData, dispatchers);
         } else {
-          newMarkers = setMarkersList(newOrders, dispatchers)
+          newMarkers = getGroupedMarkers(newOrders, dispatchers);
         }
         setMarkers(newMarkers);
         message.success(`Order ${order.id} assigned to ${name || "Unknown"}`);
