@@ -5,7 +5,7 @@ import LanguageSwitcher from "../components/LanguageSwitcher.tsx";
 import { useTranslation } from "react-i18next";
 
 export default function Setting() {
-  const { t } = useTranslation('settingPage');
+  const { t } = useTranslation('setting');
   const [useDefaultAddr, setUseDefaultAddr] = useState(false);
   const settingInfo: any = getSettingInfo();
   const { startAddress, endAddress, useDefaultAddress } = settingInfo;

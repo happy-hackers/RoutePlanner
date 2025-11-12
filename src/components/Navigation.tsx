@@ -9,6 +9,7 @@ import {
   SettingFilled,
   TeamOutlined
 } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 
 type MenuItem = Required<MenuProps>["items"][number];
 
@@ -28,17 +29,19 @@ function getItem(
   } as MenuItem;
 }
 
-export default function Sidebar() {
+export default function Navigation() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const { t } = useTranslation('sidebar');
+
   const menuItems: MenuItem[] = [
-    getItem("View Orders", "/view-orders", <ShoppingOutlined />),
-    getItem("Assign Dispatcher", "/assign-dispatcher", <UserSwitchOutlined />),
-    getItem("Route Results", "/route-results", <CompassOutlined />,),
-    getItem("Set Dispatcher", "/set-dispatcher", <SettingOutlined />),
-    getItem("View Customers", "/view-customers", <TeamOutlined />),
-    getItem("Settings", "/settings", <SettingFilled />),
+    getItem(t("menu_view_orders"), "/view-orders", <ShoppingOutlined />),
+    getItem(t("menu_assign_dispatcher"), "/assign-dispatcher", <UserSwitchOutlined />),
+    getItem(t("menu_route_results"), "/route-results", <CompassOutlined />),
+    getItem(t("menu_set_dispatcher"), "/set-dispatcher", <SettingOutlined />),
+    getItem(t("menu_view_customers"), "/view-customers", <TeamOutlined />),
+    getItem(t("menu_settings"), "/settings", <SettingFilled />),
   ];
 
   const handleMenuClick = (e: { key: string }) => {

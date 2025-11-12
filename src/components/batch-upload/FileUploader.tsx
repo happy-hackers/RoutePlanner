@@ -11,7 +11,7 @@ interface FileUploaderProps {
 }
 
 export default function FileUploader({ selectedFile, onFileSelect }: FileUploaderProps) {
-  const { t } = useTranslation('uploadComponent');
+  const { t } = useTranslation('upload');
   const keyPath = "fileUploader";
   const { message } = App.useApp();
 

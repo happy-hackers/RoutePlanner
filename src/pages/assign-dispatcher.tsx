@@ -24,7 +24,7 @@ export default function AssignDispatchers({
   hoveredOrderId: number | null;
   setHoveredOrderId: (id: number | null) => void;
 }) {
-  const { t } = useTranslation("assignDispatchersPage");
+  const { t } = useTranslation("assignDispatcher");
   const { message } = App.useApp();
   const dispatch = useDispatch();
   const selectedOrders = useSelector((state: RootState) => state.order.selectedOrders);

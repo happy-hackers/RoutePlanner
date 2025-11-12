@@ -10,7 +10,7 @@ const { Content } = Layout;
 const { Title, Text } = Typography;
 
 export default function DriverLogin() {
-  const { t } = useTranslation('driverLoginPage');
+  const { t } = useTranslation('driverLogin');
   const navigate = useNavigate();
   const [email, setEmail] = useState('hsupisces@hotmail.com');
   const [password, setPassword] = useState('adminadmin');

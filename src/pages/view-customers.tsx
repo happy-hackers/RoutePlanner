@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 const { Text } = Typography;
 
 export default function ViewCustomers() {
-  const { t } = useTranslation('viewCustomerPage');
+  const { t } = useTranslation('viewCustomer');
   const { modal, message } = App.useApp();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [modalVisible, setModalVisible] = useState(false);

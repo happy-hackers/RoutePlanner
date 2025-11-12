@@ -69,7 +69,7 @@ export default function NewOrderModal({
   const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 
   const { message } = App.useApp();
-  const { t } = useTranslation(["addOrderComponent", 'hongkongArea']);
+  const { t } = useTranslation(["addOrder", 'hongkong']);
 
   useEffect(() => {
     setOptions({ key: GOOGLE_API_KEY });
@@ -143,10 +143,10 @@ export default function NewOrderModal({
       setSelectedArea(null);
       handleCancel();
       fetchOrders();
-      message.success(t('addOrderComponent:message_success'));
+      message.success(t('message_success'));
     } else {
-      console.error(t('addOrderComponent:message_error_create_order'), result.error);
-      message.error(`${t('addOrderComponent:message_error_create_order')} ${result.error}`);
+      console.error(t('message_error_create_order'), result.error);
+      message.error(`${t('message_error_create_order')} ${result.error}`);
     }
   };
 
@@ -173,13 +173,13 @@ export default function NewOrderModal({
 
         const updateResult = await updateCustomer(updatedCustomer);
         if (updateResult.success) {
-          message.success(t('addOrderComponent:message_customer_success'));
+          message.success(t('message_customer_success'));
           addOrder(values, addResult.data.id);
         } else {
-          message.error(`${t('addOrderComponent:message_error_update_customer')} ${updateResult.error}`);
+          message.error(`${t('message_error_update_customer')} ${updateResult.error}`);
         }
       } else {
-        message.error(`${t('addOrderComponent:message_error_add_customer')} ${addResult.error}`);
+        message.error(`${t('message_error_add_customer')} ${addResult.error}`);
       }
     } else {
       addOrder(values, values.customerId);
@@ -283,29 +283,29 @@ export default function NewOrderModal({
   return (
     <>
       <Button type="primary" onClick={() => setOpen(true)}>
-        {t('addOrderComponent:button_add_new_order')}
+        {t('button_add_new_order')}
       </Button>
       <Modal
-        title={t('addOrderComponent:modal_title')}
+        title={t('modal_title')}
         open={open}
         onCancel={handleCancel}
         footer={null}
       >
         <AntForm form={form} layout="vertical" onFinish={handleSubmit}>
           <AntForm.Item
-            label={t('addOrderComponent:label_date_picker')}
+            label={t('label_date_picker')}
             name="date"
-            rules={[{ required: true, message: t('addOrderComponent:rule_select_date') }]}
+            rules={[{ required: true, message: t('rule_select_date') }]}
           >
             <DatePicker style={{ width: "100%" }} />
           </AntForm.Item>
           <AntForm.Item
-            label={t('addOrderComponent:label_customer')}
+            label={t('label_customer')}
             name="customerId"
-            rules={[{ required: true, message: t('addOrderComponent:rule_select_customer') }]}
+            rules={[{ required: true, message: t('rule_select_customer') }]}
           >
             <Select
-              placeholder={t('addOrderComponent:placeholder_select_customer')}
+              placeholder={t('placeholder_select_customer')}
               onChange={(value) => {
                 const selectedCustomer = customers.find(
                   (customer) => customer.id === value
@@ -323,7 +323,7 @@ export default function NewOrderModal({
               }}
             >
               <Select.Option key={-1} value={-1}>
-                {t('addOrderComponent:option_create_new_customer')}
+                {t('option_create_new_customer')}
               </Select.Option>
               {customers?.map((customer) => (
                 <Select.Option key={customer.id} value={customer.id}>
@@ -335,12 +335,12 @@ export default function NewOrderModal({
           <Row gutter={20}>
             <Col span={10}>
               <AntForm.Item
-                label={t('addOrderComponent:label_area')}
+                label={t('label_area')}
                 name="area"
-                rules={[{ required: true, message: t('addOrderComponent:rule_select_area') }]}
+                rules={[{ required: true, message: t('rule_select_area') }]}
               >
                 <Select
-                  placeholder={t('addOrderComponent:placeholder_select_area')}
+                  placeholder={t('placeholder_select_area')}
                   onChange={(value) => {
                     setSelectedArea(value);
                     form.setFieldsValue({
@@ -352,7 +352,7 @@ export default function NewOrderModal({
                     return {
                       value: area,
                       // UPDATED: Changed 'area_' to 'region_' to match your Traditional Chinese keys
-                      label: t(`hongkongArea:region_${areaKey}`, { defaultValue: area }),
+                      label: t(`hongkong:region_${areaKey}`, { defaultValue: area }),
                     };
                   })}
                   optionFilterProp="label"
@@ -362,21 +362,21 @@ export default function NewOrderModal({
             </Col>
             <Col span={10}>
               <AntForm.Item
-                label={t('addOrderComponent:label_district')}
+                label={t('label_district')}
                 name="district"
                 rules={[
-                  { required: true, message: t('addOrderComponent:rule_select_district') },
+                  { required: true, message: t('rule_select_district') },
                 ]}
               >
                 <Select
-                  placeholder={t('addOrderComponent:placeholder_select_district')}
+                  placeholder={t('placeholder_select_district')}
                   disabled={!selectedArea}
                   options={districts.map((district) => {
                     const districtKey = district.replace(/ /g, '_');
                     return {
                       value: district,
                       // UPDATED: Changed 'district_' to 'area_' to match your Traditional Chinese keys
-                      label: t(`hongkongArea:area_${districtKey}`, { defaultValue: district }),
+                      label: t(`hongkong:area_${districtKey}`, { defaultValue: district }),
                     };
                   })}
                   optionFilterProp="label"
@@ -386,18 +386,18 @@ export default function NewOrderModal({
             </Col>
           </Row>
           <AntForm.Item
-            label={t('addOrderComponent:label_detailed_address')}
+            label={t('label_detailed_address')}
             name="detailedAddress"
             rules={[
               {
                 required: true,
-                message: t('addOrderComponent:rule_input_address'),
+                message: t('rule_input_address'),
               },
             ]}
           >
             <Select
               showSearch
-              placeholder={t('addOrderComponent:placeholder_search_address')}
+              placeholder={t('placeholder_search_address')}
               filterOption={false}
               onSearch={(value) => setAddressValue(value)}
               options={suggestions}
@@ -405,50 +405,50 @@ export default function NewOrderModal({
             />
           </AntForm.Item>
           <AntForm.Item
-            label={t('addOrderComponent:label_longitude')}
+            label={t('label_longitude')}
             name="longitude"
             hidden
             rules={[
               {
                 required: true,
-                message: t('addOrderComponent:rule_input_longitude'),
+                message: t('rule_input_longitude'),
               },
             ]}
           >
-            <Input placeholder={t('addOrderComponent:placeholder_longitude')} />
+            <Input placeholder={t('placeholder_longitude')} />
           </AntForm.Item>
           <AntForm.Item
-            label={t('addOrderComponent:label_latitude')}
+            label={t('label_latitude')}
             name="latitude"
             hidden
             rules={[
               {
                 required: true,
-                message: t('addOrderComponent:rule_input_latitude'),
+                message: t('rule_input_latitude'),
               },
             ]}
           >
-            <Input placeholder={t('addOrderComponent:placeholder_latitude')} />
+            <Input placeholder={t('placeholder_latitude')} />
           </AntForm.Item>
           <AntForm.Item
-            label={t('addOrderComponent:label_delivery_time')}
+            label={t('label_delivery_time')}
             name="deliveryTime"
             rules={[
-              { required: true, message: t('addOrderComponent:rule_select_delivery_time') },
+              { required: true, message: t('rule_select_delivery_time') },
             ]}
           >
-            <Select placeholder={t('addOrderComponent:placeholder_select_delivery_time')}>
-              <Select.Option value="Morning">{t('addOrderComponent:time_morning')}</Select.Option>
-              <Select.Option value="Afternoon">{t('addOrderComponent:time_afternoon')}</Select.Option>
-              <Select.Option value="Evening">{t('addOrderComponent:time_evening')}</Select.Option>
+            <Select placeholder={t('placeholder_select_delivery_time')}>
+              <Select.Option value="Morning">{t('time_morning')}</Select.Option>
+              <Select.Option value="Afternoon">{t('time_afternoon')}</Select.Option>
+              <Select.Option value="Evening">{t('time_evening')}</Select.Option>
             </Select>
           </AntForm.Item>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             <Button onClick={handleCancel} style={{ marginRight: 8 }}>
-              {t('addOrderComponent:button_cancel')}
+              {t('button_cancel')}
             </Button>
             <Button type="primary" htmlType="submit">
-              {t('addOrderComponent:button_add')}
+              {t('button_add')}
             </Button>
           </div>
         </AntForm>

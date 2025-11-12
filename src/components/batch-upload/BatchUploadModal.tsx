@@ -23,7 +23,7 @@ export default function BatchUploadModal({
   setOpen,
   onUploadComplete,
 }: BatchUploadModalProps) {
-  const { t } = useTranslation('uploadComponent'); 
+  const { t } = useTranslation('upload'); 
   const keyPath = "batchUploadModel";
   const { message } = App.useApp();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);

@@ -11,7 +11,7 @@ const { Text } = Typography;
 
 export default function SetDispatcher() {
 
-  const { t } = useTranslation(['setDispatcherPage', 'hongkongArea']);
+  const { t } = useTranslation(['setDispatcher', 'hongkong']);
   const { modal, message } = App.useApp();
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -184,7 +184,7 @@ export default function SetDispatcher() {
                 const areaKey = area[1].replace(/ /g, '_');
                 return (
                   <div key={area[1]} style={{ fontSize: "12px", color: "#666" }}>
-                    {t(`hongkongArea:area_${areaKey}`, { defaultValue: area[1] })}
+                    {t(`hongkong:area_${areaKey}`, { defaultValue: area[1] })}
                   </div>
                 );
               })}

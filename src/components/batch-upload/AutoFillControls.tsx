@@ -2,7 +2,7 @@ import { Alert } from "antd";
 import { useTranslation } from 'react-i18next';
 
 export default function UploadInstructions() {
-  const { t } = useTranslation('uploadComponent'); 
+  const { t } = useTranslation('upload'); 
   const keyPath = "autoFillControls"; 
 
   return (

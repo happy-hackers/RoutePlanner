@@ -38,7 +38,7 @@ export default function DispatcherModal({
   const [password, setPassword] = useState('');
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { t } = useTranslation(["addDispatcherComponent", 'hongkongArea']);
+  const { t } = useTranslation(["addDispatcher", 'hongkong']);
 
   const generateRandomPassword = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
@@ -180,10 +180,10 @@ export default function DispatcherModal({
   };
 
   const options: Option[] = Object.entries(areaData).map(([region, districts]) => ({
-    label: t(`region_${region}`.replace(/ /g, '_'), { ns: 'hongkongArea' }),
+    label: t(`region_${region}`.replace(/ /g, '_'), { ns: 'hongkong' }),
     value: region,
     children: Object.keys(districts).map((district) => ({
-      label: t(`area_${district}`.replace(/ /g, '_'), { ns: 'hongkongArea' }),
+      label: t(`area_${district}`.replace(/ /g, '_'), { ns: 'hongkong' }),
       value: district,
     })),
   }));
@@ -350,7 +350,7 @@ export default function DispatcherModal({
                             />
                           </div>
                           <div key={`${day}-label`} style={{ fontWeight: "500", color: "black" }}>
-                            {day}
+                            {t(`day_${day}`)}
                           </div>
                           {periods.map((period) => (
                             <div key={`${day}-${period}`} style={{ textAlign: "center" }}>

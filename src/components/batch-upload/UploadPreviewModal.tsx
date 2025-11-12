@@ -40,7 +40,7 @@ function UploadPreviewModal({
   onCancel,
   loading = false,
 }: UploadPreviewModalProps) {
-  const { t } = useTranslation('uploadComponent');
+  const { t } = useTranslation('upload');
   const keyPath = "uploadPreview";
 
   const columns = [

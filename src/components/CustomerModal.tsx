@@ -34,7 +34,7 @@ export default function CustomerModal({
   customer,
   mode,
 }: CustomerModalProps) {
-  const { t } = useTranslation(["addCustomerComponent", 'hongkongArea']);
+  const { t } = useTranslation(["addCustomer", 'hongkong']);
   type Area = keyof typeof areaData;
 
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
@@ -313,7 +313,7 @@ export default function CustomerModal({
                 }}
                 options={areas.map((area) => ({
                   value: area,
-                  label: t('hongkongArea:region_' + area.replace(/ /g, '_'), { defaultValue: area }),
+                  label: t('hongkong:region_' + area.replace(/ /g, '_'), { defaultValue: area }),
                 }))}
                 optionFilterProp="label"
                 showSearch
@@ -331,7 +331,7 @@ export default function CustomerModal({
                 disabled={!selectedArea}
                 options={districts.map((district) => ({
                   value: district,
-                  label: t('hongkongArea:area_' + district.replace(/ /g, '_'), { defaultValue: district }),
+                  label: t('hongkong:area_' + district.replace(/ /g, '_'), { defaultValue: district }),
                 }))}
                 optionFilterProp="label"
                 showSearch

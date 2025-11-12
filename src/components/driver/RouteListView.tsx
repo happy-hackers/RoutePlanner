@@ -20,7 +20,7 @@ export default function RouteListView({
   onStopSelect,
   onUndo
 }: RouteListViewProps) {
-  const { t } = useTranslation('driverRouteComponent');
+  const { t } = useTranslation('viewDriverRoute');
   const keyPath = "routeListView";
   const completedCount = orders.filter(o => o.status === 'Delivered').length;
   const progressPercent = (completedCount / orders.length) * 100;

@@ -32,7 +32,7 @@ export default function Dispatcherform({
   setMarkers,
   setHoveredOrderId
 }: DispatcherformProps) {
-  const { t } = useTranslation("viewDispatcherComponent");
+  const { t } = useTranslation("viewDispatcher");
   const { message } = App.useApp();
   const dispatch = useDispatch();
   const selectedOrders = useSelector((state: RootState) => state.order.selectedOrders);

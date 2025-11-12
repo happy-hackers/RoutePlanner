@@ -24,7 +24,7 @@ export default function NextStopCard({
   onUndo,
   onViewAll
 }: NextStopCardProps) {
-  const { t } = useTranslation('driverRouteComponent');
+  const { t } = useTranslation('viewDriverRoute');
   const keyPath = "nextStopCard";
   const isCompleted = order.status === 'Delivered';
 

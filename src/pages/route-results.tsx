@@ -30,7 +30,7 @@ import { setSelectedOrders } from "../store/orderSlice.ts";
 import { useTranslation } from "react-i18next";
 
 export default function RouteResults() {
-  const { t } = useTranslation("routeResultsPage");
+  const { t } = useTranslation("routeResult");
 
   const { Title, Text } = Typography;
 

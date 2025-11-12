@@ -27,7 +27,7 @@ const SelectedOrderModal: React.FC<ServerListModalProps> = ({
   const selectedOrders = useSelector(
     (state: RootState) => state.order.selectedOrders
   );
-  const { t } = useTranslation("selectOrderComponent");
+  const { t } = useTranslation("selectOrder");
 
   const columns = [
     {

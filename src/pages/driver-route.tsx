@@ -21,7 +21,7 @@ const { Title } = Typography;
 type ViewMode = 'next' | 'list';
 
 export default function DriverRoute() {
-  const { t } = useTranslation('driverRoutePage');
+  const { t } = useTranslation('driverRoute');
   const navigate = useNavigate();
   const { user, dispatcher, loading: authLoading } = useAuth();
 

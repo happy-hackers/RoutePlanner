@@ -98,7 +98,7 @@ const OpenStreetMap = forwardRef(
     const SERVER_URL = import.meta.env.VITE_SERVER_URL;
     const { message } = App.useApp();
     const settingInfo: any = localStorage.getItem("settings");
-    const { t } = useTranslation("openStreetMapComponent");
+    const { t } = useTranslation("openStreetMap");
 
     const dispatchers = useSelector(
       (state: RootState) => state.dispatcher.dispatchers
