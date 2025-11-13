@@ -1,4 +1,4 @@
-import { Layout, Row, Col, App as AntApp } from "antd";
+import { ConfigProvider, Layout, Row, Col, App as AntApp } from "antd";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useJsApiLoader } from "@react-google-maps/api";
 import Navigation from "./components/Navigation";
@@ -18,16 +18,28 @@ import type { MarkerData } from "./types/markers";
 import { useDispatch } from "react-redux";
 import { getAllDispatchers } from "./utils/dbUtils";
 import { setDispatchers } from "./store/dispatcherSlice";
+import { useTranslation } from 'react-i18next';
+import zhCN from 'antd/locale/zh_CN';
+import zhTW from 'antd/locale/zh_TW';
+import enUS from 'antd/locale/en_US';
+import type { Locale } from 'antd/es/locale';
 
 const { Content } = Layout;
 const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+
+type LocaleKey = 'zh-CN' | 'zh-HK' | 'en';
+const antdLocales: Record<LocaleKey, Locale> = {
+  'zh-CN': zhCN,
+  'zh-HK': zhTW,
+  'en': enUS,
+};
 
 function AppContent() {
   const dispatch = useDispatch();
   const location = useLocation();
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [hoveredOrderId, setHoveredOrderId] = useState<number | null>(null);
-  
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -97,13 +109,19 @@ function AppContent() {
 }
 
 function App() {
+  const { i18n } = useTranslation();
+  const language = i18n.language as LocaleKey;
+  //set default component language english
+  const currentLocale = antdLocales[language] || antdLocales['en'];
   // useJsApiLoader() loads Google Maps API script with API key globally
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: apiKey || "",
   });
   return (
     <AuthProvider>
-      <AntApp>{isLoaded ? <AppContent /> : <div>Loading Map...</div>}</AntApp>
+      <ConfigProvider locale={currentLocale}>
+        <AntApp>{isLoaded ? <AppContent /> : <div>Loading Map...</div>}</AntApp>
+      </ConfigProvider>
     </AuthProvider>
   );
 }

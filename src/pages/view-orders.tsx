@@ -49,7 +49,7 @@ export default function ViewOrders({
 }: {
   setMarkers: (markers: MarkerData[]) => void;
 }) {
-  const { t } = useTranslation("viewOrder");
+  const { t } = useTranslation("viewOrder"); 
   const dispatch = useDispatch();
   const selectedOrders = useSelector(
     (state: RootState) => state.order.selectedOrders
@@ -81,8 +81,8 @@ export default function ViewOrders({
       width: "20%",
       render: (time: string, record: Order) => {
         const date = dayjs(record.date).format("YYYY-MM-DD");
-        const timeDisplay = time.charAt(0).toUpperCase() + time.slice(1);
-        return `${date} ${timeDisplay}`;
+        const translatedTime = t(`time_period_${time.toLowerCase()}`); 
+        return `${date} ${translatedTime}`;
       },
     },
     {
@@ -129,8 +129,8 @@ export default function ViewOrders({
     const changedId = changeRows.map((row) => row.id);
     if (selected) {
       /*changeRows.forEach((record) => {
-            setSelectedRowIds((prev) => [...prev, record.id]);
-          });*/
+               setSelectedRowIds((prev) => [...prev, record.id]);
+             });*/
       setSelectedRowIds((prev) => [...prev, ...changedId]);
       const sortedOrders = sortOrders([...selectedOrders, ...changeRows]);
       dispatch(setSelectedOrders(sortedOrders));
@@ -171,11 +171,10 @@ export default function ViewOrders({
     value: time,
   }));
 
-  //need check
-  // const translatedStateOptions = stateOptions.map(status => ({
-  //   label: t(`status_${status.toLowerCase().replace(' ', '_')}`),
-  //   value: status,
-  // }));
+  const translatedStatusOptions = statusOptions.map(status => ({
+    label: t(`status_${status.toLowerCase()}`),
+    value: status,
+  }));
 
   // Fetch orders and customers from Supabase
   useEffect(() => {
@@ -319,17 +318,17 @@ export default function ViewOrders({
               {t("label_status")}:
             </Text>
             <Radio.Group
-              options={statusOptions}
+              options={translatedStatusOptions} 
               value={status}
               onChange={(e) => setStatus(e.target.value)}
             />
           </Row>
           <Row>
             <Text strong style={{ marginRight: 20 }}>
-              Search:
+              {t("label_search")}: {/* 翻译 "Search:" */}
             </Text>
             <Input.Search
-              placeholder="Search by Address or Meter ID"
+              placeholder={t("placeholder_search")} 
               allowClear
               style={{ width: 350 }}
               onSearch={(value) => setSearchText(value.trim())}
@@ -349,12 +348,12 @@ export default function ViewOrders({
             style={{ marginBottom: 8, marginTop: 8 }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span>View Mode:</span>
+              <span>{t("label_view_mode")}:</span>
               <Switch
                 checked={groupView}
                 onChange={() => setGroupView(!groupView)}
-                checkedChildren="Grouped View"
-                unCheckedChildren="Table View"
+                checkedChildren="Grouped View" // keep
+                unCheckedChildren="Table View" // keep
                 style={{
                   backgroundColor: groupView ? "#31694E" : "#B87C4C",
                 }}
@@ -432,18 +431,18 @@ export default function ViewOrders({
                           size="small"
                           pagination={false}
                           columns={[
-                            { title: "ID", dataIndex: "id" },
+                            { title: t("table_id"), dataIndex: "id" }, 
                             {
-                              title: "Address",
+                              title: t("table_address"),
                               dataIndex: "detailedAddress",
                             },
                             {
-                              title: "Status",
+                              title: t("table_status"),
                               dataIndex: "status",
                               render: (s: string) =>
                                 s === "Delivered"
-                                  ? "✔️ Complete"
-                                  : "❌ Incomplete",
+                                  ? `✔️ ${t("status_complete")}` 
+                                  : `❌ ${t("status_incomplete")}`, 
                             },
                           ]}
                         />
@@ -474,7 +473,11 @@ export default function ViewOrders({
                   showSizeChanger: true,
                   showQuickJumper: true,
                   showTotal: (total, range) =>
-                    `${range[0]}-${range[1]} of ${total} orders`,
+                    t('pagination_total', { 
+                      start: range[0], 
+                      end: range[1], 
+                      total: total 
+                    }),
                   position: ["bottomCenter"],
                   showLessItems: true,
                   size: "small",
