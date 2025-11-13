@@ -7,6 +7,7 @@ import AssignDispatchers from "./pages/assign-dispatcher";
 import RouteResults from "./pages/route-results";
 import ViewCustomers from "./pages/view-customers";
 import SetDispatcher from "./pages/set-dispatcher";
+//import NavigationMap from "./components/NavigationMap";
 import Settings from "./pages/settings";
 import DriverRoute from "./pages/driver-route";
 import DriverLogin from "./pages/driver-login";
@@ -99,6 +100,7 @@ function AppContent() {
           </Col>
           {needMap && (
             <Col flex="auto">
+              {/* <NavigationMap markers={markers} /> */}
               <OpenStreetMap orderMarkers={markers} setOrderMarkers={setMarkers} />
             </Col>
           )}
