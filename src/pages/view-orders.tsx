@@ -49,7 +49,7 @@ export default function ViewOrders({
 }: {
   setMarkers: (markers: MarkerData[]) => void;
 }) {
-  const { t } = useTranslation("viewOrder"); 
+  const { t } = useTranslation("viewOrder");
   const dispatch = useDispatch();
   const selectedOrders = useSelector(
     (state: RootState) => state.order.selectedOrders
@@ -65,7 +65,8 @@ export default function ViewOrders({
   const [searchText, setSearchText] = useState("");
   const [groupView, setGroupView] = useState(true);
   const [groupPage, setGroupPage] = useState(1);
-  const groupsPerPage = 20;
+  const [tablePageSize, setTablePageSize] = useState(20);
+  const [groupsPerPage, setGroupsPerPage] = useState(20);
 
   const columns = [
     {
@@ -81,7 +82,7 @@ export default function ViewOrders({
       width: "20%",
       render: (time: string, record: Order) => {
         const date = dayjs(record.date).format("YYYY-MM-DD");
-        const translatedTime = t(`time_period_${time.toLowerCase()}`); 
+        const translatedTime = t(`time_period_${time.toLowerCase()}`);
         return `${date} ${translatedTime}`;
       },
     },
@@ -249,6 +250,9 @@ export default function ViewOrders({
     return groupedEntries.slice(startIndex, endIndex);
   }, [groupPage, groupsPerPage, groupedEntries]);
 
+  const totalOrders = filteredOrders.length;
+  const pageSizeOptions = ['20', '50', '100', String(totalOrders)];
+
   const sortedOrders = sortOrders(filteredOrders);
 
   useEffect(() => {
@@ -318,7 +322,7 @@ export default function ViewOrders({
               {t("label_status")}:
             </Text>
             <Radio.Group
-              options={translatedStatusOptions} 
+              options={translatedStatusOptions}
               value={status}
               onChange={(e) => setStatus(e.target.value)}
             />
@@ -328,7 +332,7 @@ export default function ViewOrders({
               {t("label_search")}: {/* 翻译 "Search:" */}
             </Text>
             <Input.Search
-              placeholder={t("placeholder_search")} 
+              placeholder={t("placeholder_search")}
               allowClear
               style={{ width: 350 }}
               onSearch={(value) => setSearchText(value.trim())}
@@ -431,7 +435,7 @@ export default function ViewOrders({
                           size="small"
                           pagination={false}
                           columns={[
-                            { title: t("table_id"), dataIndex: "id" }, 
+                            { title: t("table_id"), dataIndex: "id" },
                             {
                               title: t("table_address"),
                               dataIndex: "detailedAddress",
@@ -441,8 +445,8 @@ export default function ViewOrders({
                               dataIndex: "status",
                               render: (s: string) =>
                                 s === "Delivered"
-                                  ? `✔️ ${t("status_complete")}` 
-                                  : `❌ ${t("status_incomplete")}`, 
+                                  ? `✔️ ${t("status_complete")}`
+                                  : `❌ ${t("status_incomplete")}`,
                             },
                           ]}
                         />
@@ -456,7 +460,12 @@ export default function ViewOrders({
                 pageSize={groupsPerPage}
                 total={groupedEntries.length}
                 onChange={(page) => setGroupPage(page)}
-                showSizeChanger={false}
+                showSizeChanger={true}
+                pageSizeOptions={pageSizeOptions}
+                onShowSizeChange={(_, size) => {
+                  setGroupsPerPage(size);
+                  setGroupPage(1);
+                }}
                 style={{ marginTop: 16, textAlign: "center" }}
               />
             </>
@@ -469,14 +478,16 @@ export default function ViewOrders({
                 rowSelection={rowSelection}
                 scroll={{ y: "calc(100vh - 390px)" }}
                 pagination={{
-                  pageSize: 20,
+                  pageSize: tablePageSize,
+                  onShowSizeChange: (_, size) => setTablePageSize(size), 
                   showSizeChanger: true,
+                  pageSizeOptions: pageSizeOptions,
                   showQuickJumper: true,
                   showTotal: (total, range) =>
-                    t('pagination_total', { 
-                      start: range[0], 
-                      end: range[1], 
-                      total: total 
+                    t('pagination_total', {
+                      start: range[0],
+                      end: range[1],
+                      total: total
                     }),
                   position: ["bottomCenter"],
                   showLessItems: true,
