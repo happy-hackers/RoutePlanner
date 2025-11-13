@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
 import NextStopCard from '../components/driver/NextStopCard';
 import RouteListView from '../components/driver/RouteListView';
 import DriverMap from '../components/driver/DriverMap';
-import { getDriverActiveRoute } from '../utils/dbUtils';
+import { getDriverActiveRoute, updateOrderStatus } from '../utils/dbUtils';
 import { generateGoogleMapsUrl } from '../utils/mapUtils';
 import { logoutDriver } from '../utils/authUtils';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,6 +32,7 @@ export default function DriverRoute() {
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>('next');
   const [selectedDate, setSelectedDate] = useState(dayjs());
+  
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -85,60 +86,47 @@ export default function DriverRoute() {
   }, [dispatcher, selectedDate]);
 
   // Handle mark as done
-  const handleDone = async () => {/*
-    //const currentOrder = orders[currentStopIndex];
-    const currentStop = stops[currentStopIndex];
-
+  const handleMeterDone = async (orderId: number) => {
     try {
-      // Update database
-      await updateOrderStatus(currentOrder.id, 'Delivered');
+      await updateOrderStatus(orderId, "Delivered");
 
-      // Update local state
-      setOrders(prev => prev.map(o =>
-        o.id === currentOrder.id ? { ...o, status: 'Delivered' as const } : o
-      ));
+      setStops((prev) =>
+        prev.map((stop) => ({
+          ...stop,
+          meters: stop.meters.map((order) =>
+            order.id === orderId
+              ? { ...order, status: "Delivered" as const }
+              : order
+          ),
+        }))
+      );
 
-      message.success(t('message_done_success'));
-
-      // Auto-advance to next incomplete stop
-      const nextIndex = getNextIncompleteStopIndex(stops, currentStopIndex);
-
-      if (nextIndex !== -1) {
-        setCurrentStopIndex(nextIndex);
-      } else {
-        // All done!
-        message.success(t('message_all_done'));
-      }
-
+      message.success(t("message_done_success"));
     } catch (error) {
-      message.error(t('message_fail_update_status'));
-    }*/
+      message.error(t("message_fail_update_status"));
+    }
   };
 
   // Handle undo (revert delivered status)
-  const handleUndo = async () => {/*
-    const currentOrder = orders[currentStopIndex];
-
-    // Only allow undo for delivered orders
-    if (currentOrder.status !== 'Delivered') {
-      message.warning(t('message_warning_not_delivered'));
-      return;
-    }
-
+  const handleMeterUndo = async (orderId: number) => {
     try {
-      // Update database back to In Progress
-      await updateOrderStatus(currentOrder.id, 'In Progress');
+      await updateOrderStatus(orderId, "In Progress");
 
-      // Update local state
-      setOrders(prev => prev.map(o =>
-        o.id === currentOrder.id ? { ...o, status: 'In Progress' as const } : o
-      ));
+      setStops((prev) =>
+        prev.map((stop) => ({
+          ...stop,
+          meters: stop.meters.map((order) =>
+            order.id === orderId
+              ? { ...order, status: "In Progress" as const }
+              : order
+          ),
+        }))
+      );
 
-      message.success(t('message_undo_success'));
-
+      message.success(t("message_undo_success"));
     } catch (error) {
-      message.error(t('message_fail_revert_status'));
-    }*/
+      message.error(t("message_fail_revert_status"));
+    }
   };
 
   // Handle stop selection from list
@@ -200,41 +188,38 @@ export default function DriverRoute() {
   const currentStop = stops[currentStopIndex];
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: "100vh" }}>
       {/* Header */}
-      <Header style={{
-        background: '#fff',
-        padding: '0 16px',
-        borderBottom: '1px solid #f0f0f0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
+      <Header
+        style={{
+          background: "#fff",
+          padding: "0 16px",
+          borderBottom: "1px solid #f0f0f0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <Title level={4} style={{ margin: 0 }}>
-          {t('header_title', { dispatcherName: dispatcher.name })}
+          {t("header_title", { dispatcherName: dispatcher.name })}
         </Title>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ whiteSpace: 'nowrap' }}>
-            {t('language_select')} 
-          </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <span style={{ whiteSpace: "nowrap" }}>{t("language_select")}</span>
           <LanguageSwitcher />
           <DatePicker
             value={selectedDate}
             onChange={(date) => date && setSelectedDate(date)}
             format="MMM DD"
           />
-          <Button
-            icon={<LogoutOutlined />}
-            onClick={handleLogout}
-          >
-            {t('button_logout')}
+          <Button icon={<LogoutOutlined />} onClick={handleLogout}>
+            {t("button_logout")}
           </Button>
         </div>
       </Header>
 
       {/* Content */}
-      <Content style={{ position: 'relative', height: 'calc(100vh - 64px)' }}>
-        {viewMode === 'next' ? (
+      <Content style={{ position: "relative", height: "calc(100vh - 64px)" }}>
+        {viewMode === "next" ? (
           <>
             {/* Map View */}
             <DriverMap
@@ -250,9 +235,9 @@ export default function DriverRoute() {
               stopNumber={currentStopIndex + 1}
               totalStops={stops.length}
               segmentTime={deliveryRoute.segmentTimes[currentStopIndex] || 0}
-              onDone={handleDone}
-              onUndo={handleUndo}
               onViewAll={() => setViewMode('list')}
+              onMeterDone={handleMeterDone}
+              onMeterUndo={handleMeterUndo}
             />
 
             {/* Floating Google Maps Button */}
@@ -262,14 +247,14 @@ export default function DriverRoute() {
               icon={<EnvironmentOutlined />}
               onClick={handleOpenGoogleMaps}
               style={{
-                position: 'fixed',
+                position: "fixed",
                 top: 80,
                 right: 16,
-                zIndex: 1000,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                zIndex: 1001,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
               }}
             >
-              {t('button_google_maps')}
+              {t("button_google_maps")}
             </Button>
           </>
         ) : (
@@ -280,24 +265,23 @@ export default function DriverRoute() {
               segmentTimes={deliveryRoute.segmentTimes}
               currentStopIndex={currentStopIndex}
               onStopSelect={handleStopSelect}
-              onUndo={handleUndo}
             />
 
             {/* Back to Map Button */}
             <Button
               type="primary"
               size="large"
-              onClick={() => setViewMode('next')}
+              onClick={() => setViewMode("next")}
               style={{
-                position: 'fixed',
+                position: "fixed",
                 bottom: 16,
                 left: 16,
                 right: 16,
                 height: 56,
-                zIndex: 1000
+                zIndex: 1000,
               }}
             >
-              {t('button_back_to_map')}
+              {t("button_back_to_map")}
             </Button>
           </>
         )}

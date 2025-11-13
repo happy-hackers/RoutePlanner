@@ -1,5 +1,5 @@
-import { List, Space, Typography, Tag, Progress, Button } from 'antd';
-import { CheckCircleFilled, ClockCircleOutlined, UndoOutlined } from '@ant-design/icons';
+import { List, Space, Typography, Tag, Progress } from 'antd';
+import { CheckCircleFilled, ClockCircleOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { AddressMetersElement } from '../../types/route';
 
@@ -10,7 +10,6 @@ interface RouteListViewProps {
   segmentTimes: number[];
   currentStopIndex: number;
   onStopSelect: (index: number) => void;
-  onUndo: () => void;
 }
 
 export default function RouteListView({
@@ -18,7 +17,6 @@ export default function RouteListView({
   segmentTimes,
   currentStopIndex,
   onStopSelect,
-  onUndo
 }: RouteListViewProps) {
   const { t } = useTranslation('viewDriverRoute');
   const keyPath = "routeListView";
@@ -117,20 +115,6 @@ export default function RouteListView({
                     </Space>
                   </Space>
                 </Space>
-
-                {/* Undo Button for completed items */}
-                {isCompleted && isCurrent && (
-                  <Button
-                    icon={<UndoOutlined />}
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent triggering onStopSelect
-                      onUndo();
-                    }}
-                    size="small"
-                  >
-                    {t(`${keyPath}.button_undo`)}
-                  </Button>
-                )}
               </Space>
             </List.Item>
           );
