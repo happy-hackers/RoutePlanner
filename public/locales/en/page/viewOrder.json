@@ -6,9 +6,15 @@
     "time_period_afternoon": "Afternoon",
     "time_period_evening": "Evening",
     "label_status": "Status",
-
+    "status_all": "All",
+    "status_complete": "Complete",
+    "status_incomplete": "Incomplete",
+    "label_search": "Search",
+    "placeholder_search": "Search by Address or Order ID",
+    "label_view_mode": "View Mode",
     "table_id": "ID",
     "table_delivery_time": "Delivery Time",
     "table_address": "Address",
-    "table_status": "Status"
-  }
+    "table_status": "Status",
+    "pagination_total": "{{start}}-{{end}} of {{total}} orders"
+}
