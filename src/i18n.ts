@@ -30,7 +30,7 @@ const areaNamespaces = [
   'hongkong',
 ];
 
-const getLoadPath = (lng, ns) => {
+const getLoadPath = (lng: string, ns: string) => {
   let folder = '';
 
   if (pageNamespaces.includes(ns)) {
@@ -91,7 +91,7 @@ i18n
     },
 
     backend: {
-      loadPath: (lngs, namespaces) => {
+      loadPath: (lngs: string[], namespaces: string[]) => {
         const lng = lngs[0];
         const ns = namespaces[0];
         return getLoadPath(lng, ns);
