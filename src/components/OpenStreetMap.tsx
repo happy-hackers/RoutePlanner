@@ -25,6 +25,7 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../store";
 import { generateDispatcherColorsMap } from "../utils/markersUtils";
 import dayjs, { Dayjs } from "dayjs";
+import { useTranslation } from "react-i18next";
 
 interface NavigationMapProp {
   orderMarkers: MarkerData[];
@@ -97,6 +98,7 @@ const OpenStreetMap = forwardRef(
     const SERVER_URL = import.meta.env.VITE_SERVER_URL;
     const { message } = App.useApp();
     const settingInfo: any = localStorage.getItem("settings");
+    const { t } = useTranslation("openStreetMap");
 
     const dispatchers = useSelector(
       (state: RootState) => state.dispatcher.dispatchers
@@ -155,7 +157,7 @@ const OpenStreetMap = forwardRef(
               lng: loc.lng(),
             });
           } else {
-            reject(`Geocode failed for "${address}" with status: ${status}`);
+            reject(`${t("geocodeError")}: "${address}" with status: ${status}`);
           }
         });
       });
@@ -262,7 +264,7 @@ const OpenStreetMap = forwardRef(
     }
     const calculateRoutebyTime = async (dispatcherId?: number) => {
       if (!startAddress || !endAddress) {
-        message.error("Start location and destination should be entered");
+        message.error(t("errorStartEndRequired"));
         return;
       }
 
@@ -355,17 +357,17 @@ const OpenStreetMap = forwardRef(
               }
             });
           } else {
-            message.error("No route found");
+            message.error(t("errorNoRouteFound"));
           }
         }
       } catch (error) {
         console.error("Routing error:", error);
-        message.error("Route calculation failed");
+        message.error(t("errorRouteCalculationFailed"));
       }
     };
     const calculateRoute = async (dispatcherId?: number) => {
       if (!startAddress || !endAddress) {
-        message.error("Start location and destination should be entered");
+        message.error(t("errorStartEndRequired"));
         return;
       }
 
@@ -455,11 +457,11 @@ const OpenStreetMap = forwardRef(
             }
           });
         } else {
-          message.error("No route found");
+          message.error(t("errorNoRouteFound"));
         }
       } catch (error) {
         console.error("Routing error:", error);
-        message.error("Route calculation failed");
+        message.error(t("errorRouteCalculationFailed"));
       }
     };
 
@@ -479,7 +481,7 @@ const OpenStreetMap = forwardRef(
       } else {
         if (!startTime) {
           message.error(
-            "Please select a star time before calculating the route."
+            t("errorStartTimeRequired")
           );
           return;
         }
@@ -513,28 +515,28 @@ const OpenStreetMap = forwardRef(
             >
               <Space direction="vertical" style={{ width: 300 }}>
                 <Input
-                  placeholder="Input Start (lng,lat)"
+                  placeholder={t("inputStartPlaceholder")}
                   value={startAddress}
                   onChange={(e) => setStartAddress(e.target.value)}
                 />
                 <Input
-                  placeholder="Input End (lng,lat)"
+                  placeholder={t("inputEndPlaceholder")}
                   value={endAddress}
                   onChange={(e) => setEndAddress(e.target.value)}
                 />
               </Space>
               <Select
-                placeholder="Select Option"
+                placeholder={t("selectOptionPlaceholder")}
                 value={searchOptions}
                 onChange={(value) => setSearchOptions(value)}
                 style={{ width: 140 }}
               >
-                <Select.Option value="normal">Normal</Select.Option>
-                <Select.Option value="byTime">Opening Time</Select.Option>
+                <Select.Option value="normal">{t("optionNormal")}</Select.Option>
+                <Select.Option value="byTime">{t("optionByTime")}</Select.Option>
               </Select>
               {searchOptions === "byTime" && (
                 <TimePicker
-                  placeholder="Select Start Time"
+                  placeholder={t("selectStartTimePlaceholder")}
                   value={startTime}
                   onChange={(value) => setStartTime(value)}
                   format="HH:mm:ss"
@@ -554,7 +556,7 @@ const OpenStreetMap = forwardRef(
                 }}
                 onClick={handleCalculate}
               >
-                Calculate
+                {t("calculateButton")}
               </Button>
             </Space>
           </div>
@@ -605,7 +607,7 @@ const OpenStreetMap = forwardRef(
                     icon={startIcon}
                   >
                     <Popup>
-                      Start ({routeIndex + 1}): {route.startAddress}
+                      {t("popupStart")} ({routeIndex + 1}): {route.startAddress}
                     </Popup>
                   </Marker>
                   {route.orderSequence.map((waypoint, i) => (
@@ -615,7 +617,7 @@ const OpenStreetMap = forwardRef(
                       icon={createNumberIcon(i + 1)}
                     >
                       <Popup>
-                        Stop {i + 1}: {waypoint.detailedAddress}
+                        {t("popupStop")} {i + 1}: {waypoint.detailedAddress}
                       </Popup>
                     </Marker>
                   ))}
@@ -624,7 +626,7 @@ const OpenStreetMap = forwardRef(
                     icon={endIcon}
                   >
                     <Popup>
-                      End ({routeIndex + 1}): {route.endAddress}
+                      {t("popupEnd")} ({routeIndex + 1}): {route.endAddress}
                     </Popup>
                   </Marker>
                   <Polyline
@@ -648,7 +650,7 @@ const OpenStreetMap = forwardRef(
                       position={[foundRoute.startLat, foundRoute.startLng]}
                       icon={startIcon}
                     >
-                      <Popup>Start: {foundRoute.startAddress}</Popup>
+                      <Popup>{t("popupStart")}: {foundRoute.startAddress}</Popup>
                     </Marker>
                     {foundRoute.orderSequence.map((wp, i) => (
                       <Marker
@@ -657,7 +659,7 @@ const OpenStreetMap = forwardRef(
                         icon={createNumberIcon(i + 1)}
                       >
                         <Popup>
-                          Stop {i + 1}: {wp.detailedAddress}
+                          {t("popupStop")} {i + 1}: {wp.detailedAddress}
                         </Popup>
                       </Marker>
                     ))}
@@ -665,7 +667,7 @@ const OpenStreetMap = forwardRef(
                       position={[foundRoute.endLat, foundRoute.endLng]}
                       icon={endIcon}
                     >
-                      <Popup>End: {foundRoute.endAddress}</Popup>
+                      <Popup>{t("popupEnd")}: {foundRoute.endAddress}</Popup>
                     </Marker>
                     <Polyline
                       positions={foundRoute.polylineCoordinates}
@@ -694,7 +696,7 @@ const OpenStreetMap = forwardRef(
               fontSize: "16px",
             }}
           >
-            🕒 Total Time:{" "}
+            🕒 {t("footerTotalTime")}:{" "}
             {foundRoute.total_time >= 60
               ? `${Math.floor(foundRoute.total_time / 60)}h ${
                   foundRoute.total_time % 60

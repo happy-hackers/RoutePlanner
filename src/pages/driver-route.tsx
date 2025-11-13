@@ -12,6 +12,8 @@ import { logoutDriver } from '../utils/authUtils';
 import { useAuth } from '../contexts/AuthContext';
 import type { DeliveryRoute } from '../types/delivery-route';
 import type { Order } from '../types/order';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from "../components/LanguageSwitcher.tsx";
 
 const { Header, Content } = Layout;
 const { Title } = Typography;
@@ -19,6 +21,7 @@ const { Title } = Typography;
 type ViewMode = 'next' | 'list';
 
 export default function DriverRoute() {
+  const { t } = useTranslation('driverRoute');
   const navigate = useNavigate();
   const { user, dispatcher, loading: authLoading } = useAuth();
 
@@ -65,7 +68,7 @@ export default function DriverRoute() {
       setCurrentStopIndex(firstIncomplete !== -1 ? firstIncomplete : 0);
 
     } catch (error) {
-      message.error('Failed to load route');
+      message.error(t('message_fail_load_route'));
     } finally {
       setLoading(false);
     }
@@ -91,7 +94,7 @@ export default function DriverRoute() {
         o.id === currentOrder.id ? { ...o, status: 'Delivered' as const } : o
       ));
 
-      message.success('Delivery marked as complete!');
+      message.success(t('message_done_success'));
 
       // Auto-advance to next incomplete stop
       const nextIndex = getNextIncompleteStopIndex(orders, currentStopIndex);
@@ -100,11 +103,11 @@ export default function DriverRoute() {
         setCurrentStopIndex(nextIndex);
       } else {
         // All done!
-        message.success('All deliveries completed!');
+        message.success(t('message_all_done'));
       }
 
     } catch (error) {
-      message.error('Failed to update delivery status');
+      message.error(t('message_fail_update_status'));
     }
   };
 
@@ -114,7 +117,7 @@ export default function DriverRoute() {
 
     // Only allow undo for delivered orders
     if (currentOrder.status !== 'Delivered') {
-      message.warning('This delivery has not been marked as complete yet');
+      message.warning(t('message_warning_not_delivered'));
       return;
     }
 
@@ -127,10 +130,10 @@ export default function DriverRoute() {
         o.id === currentOrder.id ? { ...o, status: 'In Progress' as const } : o
       ));
 
-      message.success('Delivery status reverted to In Progress');
+      message.success(t('message_undo_success'));
 
     } catch (error) {
-      message.error('Failed to revert delivery status');
+      message.error(t('message_fail_revert_status'));
     }
   };
 
@@ -152,10 +155,10 @@ export default function DriverRoute() {
   const handleLogout = async () => {
     const result = await logoutDriver();
     if (result.success) {
-      message.success('Logged out successfully');
+      message.success(t('message_logout_success'));
       navigate('/driver-login');
     } else {
-      message.error('Failed to logout');
+      message.error(t('message_fail_logout'));
     }
   };
 
@@ -178,8 +181,8 @@ export default function DriverRoute() {
     return (
       <Result
         status="info"
-        title="No Route Found"
-        subTitle={`No active route found for ${selectedDate.format('YYYY-MM-DD')}`}
+        title={t('result_no_route_title')}
+        subTitle={t('result_no_route_subtitle', { date: selectedDate.format('YYYY-MM-DD') })}
         extra={
           <DatePicker
             value={selectedDate}
@@ -204,9 +207,13 @@ export default function DriverRoute() {
         justifyContent: 'space-between'
       }}>
         <Title level={4} style={{ margin: 0 }}>
-          {dispatcher.name}'s Route
+          {t('header_title', { dispatcherName: dispatcher.name })}
         </Title>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ whiteSpace: 'nowrap' }}>
+            {t('language_select')} 
+          </span>
+          <LanguageSwitcher />
           <DatePicker
             value={selectedDate}
             onChange={(date) => date && setSelectedDate(date)}
@@ -216,7 +223,7 @@ export default function DriverRoute() {
             icon={<LogoutOutlined />}
             onClick={handleLogout}
           >
-            Logout
+            {t('button_logout')}
           </Button>
         </div>
       </Header>
@@ -258,7 +265,7 @@ export default function DriverRoute() {
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
               }}
             >
-              Google Maps
+              {t('button_google_maps')}
             </Button>
           </>
         ) : (
@@ -286,7 +293,7 @@ export default function DriverRoute() {
                 zIndex: 1000
               }}
             >
-              Back to Map
+              {t('button_back_to_map')}
             </Button>
           </>
         )}

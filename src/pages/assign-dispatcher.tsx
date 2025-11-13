@@ -13,6 +13,7 @@ import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../store";
 import { setSelectedOrders } from "../store/orderSlice";
 import type { Customer } from "../types/customer";
+import { useTranslation } from "react-i18next";
 
 export default function AssignDispatchers({
   setMarkers,
@@ -23,6 +24,7 @@ export default function AssignDispatchers({
   hoveredOrderId: number | null;
   setHoveredOrderId: (id: number | null) => void;
 }) {
+  const { t } = useTranslation("assignDispatcher");
   const { message } = App.useApp();
   const dispatch = useDispatch();
   const selectedOrders = useSelector((state: RootState) => state.order.selectedOrders);
@@ -39,8 +41,8 @@ export default function AssignDispatchers({
           setDispatchers(dispatchersData);
         }
       } catch (error) {
-        console.error("Error fetching dispatchers:", error);
-        message.error("Failed to load dispatchers.");
+        console.error(t("message_error_fetch"), error);
+        message.error(t("message_error_load"));
       }
     };
 
@@ -48,7 +50,7 @@ export default function AssignDispatchers({
   }, []);
 
   const dispatchersOption = [
-    { value: null, label: "All Dispatchers" },
+    { value: null, label: t("select_all_dispatchers") },
     ...dispatchers.map((dispatcher) => ({
       value: dispatcher.id,
       label: dispatcher.name,
@@ -57,7 +59,7 @@ export default function AssignDispatchers({
 
   const handleUpdateOrders = async (
     order: Order | (Order & { matchedDispatchers: Dispatcher[] }), dispatcher: Dispatcher, newActiveOrders: Order[]
-  ) : Promise<Order[]> => {
+  ): Promise<Order[]> => {
     let customer: Customer | undefined;
     let rest: Omit<Order, "customer">;
     let matchedDispatchers: Dispatcher[] = [];
@@ -80,9 +82,15 @@ export default function AssignDispatchers({
       );
       const newMarkers = setMarkersList(newActiveOrders, dispatchers);
       setMarkers(newMarkers);
-      message.success(`Order ${order.id} assigned to ${dispatcher.name}`);
+      message.success(t("message_success", {
+        orderId: order.id,
+        dispatcherName: dispatcher.name
+      }));
     } else {
-      message.error(`Failed to update order ${order.id}: ${result.error}`);
+      message.error(t("message_error_update", {
+        orderId: order.id,
+        error: result.error
+      }));
     }
     return newActiveOrders
   };
@@ -148,7 +156,7 @@ export default function AssignDispatchers({
           unassignedOrderswithNoDispatchers.push(order);
           continue;
         } else if (matchedDispatchers.length === 1) {
-          
+
           matchedDispatcher = matchedDispatchers[0];
         } else if (matchedDispatchers.length > 1) {
           unassignedOrderswithDispatchers.push({
@@ -167,47 +175,53 @@ export default function AssignDispatchers({
       if (matchedDispatcher) {
         newActiveOrders = await handleUpdateOrders(order, matchedDispatcher, newActiveOrders);
       } else {
-        message.warning(`No dispatcher found for order ${order.id}`);
+        message.warning(t("message_warning_not_found", {
+          orderId: order.id
+        }));
       }
-}
-      if (unassignedOrderswithDispatchers.length > 0) {
-        for (const order of unassignedOrderswithDispatchers) {
-          const dispatcher = getDispatcherWithLeastAssigned(
-            order.matchedDispatchers,
-            newActiveOrders
-          );
-          if (dispatcher) {
-            newActiveOrders = await handleUpdateOrders(order, dispatcher, newActiveOrders);
-          } else {
-            message.warning(`No dispatcher found for order ${order.id}`);
-          }
+    }
+    if (unassignedOrderswithDispatchers.length > 0) {
+      for (const order of unassignedOrderswithDispatchers) {
+        const dispatcher = getDispatcherWithLeastAssigned(
+          order.matchedDispatchers,
+          newActiveOrders
+        );
+        if (dispatcher) {
+          newActiveOrders = await handleUpdateOrders(order, dispatcher, newActiveOrders);
+        } else {
+          message.warning(t("message_warning_not_found", {
+            orderId: order.id
+          }));
         }
       }
-      if (unassignedOrderswithNoDispatchers.length > 0) {
-        for (const order of unassignedOrderswithNoDispatchers) {
-          const dispatcher = getDispatcherWithLeastAssigned(
-            dispatchers,
-            newActiveOrders
-          );
-          if (dispatcher) {
-            newActiveOrders = await handleUpdateOrders(order, dispatcher, newActiveOrders);
-          } else {
-            message.warning(`No dispatcher found for order ${order.id}`);
-          }
+    }
+    if (unassignedOrderswithNoDispatchers.length > 0) {
+      for (const order of unassignedOrderswithNoDispatchers) {
+        const dispatcher = getDispatcherWithLeastAssigned(
+          dispatchers,
+          newActiveOrders
+        );
+        if (dispatcher) {
+          newActiveOrders = await handleUpdateOrders(order, dispatcher, newActiveOrders);
+        } else {
+          message.warning(t("message_warning_not_found", {
+            orderId: order.id
+          }));
         }
       }
-      dispatch(setSelectedOrders(newActiveOrders));
-      setIsAssigning(false);
+    }
+    dispatch(setSelectedOrders(newActiveOrders));
+    setIsAssigning(false);
 
   };
-    const confirm = () => {
-      const newActiveOrders = selectedOrders.map(order => ({
-        ...order,
-        dispatcherId: undefined,
-      }));
-      assignOrders(newActiveOrders);
-      console.log("newActiveOrders", newActiveOrders)
-    };
+  const confirm = () => {
+    const newActiveOrders = selectedOrders.map(order => ({
+      ...order,
+      dispatcherId: undefined,
+    }));
+    assignOrders(newActiveOrders);
+    console.log("newActiveOrders", newActiveOrders)
+  };
 
   return (
     <Row style={{ height: "100%" }}>
@@ -248,13 +262,13 @@ export default function AssignDispatchers({
             {isEveryOrderAssigned ? (
               <Popconfirm
                 placement="rightBottom"
-                title={"Do you want to re-assign orders?"}
-                okText="Yes"
-                cancelText="No"
+                title={t("popconfirm_title")}
+                okText={t("popconfirm_ok")}
+                cancelText={t("popconfirm_cancel")}
                 onConfirm={confirm}
               >
                 <Button type="primary" loading={isAssigning} disabled={selectedId !== null}>
-                  {isAssigning ? "Assigning..." : "Auto Assign"}
+                  {isAssigning ? t("button_assigning") : t("button_auto_assign")}
                 </Button>
               </Popconfirm>
             ) : (
@@ -264,7 +278,7 @@ export default function AssignDispatchers({
                 disabled={selectedId !== null}
                 onClick={() => assignOrders(selectedOrders)}
               >
-                {isAssigning ? "Assigning..." : "Auto Assign"}
+                {isAssigning ? t("button_assigning") : t("button_auto_assign")}
               </Button>
             )}
           </Space>

@@ -1,0 +1,59 @@
+{
+    "autoFillControls": {
+        "upload_instructions_title": "上传说明",
+        "upload_instructions_desc1": "上传 JSON 或 CSV 文件以批量导入订单。缺失的日期/时间数据将自动使用当前香港日期/时间填充。",
+        "upload_instructions_date_label": "日期格式",
+        "upload_instructions_date_format_text1": "日期必须是",
+        "upload_instructions_date_format_text2": "格式",
+        "upload_instructions_date_rejection": "其他格式将被拒绝。"
+    },
+    "batchUploadModel": {
+        "modal_title": "上传 JSON/CSV 文件",
+        "button_cancel": "取消",
+        "button_upload": "上传",
+        "error_select_file": "请选择一个文件",
+        "error_maps_not_loaded": "Google 地图未加载。请重试。",
+        "error_no_valid_orders": "文件中未找到有效的订单",
+        "error_geocoder_not_available": "Google 地图地理编码器不可用。请重试。",
+        "error_processing_file": "处理文件时出错：{{error}}",
+        "error_create_customer": "创建客户失败：{{error}}",
+        "error_creating_records": "创建记录时出错：{{error}}",
+        "success_upload": "成功创建 {{customerCount}} 个客户和 {{orderCount}} 个订单"
+    },
+    "fileUploader": {
+        "error_file_type": "只允许上传 JSON 和 CSV 文件",
+        "success_file_select": "文件已选中，请点击上传按钮",
+        "text_drag_prompt": "点击或拖拽 JSON/CSV 文件到此区域上传",
+        "text_hint": "上传 JSON 或 CSV 文件以批量导入订单。",
+        "text_selected_file": "已选文件"
+    },
+    "uploadPreview": {
+        "modal_title": "预览批量上传",
+        "button_cancel": "取消",
+        "button_confirm_create": "确认并创建",
+        "col_customer_name": "客户名称",
+        "col_detailed_address": "详细地址",
+        "col_area": "区域",
+        "col_district": "地区",
+        "col_open_time": "开始时间",
+        "col_close_time": "结束时间",
+        "summary_title": "摘要",
+        "summary_new_customer_text": "个新客户将被创建",
+        "summary_order_import_text": "个订单将被导入",
+        "alert_geocode_failure_title": "地理编码失败",
+        "alert_geocode_failure_desc_part1": "以下 {{count}} 个地址地理编码失败，将被跳过：",
+        "alert_invalid_date_title": "日期格式无效 - 行将被跳过",
+        "alert_invalid_date_desc_part1": "以下 {{count}} 行的日期格式无效，将被**跳过**。只接受 **YYYY-MM-DD** 格式（例如：2025-01-20）：",
+        "text_row": "行 {{rowNumber}}",
+        "text_order_id": "（订单 {{orderId}}）",
+        "text_invalid_format": "- 无效格式：",
+        "table_new_customers_title": "待创建的新客户",
+        "alert_auto_fill_title": "自动填充数据（{{count}} 个订单）",
+        "alert_auto_fill_desc_part1": "以下订单缺少日期/时间数据，已自动使用您的默认值填充：",
+        "text_order": "订单 {{orderId}}",
+        "text_used_default_date": "使用了默认日期",
+        "text_used_default_time": "使用了默认时间段",
+        "alert_no_data_title": "无有效数据",
+        "alert_no_data_desc": "无法从上传的文件中创建任何客户或订单。"
+    }
+}

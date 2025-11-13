@@ -1,0 +1,13 @@
+{
+    "select_all_dispatchers": "All Dispatchers",
+    "popconfirm_title": "Do you want to re-assign orders?",
+    "popconfirm_ok": "Yes",
+    "popconfirm_cancel": "No",
+    "button_auto_assign": "Auto Assign",
+    "button_assigning": "Assigning...",
+    "message_error_fetch": "Error fetching dispatchers:",
+    "message_error_load": "Failed to load dispatchers.",
+    "message_warning_not_found": "No dispatcher found for order {{orderId}}", 
+    "message_success": "Order {{orderId}} assigned to {{dispatcherName}}",
+    "message_error_update": "Failed to update order {{orderId}}: {{error}}"
+  }

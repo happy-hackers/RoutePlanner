@@ -27,65 +27,68 @@ import type { Route } from "../types/route.ts";
 import type { ColumnsType } from "antd/es/table/index";
 import { addRoute, getAllRoutes, updateRouteIsActive } from "../utils/dbUtils.ts";
 import { setSelectedOrders } from "../store/orderSlice.ts";
-
-const { Title, Text } = Typography;
-
-const columns = [
-  {
-    title: "Order ID",
-    dataIndex: "id",
-    key: "orderId",
-  },
-  {
-    title: "Address",
-    dataIndex: "detailedAddress",
-    key: "detailedAddress",
-    render: (detailedAddress: string, record: Order) => {
-      return (
-        <span>
-          {detailedAddress}, {record.area}
-        </span>
-      );
-    },
-  },
-];
-
-interface RouteRow {
-  order: number;
-  address: string;
-  travelTime: number;
-}
-
-const routeModeColumns: ColumnsType<RouteRow> = [
-  {
-    title: "",
-    dataIndex: "order",
-    key: "order",
-    width: "10%",
-    align: "center",
-  },
-  {
-    title: "Address",
-    dataIndex: "address",
-    key: "address",
-  },
-  {
-    title: "Travel Time",
-    dataIndex: "travelTime",
-    key: "travelTime",
-    render: (time: number) => {
-      let color = "inherit";
-
-      if (time <= 10) color = "green";
-      else if (time <= 30) color = "orange";
-      else color = "red";
-
-      return <span style={{ color, fontWeight: 600 }}>{time} mins</span>;
-    },
-  },
-];
+import { useTranslation } from "react-i18next";
 
 export default function RouteResults() {
+  const { t } = useTranslation("routeResult");
+
+  const { Title, Text } = Typography;
+
+  const columns = [
+    {
+      title: t("table_order_id"),
+      dataIndex: "id",
+      key: "orderId",
+    },
+    {
+      title: t("table_address"),
+      dataIndex: "detailedAddress",
+      key: "detailedAddress",
+      render: (detailedAddress: string, record: Order) => {
+        return (
+          <span>
+            {detailedAddress}, {record.area}
+          </span>
+        );
+      },
+    },
+  ];
+
+  interface RouteRow {
+    order: number;
+    address: string;
+    travelTime: number;
+  }
+
+  const routeModeColumns: ColumnsType<RouteRow> = [
+    {
+      title: "",
+      dataIndex: "order",
+      key: "order",
+      width: "10%",
+      align: "center",
+    },
+    {
+      title: t("table_address"),
+      dataIndex: "address",
+      key: "address",
+    },
+    {
+      title: t("table_travel_time"),
+      dataIndex: "travelTime",
+      key: "travelTime",
+      render: (time: number) => {
+        let color = "inherit";
+
+        if (time <= 10) color = "green";
+        else if (time <= 30) color = "orange";
+        else color = "red";
+
+        return <span style={{ color, fontWeight: 600 }}>{time} {t("unit_mins")} </span>;
+      },
+    },
+  ];
+
   const dispatch = useDispatch();
   const { message } = App.useApp();
   const [markers, setMarkers] = useState<MarkerData[]>([]);
@@ -112,8 +115,8 @@ export default function RouteResults() {
   const DISPATCHER_COLORS_MAP = generateDispatcherColorsMap(dispatchers);
 
   const dispatchersOption = [
-    { value: null, label: "Please select dispatcher" },
-    { value: -1, label: "All Routes" },
+    { value: null, label: t("select_placeholder") },
+    { value: -1, label: t("option_all_routes") },
     ...dispatchers.map((dispatcher) => ({
       value: dispatcher.id,
       label: dispatcher.name,
@@ -198,12 +201,11 @@ export default function RouteResults() {
   if (selectedOrders.length === 0) {
     return (
       <div>
-        <Title level={4}>No orders found</Title>
+        <Title level={4}>{t("title_no_orders_found")}</Title>
       </div>
     );
   }
 
-  
 
   const addMarker = (marker: MarkerData) => {
     setMarkers((prev) => [...prev, marker]);
@@ -294,7 +296,7 @@ export default function RouteResults() {
               {route ? (
                 <>
                   <Text type="secondary">
-                    {route.orderSequence.length} Waypoints
+                    {route.orderSequence.length} {t("text_waypoints")}
                   </Text>
                   <Button
                     danger
@@ -317,12 +319,12 @@ export default function RouteResults() {
                       setMarkers((prev) => [...prev, ...newMarker]);
                     }}
                   >
-                    Clear Route
+                    {t("button_clear_route")}
                   </Button>
                 </>
               ) : (
                 <>
-                  <Text type="secondary">No route found</Text>
+                  <Text type="secondary">{t("text_no_route_found")}</Text>
                   <Button
                     size="small"
                     type="primary"
@@ -331,7 +333,7 @@ export default function RouteResults() {
                       mapRef.current?.triggerCalculate(dispatcher.id);
                     }}
                   >
-                    Calculate
+                    {t("button_calculate")}
                   </Button>
                 </>
               )}
@@ -350,7 +352,7 @@ export default function RouteResults() {
                 <Text
                   style={{ color: getTimeColor(route.segmentTimes[index]) }}
                 >
-                  {route.segmentTimes[index]} mins
+                  {route.segmentTimes[index]} {t("unit_mins")}
                 </Text>
               </List.Item>
             )}
@@ -414,7 +416,7 @@ export default function RouteResults() {
               setAllRoutes((prev) => [...prev, newRouteWithId]);
           } else {
             allSuccess = false;
-            errorMsg = result.error || "Failed to save a route.";
+            errorMsg = result.error || t("message_error_save_route_failed");
           }
         } else {
           const result = await addRoute(nr);
@@ -424,7 +426,7 @@ export default function RouteResults() {
               setAllRoutes((prev) => [...prev, newRouteWithId]);
           } else {
             allSuccess = false;
-            errorMsg = result.error || "Failed to save a route.";
+            errorMsg = result.error || t("message_error_save_route_failed");
           }
         }
       } catch (err: any) {
@@ -434,9 +436,7 @@ export default function RouteResults() {
     }
 
     if (allSuccess) {
-      message.success(
-        "All routes have been saved successfully and are active now."
-      );
+      message.success(t("message_success_all_routes_saved"));
       setNewRoutes([]);
       dispatch(setSelectedOrders([]));
     } else {
@@ -453,8 +453,8 @@ export default function RouteResults() {
               isAllRoutes
                 ? -1
                 : selectedDispatcher
-                ? selectedDispatcher.id
-                : null
+                  ? selectedDispatcher.id
+                  : null
             }
             onChange={(id) => {
               if (id === -1) {
@@ -470,14 +470,14 @@ export default function RouteResults() {
               }
             }}
             options={dispatchersOption}
-            placeholder="Select Dispatcher"
+            placeholder={t("select_placeholder")}
           />
           {isAllRoutes ? (
             <>
               <Row justify="space-between" align="middle">
                 <Col>
                   <Button type="primary" onClick={saveRoutes}>
-                    Confirm & Save the Route
+                    {t("button_confirm_save_route")}
                   </Button>
                 </Col>
               </Row>
@@ -512,7 +512,7 @@ export default function RouteResults() {
             )
           ) : (
             <div>
-              <Title level={4}>Please select a dispatcher</Title>
+              <Title level={4}>{t("title_select_dispatcher")}</Title>
             </div>
           )}
         </Space>

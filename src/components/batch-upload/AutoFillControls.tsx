@@ -1,14 +1,18 @@
 import { Alert } from "antd";
+import { useTranslation } from 'react-i18next';
 
 export default function UploadInstructions() {
+  const { t } = useTranslation('upload'); 
+  const keyPath = "autoFillControls"; 
+
   return (
     <Alert
-      message="Upload Instructions"
+      message={t(`${keyPath}.upload_instructions_title`)}
       description={
         <div>
-          <p>Upload a JSON or CSV file to import orders in bulk. Missing date/time data will be automatically filled with current Hong Kong date/time.</p>
+          <p>{t(`${keyPath}.upload_instructions_desc1`)}</p>
           <p style={{ marginTop: 8, marginBottom: 0 }}>
-            <strong>Date Format:</strong> Dates must be in <strong>YYYY-MM-DD</strong> format (e.g., 2025-01-20). Other formats will be rejected.
+            <strong>{t(`${keyPath}.upload_instructions_date_label`)}:</strong> {t(`${keyPath}.upload_instructions_date_format_text1`)} <strong>YYYY-MM-DD</strong> {t(`${keyPath}.upload_instructions_date_format_text2`)} (e.g., 2025-01-20). {t(`${keyPath}.upload_instructions_date_rejection`)}
           </p>
         </div>
       }

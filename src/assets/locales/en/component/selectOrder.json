@@ -1,0 +1,15 @@
+{
+  "modalTitle": "Selected Orders",
+  "tableColumnId": "ID",
+  "tableColumnAddress": "Address",
+  "tableColumnTime": "Time",
+  "tableColumnAction": "Action",
+  "actionDelete": "Delete",
+  "buttonDeleteAll": "Delete all",
+  "confirmDescription": "Do you want to remove all selected orders",
+  "confirmAction": "Yes",
+  "confirmCancel": "No",
+  "timeMorning": "Morning",
+  "timeAfternoon": "Afternoon",
+  "timeEvening": "Evening"
+}

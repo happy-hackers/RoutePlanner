@@ -3,20 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { Layout, Input, Button, Checkbox, Typography, message, Spin } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { loginDriver } from '../utils/authUtils';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from "../components/LanguageSwitcher.tsx";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
 export default function DriverLogin() {
+  const { t } = useTranslation('driverLogin');
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('hsupisces@hotmail.com');
+  const [password, setPassword] = useState('adminadmin');
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      message.error('Please enter email and password');
+      message.error(t('message_error_required'));
       return;
     }
 
@@ -26,14 +29,13 @@ export default function DriverLogin() {
       const result = await loginDriver(email, password);
 
       if (result.success) {
-        message.success('Login successful!');
+        message.success(t('message_login_success'));
         navigate('/driver-route');
       } else {
-        message.error(result.error || 'Login failed');
+        message.error(result.error || t('message_login_failed_generic'));
       }
     } catch (error) {
-      console.error('Login error:', error);
-      message.error('An error occurred during login');
+      message.error(t('message_error_occurred'));
     } finally {
       setLoading(false);
     }
@@ -61,12 +63,12 @@ export default function DriverLogin() {
           borderRadius: '8px',
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
         }}>
-          {/* Logo/Title */}
+
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <Title level={2} style={{ margin: 0 }}>
-              RoutePlanner
+              {t('app_name')}
             </Title>
-            <Text type="secondary">Driver Portal</Text>
+            <Text type="secondary">{t('portal_title')}</Text>
           </div>
 
           {loading ? (
@@ -75,12 +77,12 @@ export default function DriverLogin() {
             </div>
           ) : (
             <>
-              {/* Email Input */}
+
               <div style={{ marginBottom: '20px' }}>
                 <Input
                   size="large"
                   prefix={<UserOutlined />}
-                  placeholder="Email"
+                  placeholder={t('placeholder_email')}
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -90,12 +92,12 @@ export default function DriverLogin() {
                 />
               </div>
 
-              {/* Password Input */}
+
               <div style={{ marginBottom: '20px' }}>
                 <Input.Password
                   size="large"
                   prefix={<LockOutlined />}
-                  placeholder="Password"
+                  placeholder={t('placeholder_password')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onKeyPress={handleKeyPress}
@@ -104,17 +106,17 @@ export default function DriverLogin() {
                 />
               </div>
 
-              {/* Remember Me */}
+
               <div style={{ marginBottom: '24px' }}>
                 <Checkbox
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
                 >
-                  Remember me
+                  {t('checkbox_remember_me')}
                 </Checkbox>
               </div>
 
-              {/* Login Button */}
+
               <Button
                 type="primary"
                 size="large"
@@ -126,14 +128,25 @@ export default function DriverLogin() {
                   fontWeight: 'bold'
                 }}
               >
-                Login
+                {t('button_login')}
               </Button>
 
-              {/* Help Text */}
               <div style={{ marginTop: '24px', textAlign: 'center' }}>
                 <Text type="secondary" style={{ fontSize: '14px' }}>
-                  Contact your admin if you need help logging in
+                  {t('help_text')}
                 </Text>
+              </div>
+
+              <div style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                zIndex: 1
+              }}>
+                <span style={{ whiteSpace: 'nowrap' }}>
+                  {t('language_select')}
+                </span>
+                <LanguageSwitcher />
               </div>
             </>
           )}

@@ -5,6 +5,7 @@ import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../store";
 import ActionConfirmModal from "./ActionConfirmModal";
 import { setSelectedOrders } from "../store/orderSlice";
+import { useTranslation } from "react-i18next";
 
 const { Text } = Typography;
 
@@ -26,15 +27,16 @@ const SelectedOrderModal: React.FC<ServerListModalProps> = ({
   const selectedOrders = useSelector(
     (state: RootState) => state.order.selectedOrders
   );
+  const { t } = useTranslation("selectOrder");
 
   const columns = [
     {
-      title: "ID",
+      title: t("tableColumnId"),
       dataIndex: "id",
       key: "id",
     },
     {
-      title: "Address",
+      title: t("tableColumnAddress"),
       dataIndex: "detailedAddress",
       key: "detailedAddress",
       render: (detailedAddress: string, record: Order) => (
@@ -44,12 +46,13 @@ const SelectedOrderModal: React.FC<ServerListModalProps> = ({
       ),
     },
     {
-      title: "Time",
+      title: t("tableColumnTime"),
       dataIndex: "time",
       key: "time",
+      render: (time: string) => t(`time${time}`),
     },
     {
-      title: "Action",
+      title: t("tableColumnAction"),
       key: "action",
       render: (_: any, record: any) => (
         <Text
@@ -57,7 +60,7 @@ const SelectedOrderModal: React.FC<ServerListModalProps> = ({
           style={{ cursor: "pointer" }}
           onClick={() => handleDelete(record.id)}
         >
-          delete
+          {t("actionDelete")}
         </Text>
       ),
     },
@@ -76,7 +79,7 @@ const SelectedOrderModal: React.FC<ServerListModalProps> = ({
   return (
     <>
       <Modal
-        title="Selected Orders"
+        title={t("modalTitle")}
         open={isVisible}
         onCancel={() => setVisibility(false)}
         footer={[
@@ -85,7 +88,7 @@ const SelectedOrderModal: React.FC<ServerListModalProps> = ({
             danger
             onClick={() => setIsActionConfirm(true)}
           >
-            Delete all
+            {t("buttonDeleteAll")}
           </Button>,
         ]}
         styles={{
@@ -106,9 +109,9 @@ const SelectedOrderModal: React.FC<ServerListModalProps> = ({
       </Modal>
       <ActionConfirmModal
         isOpen={isActionConfirm}
-        description={"Do you want to remove all selected orders"}
-        actionText={"Yes"}
-        cancelText={"No"}
+        description={t("confirmDescription")}
+        actionText={t("confirmAction")}
+        cancelText={t("confirmCancel")}
         onConfirm={() => {
           handleDeleteAll();
           setIsActionConfirm(false);

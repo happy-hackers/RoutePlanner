@@ -1,0 +1,14 @@
+{
+  "app_name": "RoutePlanner",
+  "portal_title": "Driver Portal",
+  "placeholder_email": "Email",
+  "placeholder_password": "Password",
+  "checkbox_remember_me": "Remember me",
+  "button_login": "Login",
+  "help_text": "Contact your admin if you need help logging in",
+  "message_error_required": "Please enter email and password",
+  "message_login_success": "Login successful!",
+  "message_login_failed_generic": "Login failed",
+  "message_error_occurred": "An error occurred during login",
+  "language_select": "Language:"
+}

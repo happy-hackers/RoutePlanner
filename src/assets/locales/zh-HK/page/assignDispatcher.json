@@ -1,0 +1,13 @@
+{
+    "select_all_dispatchers": "所有調度員",
+    "popconfirm_title": "您確定要重新分配訂單嗎？",
+    "popconfirm_ok": "是",
+    "popconfirm_cancel": "否",
+    "button_auto_assign": "自動分配",
+    "button_assigning": "分配中...",
+    "message_error_fetch": "擷取調度員時出錯：",
+    "message_error_load": "載入調度員失敗。",
+    "message_warning_not_found": "未找到訂單 {{orderId}} 的調度員",
+    "message_success": "訂單 {{orderId}} 已分配給 {{dispatcherName}}",
+    "message_error_update": "更新訂單 {{orderId}} 失敗：{{error}}"
+  }

@@ -1,6 +1,7 @@
 import { Modal, Button, Table, Alert, Space, Typography } from "antd";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import type { Customer } from "../../types/customer";
+import { useTranslation } from 'react-i18next';
 
 const { Title, Text } = Typography;
 
@@ -39,39 +40,42 @@ function UploadPreviewModal({
   onCancel,
   loading = false,
 }: UploadPreviewModalProps) {
+  const { t } = useTranslation('upload');
+  const keyPath = "uploadPreview";
+
   const columns = [
     {
-      title: "Customer Name",
+      title: t(`${keyPath}.col_customer_name`),
       dataIndex: "name",
       key: "name",
       width: 200,
     },
     {
-      title: "Detailed Address",
+      title: t(`${keyPath}.col_detailed_address`),
       dataIndex: "detailedAddress",
       key: "detailedAddress",
       ellipsis: true,
     },
     {
-      title: "Area",
+      title: t(`${keyPath}.col_area`),
       dataIndex: "area",
       key: "area",
       width: 150,
     },
     {
-      title: "District",
+      title: t(`${keyPath}.col_district`),
       dataIndex: "district",
       key: "district",
       width: 150,
     },
     {
-      title: "Open Time",
+      title: t(`${keyPath}.col_open_time`),
       dataIndex: "openTime",
       key: "openTime",
       width: 100,
     },
     {
-      title: "Close Time",
+      title: t(`${keyPath}.col_close_time`),
       dataIndex: "closeTime",
       key: "closeTime",
       width: 100,
@@ -80,13 +84,13 @@ function UploadPreviewModal({
 
   return (
     <Modal
-      title="Preview Batch Upload"
+      title={t(`${keyPath}.modal_title`)}
       open={isOpen}
       onCancel={onCancel}
       width={1000}
       footer={[
         <Button key="cancel" onClick={onCancel} disabled={loading}>
-          Cancel
+          {t(`${keyPath}.button_cancel`)}
         </Button>,
         <Button
           key="confirm"
@@ -95,33 +99,34 @@ function UploadPreviewModal({
           loading={loading}
           disabled={newCustomers.length === 0 && ordersCount === 0}
         >
-          Confirm & Create
+          {t(`${keyPath}.button_confirm_create`)}
         </Button>,
       ]}
     >
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
         {/* Summary */}
         <div>
-          <Title level={5}>Summary</Title>
+          <Title level={5}>{t(`${keyPath}.summary_title`)}</Title>
           <Text>
-            <strong>{newCustomers.length}</strong> new customer(s) will be
-            created
+            <strong>{newCustomers.length}</strong>{" "}
+            {t(`${keyPath}.summary_new_customer_text`, { count: newCustomers.length })}
           </Text>
           <br />
           <Text>
-            <strong>{ordersCount}</strong> order(s) will be imported
+            <strong>{ordersCount}</strong> {t(`${keyPath}.summary_order_import_text`, { count: ordersCount })}
           </Text>
         </div>
 
         {/* Failed Addresses Warning */}
         {failedAddresses.length > 0 && (
           <Alert
-            message="Geocoding Failures"
+            message={t(`${keyPath}.alert_geocode_failure_title`)}
             description={
               <div>
                 <Text>
-                  The following {failedAddresses.length} address(es) failed
-                  geocoding and will be skipped:
+                  {t(`${keyPath}.alert_geocode_failure_desc_part1`, {
+                    count: failedAddresses.length,
+                  })}
                 </Text>
                 <ul style={{ marginTop: 8, marginBottom: 0 }}>
                   {failedAddresses.map((failed, index) => (
@@ -142,23 +147,26 @@ function UploadPreviewModal({
         {/* Invalid Date Format Warning */}
         {invalidDateFormats.length > 0 && (
           <Alert
-            message="Invalid Date Format - Rows Skipped"
+            message={t(`${keyPath}.alert_invalid_date_title`)}
             description={
               <div>
                 <Text>
-                  The following {invalidDateFormats.length} row(s) had invalid
-                  date formats and will be <strong>skipped</strong>. Only{" "}
-                  <strong>YYYY-MM-DD</strong> format is accepted (e.g.,
-                  2025-01-20):
+                  {t(`${keyPath}.alert_invalid_date_desc_part1`, {
+                    count: invalidDateFormats.length,
+                  })}
                 </Text>
                 <ul style={{ marginTop: 8, marginBottom: 0 }}>
                   {invalidDateFormats.map((invalid, index) => (
                     <li key={index}>
-                      <Text strong>Row {invalid.rowNumber}</Text>
+                      <Text strong>
+                        {t(`${keyPath}.text_row`, { rowNumber: invalid.rowNumber })}
+                      </Text>
                       {invalid.orderId > 0 && (
-                        <Text> (Order {invalid.orderId})</Text>
+                        <Text>
+                          {t(`${keyPath}.text_order_id`, { orderId: invalid.orderId })}
+                        </Text>
                       )}
-                      <Text> - Invalid format: </Text>
+                      <Text> {t(`${keyPath}.text_invalid_format`)} </Text>
                       <Text type="danger" code>
                         {invalid.originalDate}
                       </Text>
@@ -176,7 +184,9 @@ function UploadPreviewModal({
         {/* New Customers Table */}
         {newCustomers.length > 0 && (
           <div>
-            <Title level={5}>New Customers to be Created</Title>
+            <Title level={5}>
+              {t(`${keyPath}.table_new_customers_title`)}
+            </Title>
             <Table
               columns={columns}
               dataSource={newCustomers}
@@ -191,24 +201,28 @@ function UploadPreviewModal({
         {/* Orders with Default Values */}
         {ordersWithDefaults.length > 0 && (
           <Alert
-            message={`Auto-filled Data (${ordersWithDefaults.length} order(s))`}
+            message={t(`${keyPath}.alert_auto_fill_title`, {
+              count: ordersWithDefaults.length,
+            })}
             description={
               <div>
                 <Text>
-                  The following orders had missing date/time data that was
-                  auto-filled with your defaults:
+                  {t(`${keyPath}.alert_auto_fill_desc_part1`)}
                 </Text>
                 <ul style={{ marginTop: 8, marginBottom: 0 }}>
                   {ordersWithDefaults.map((defaultInfo, index) => (
                     <li key={index}>
-                      <Text strong>Order {defaultInfo.orderId}</Text> -
+                      <Text strong>
+                        {t(`${keyPath}.text_order`, { orderId: defaultInfo.orderId })}
+                      </Text>{" "}
+                      -
                       {defaultInfo.usedDefaultDate && (
-                        <Text> Used default date</Text>
+                        <Text> {t(`${keyPath}.text_used_default_date`)}</Text>
                       )}
                       {defaultInfo.usedDefaultDate &&
                         defaultInfo.usedDefaultTime && <Text>, </Text>}
                       {defaultInfo.usedDefaultTime && (
-                        <Text> Used default time period</Text>
+                        <Text> {t(`${keyPath}.text_used_default_time`)}</Text>
                       )}
                     </li>
                   ))}
@@ -223,8 +237,8 @@ function UploadPreviewModal({
         {/* No Data Warning */}
         {newCustomers.length === 0 && ordersCount === 0 && (
           <Alert
-            message="No Valid Data"
-            description="No customers or orders can be created from the uploaded file."
+            message={t(`${keyPath}.alert_no_data_title`)}
+            description={t(`${keyPath}.alert_no_data_desc`)}
             type="error"
             showIcon
           />

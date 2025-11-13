@@ -1,0 +1,17 @@
+{
+    "title_no_orders_found": "No orders found",
+    "title_select_dispatcher": "Please select a dispatcher",
+    "select_placeholder": "Select Dispatcher",
+    "option_all_routes": "All Routes",
+    "table_order_id": "Order ID",
+    "table_address": "Address",
+    "table_travel_time": "Travel Time",
+    "unit_mins": "mins",
+    "button_confirm_save_route": "Confirm & Save the Route",
+    "button_clear_route": "Clear Route",
+    "button_calculate": "Calculate",
+    "text_waypoints": "Waypoints",
+    "text_no_route_found": "No route found",
+    "message_success_all_routes_saved": "All routes have been saved successfully and are active now.",
+    "message_error_save_route_failed": "Failed to save routes: {{error}}"
+  }

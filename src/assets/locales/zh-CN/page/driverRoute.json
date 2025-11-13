@@ -1,0 +1,18 @@
+{
+  "header_title": "{{dispatcherName}} 的路线",
+  "button_logout": "退出登录",
+  "button_google_maps": "谷歌地图",
+  "button_back_to_map": "返回地图",
+  "message_fail_load_route": "加载路线失败",
+  "message_done_success": "配送已标记为完成！",
+  "message_all_done": "所有配送已完成！",
+  "message_fail_update_status": "更新配送状态失败",
+  "message_warning_not_delivered": "此配送尚未标记为完成",
+  "message_undo_success": "配送状态已恢复为进行中",
+  "message_fail_revert_status": "恢复配送状态失败",
+  "message_logout_success": "退出登录成功",
+  "message_fail_logout": "退出登录失败",
+  "result_no_route_title": "未找到路线",
+  "result_no_route_subtitle": "{{date}} 未找到任何激活路线",
+  "language_select": "语言:"
+}

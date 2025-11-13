@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { getAllCustomers, deleteCustomer } from "../utils/dbUtils";
 import type { Customer } from "../types/customer.ts";
 import CustomerModal from "../components/CustomerModal";
+import { useTranslation } from "react-i18next";
 
 const { Text } = Typography;
 
 export default function ViewCustomers() {
+  const { t } = useTranslation('viewCustomer');
   const { modal, message } = App.useApp();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -51,62 +53,61 @@ export default function ViewCustomers() {
 
   const handleDeleteCustomer = (customer: Customer) => {
     modal.confirm({
-      title: "Delete Customer",
+      title: t("modal_delete_title"),
       icon: <DeleteOutlined style={{ color: "red" }} />,
       content: (
         <div>
           <p>
-            Are you sure you want to delete <strong>{customer.name}</strong>?
+            {t("modal_delete_content_main", { name: customer.name })}
           </p>
           <p style={{ color: "red", marginTop: 8 }}>
-            <strong>Warning:</strong> This will permanently delete the customer
-            and all their associated orders. This action cannot be undone.
+            <strong>{t("modal_delete_warning_label")}:</strong>{" "}
+            {t("modal_delete_warning_text")}
           </p>
         </div>
       ),
-      okText: "Delete",
+      okText: t("button_delete"),
       okType: "danger",
-      cancelText: "Cancel",
+      cancelText: t("button_cancel"),
       onOk: async () => {
         const result = await deleteCustomer(customer.id);
         if (result.success) {
+          const messageKey =
+            result.orderCount && result.orderCount > 0
+              ? "message_success_deleted_with_orders"
+              : "message_success_deleted_no_orders";
+
           message.success(
-            `Customer deleted successfully${
-              result.orderCount && result.orderCount > 0
-                ? ` (${result.orderCount} order${
-                    result.orderCount > 1 ? "s" : ""
-                  } also deleted)`
-                : ""
-            }`
+            t(messageKey, { count: result.orderCount || 0, name: customer.name })
           );
           fetchCustomers();
         } else {
-          message.error(`Failed to delete customer: ${result.error}`);
+          message.error(t("message_error_delete_failed", { error: result.error }));
         }
       },
     });
   };
 
   return (
-    <Card title="Customers" style={{ maxWidth: "70%", margin: "0 auto" }}>
+    <Card title={t("card_title")} style={{ maxWidth: "70%", margin: "0 auto" }}>
       <Row gutter={12} style={{ marginBottom: 12 }}>
         <Col span={2}>
-          <Text strong>ID</Text>
+          <Text strong>{t("header_id")}</Text>
         </Col>
         <Col span={4}>
-          <Text strong>Name</Text>
+          <Text strong>{t("header_name")}</Text>
         </Col>
         <Col span={8}>
-          <Text strong>Address</Text>
+          <Text strong>{t("header_address")}</Text>
         </Col>
         <Col span={3}>
-          <Text strong>Open Time</Text>
+          <Text strong>{t("header_open_time")}</Text>
         </Col>
         <Col span={3}>
-          <Text strong>Close Time</Text>
+          <Text strong>{t("header_close_time")}</Text>
         </Col>
         <Col span={4}>
-          <Text strong>Action</Text>
+          <Text strong>{t("header_action")}</Text>
         </Col>
       </Row>
 
@@ -142,7 +143,7 @@ export default function ViewCustomers() {
               size="small"
               onClick={() => handleEditCustomer(customer)}
             >
-              Edit
+              {t("button_edit")}
             </Button>
             <Button
               type="link"
@@ -151,7 +152,7 @@ export default function ViewCustomers() {
               icon={<DeleteOutlined />}
               onClick={() => handleDeleteCustomer(customer)}
             >
-              Delete
+              {t("button_delete")}
             </Button>
           </Col>
         </Row>
@@ -160,7 +161,7 @@ export default function ViewCustomers() {
       <Row style={{ marginTop: 16 }}>
         <Col>
           <Button type="primary" onClick={handleAddCustomer}>
-            Add Customer
+            {t("button_add_customer")}
           </Button>
         </Col>
       </Row>

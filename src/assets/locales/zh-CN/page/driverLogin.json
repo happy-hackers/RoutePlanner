@@ -1,0 +1,14 @@
+{
+  "app_name": "路线规划器",
+  "portal_title": "司机门户",
+  "placeholder_email": "邮箱",
+  "placeholder_password": "密码",
+  "checkbox_remember_me": "记住我",
+  "button_login": "登录",
+  "help_text": "如果需要登录帮助，请联系您的管理员",
+  "message_error_required": "请输入邮箱和密码",
+  "message_login_success": "登录成功！",
+  "message_login_failed_generic": "登录失败",
+  "message_error_occurred": "登录时发生错误",
+  "language_select": "语言:"
+}
