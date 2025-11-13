@@ -1,12 +1,12 @@
 import { Card, Button, Space, Typography, Tag } from 'antd';
 import { CheckOutlined, UnorderedListOutlined, UndoOutlined } from '@ant-design/icons';
-import type { Order } from '../../types/order';
 import { useTranslation } from 'react-i18next';
+import type { AddressMetersElement } from '../../types/route';
 
 const { Title, Text } = Typography;
 
 interface NextStopCardProps {
-  order: Order;
+  stop: AddressMetersElement;
   stopNumber: number;
   totalStops: number;
   segmentTime: number;
@@ -16,7 +16,7 @@ interface NextStopCardProps {
 }
 
 export default function NextStopCard({
-  order,
+  stop,
   stopNumber,
   totalStops,
   segmentTime,
@@ -26,7 +26,7 @@ export default function NextStopCard({
 }: NextStopCardProps) {
   const { t } = useTranslation('viewDriverRoute');
   const keyPath = "nextStopCard";
-  const isCompleted = order.status === 'Delivered';
+  const isCompleted = stop.meters.every(order => order.status === 'Delivered');
 
   return (
     <Card
@@ -58,10 +58,10 @@ export default function NextStopCard({
         {/* Customer & Address */}
         <div>
           <Title level={4} style={{ margin: 0 }}>
-            {order.customer?.name || t(`${keyPath}.placeholder_customer`)}
+            {stop.meters[0].customer?.name || t(`${keyPath}.placeholder_customer`)}
           </Title>
           <Text type="secondary" style={{ fontSize: 16 }}>
-            {order.detailedAddress}, {order.area}
+            {stop.address}, {stop.area}
           </Text>
         </div>
 
@@ -70,9 +70,9 @@ export default function NextStopCard({
           <Text strong style={{ color: '#52c41a' }}>
             {t(`${keyPath}.text_time_mins`, { segmentTime })}
           </Text>
-          {order.customer?.openTime && (
+          {stop.meters[0].customer?.openTime && (
             <Text type="secondary">
-              {t(`${keyPath}.text_open`)}: {order.customer.openTime} - {order.customer.closeTime}
+              {t(`${keyPath}.text_open`)}: {stop.meters[0].customer.openTime} - {stop.meters[0].customer.closeTime}
             </Text>
           )}
         </Space>

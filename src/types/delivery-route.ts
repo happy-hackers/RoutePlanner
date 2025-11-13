@@ -1,4 +1,5 @@
 import type { Order } from './order';
+import type { AddressMetersElement } from './route';
 
 export interface DeliveryRoute {
   id: number;
@@ -13,7 +14,7 @@ export interface DeliveryRoute {
   startLng: number;
   endLat: number;
   endLng: number;
-  orderSequence: Order[]; // Full Order objects with customer data
+  addressMeterSequence: AddressMetersElement[];
   segmentTimes: number[]; // [15, 20, 10, 25]
   totalTime: number;
   totalDistance?: number;

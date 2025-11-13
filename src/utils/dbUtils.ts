@@ -655,7 +655,8 @@ export const getDriverActiveRoute = async (
   if (error || !data) return null;
 
   // Extract order IDs from the route's order_sequence
-  const orderIds = data.order_sequence.map((order: any) => order.id);
+  const orderIds = data.address_meter_sequence
+    .flatMap((entry: any) => entry.meters.map((order: any) => order.id));
 
   // Fetch fresh order data from orders table with current statuses
   const { data: freshOrders, error: ordersError } = await supabase
@@ -673,15 +674,24 @@ export const getDriverActiveRoute = async (
   const cleanedOrders = freshOrders.map(({ created_time, ...rest }) => ({ ...rest }));
   const camelOrders = camelcaseKeys(cleanedOrders, { deep: true });
 
-  // Merge: maintain route's sequence order but use fresh order data
-  const freshOrderSequence = orderIds.map((id: number) =>
-    camelOrders.find((order: any) => order.id === id)
-  ).filter(Boolean); // Remove any null entries
+  // Merge: maintain route's address meter sequence order but use fresh order data
+  const freshAddressMeterSequence = data.address_meter_sequence.map((entry: any) => {
+    const freshMeters = entry.meters.map((order: any) =>
+      camelOrders.find((o: any) => o.id === order.id)
+    ).filter(Boolean); // Remove any null entries
+
+    return {
+      address: entry.address,
+      lat: entry.lat,
+      lng: entry.lng,
+      meters: freshMeters,
+    };
+  });
 
   // Update route with fresh order sequence
   const { created_time, ...rest } = data;
   const route = camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
-  route.orderSequence = freshOrderSequence as any;
+  route.addressMeterSequence = freshAddressMeterSequence as any;
 
   return route;
 };

@@ -19,7 +19,7 @@ import orderedMarkerImg from "../assets/icons/orderedMarker.png";
 import startMarkerImg from "../assets/icons/startMarker.png";
 import endMarkerImg from "../assets/icons/endMarker.png";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
-import type { Route } from "../types/route";
+import type { AddressMetersElement, Route } from "../types/route";
 import type { Dispatcher } from "../types/dispatchers";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store";
@@ -289,10 +289,12 @@ const OpenStreetMap = forwardRef(
         if (!optimizedRouteResult.error) {
           const { order, segment_times, total_time, total_distance } =
             optimizedRouteResult;
-          const sortedAddressWithMeters = order.map((i: number) => ({
+          const sortedAddressWithMeters: AddressMetersElement[] = order.map((i: number) => ({
             address: oMarkers[i].address,
             lat: oMarkers[i].position.lat,
             lng: oMarkers[i].position.lng,
+            area: oMarkers[i].area,
+            district: oMarkers[i].district,
             meters: oMarkers[i].meters
           }));
 
@@ -393,10 +395,12 @@ const OpenStreetMap = forwardRef(
           totalDistance,
         } = optimizedRouteResult;
 
-        const sortedAddressWithMeters = order.map((i: number) => ({
+        const sortedAddressWithMeters: AddressMetersElement[] = order.map((i: number) => ({
             address: oMarkers[i].address,
             lat: oMarkers[i].position.lat,
             lng: oMarkers[i].position.lng,
+            area: oMarkers[i].area,
+            district: oMarkers[i].district,
             meters: oMarkers[i].meters
         }));
 

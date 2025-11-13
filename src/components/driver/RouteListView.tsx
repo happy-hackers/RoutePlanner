@@ -1,12 +1,12 @@
 import { List, Space, Typography, Tag, Progress, Button } from 'antd';
 import { CheckCircleFilled, ClockCircleOutlined, UndoOutlined } from '@ant-design/icons';
-import type { Order } from '../../types/order';
 import { useTranslation } from 'react-i18next';
+import type { AddressMetersElement } from '../../types/route';
 
 const { Text } = Typography;
 
 interface RouteListViewProps {
-  orders: Order[];
+  stops: AddressMetersElement[];
   segmentTimes: number[];
   currentStopIndex: number;
   onStopSelect: (index: number) => void;
@@ -14,7 +14,7 @@ interface RouteListViewProps {
 }
 
 export default function RouteListView({
-  orders,
+  stops,
   segmentTimes,
   currentStopIndex,
   onStopSelect,
@@ -22,25 +22,29 @@ export default function RouteListView({
 }: RouteListViewProps) {
   const { t } = useTranslation('viewDriverRoute');
   const keyPath = "routeListView";
-  const completedCount = orders.filter(o => o.status === 'Delivered').length;
-  const progressPercent = (completedCount / orders.length) * 100;
-  const nextIncompleteIndex = orders.findIndex(o => o.status !== 'Delivered');
+  const completedCount = stops.filter(stop =>
+    stop.meters.every(order => order.status === 'Delivered')
+  ).length;
+  const progressPercent = (completedCount / stops.length) * 100;
+  const nextIncompleteIndex = stops.findIndex(
+    stop => stop.meters.some(order => order.status !== 'Delivered')
+  );
 
   return (
     <div style={{ padding: 16, paddingBottom: 80 }}>
       {/* Progress Header */}
       <Space direction="vertical" size="middle" style={{ width: '100%', marginBottom: 16 }}>
         <Text strong style={{ fontSize: 18 }}>
-          {t(`${keyPath}.progress_header_text`)}: {completedCount} {t(`${keyPath}.progress_header_of`)} {orders.length} {t(`${keyPath}.progress_header_completed`)}
+          {t(`${keyPath}.progress_header_text`)}: {completedCount} {t(`${keyPath}.progress_header_of`)} {stops.length} {t(`${keyPath}.progress_header_completed`)}
         </Text>
         <Progress percent={Math.round(progressPercent)} status="active" />
       </Space>
 
       {/* Stop List */}
       <List
-        dataSource={orders}
-        renderItem={(order, index) => {
-          const isCompleted = order.status === 'Delivered';
+        dataSource={stops}
+        renderItem={(stop, index) => {
+          const isCompleted = stop.meters.every(order => order.status === 'Delivered');
           const isNext = index === nextIncompleteIndex;
           const isCurrent = index === currentStopIndex;
 
@@ -91,13 +95,13 @@ export default function RouteListView({
                       delete={isCompleted}
                       style={{ fontSize: 16 }}
                     >
-                      {index + 1}. {order.customer?.name || t(`${keyPath}.placeholder_customer`)}
+                      {index + 1}. {stop.meters[0].customer?.name || t(`${keyPath}.placeholder_customer`)}
                     </Text>
                     <Text
                       type="secondary"
                       delete={isCompleted}
                     >
-                      {order.detailedAddress}
+                      {stop.address}
                     </Text>
                     <Space>
                       <Text strong style={{ color: '#52c41a' }}>
@@ -105,9 +109,9 @@ export default function RouteListView({
                       </Text>
                       {isNext && <Tag color="blue">{t(`${keyPath}.tag_next`)}</Tag>}
                       {isCompleted && <Tag color="success">{t(`${keyPath}.tag_done`)}</Tag>}
-                      {order.customer?.openTime && (
+                      {stop.meters[0].customer?.openTime && (
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                          {order.customer.openTime}-{order.customer.closeTime}
+                          {stop.meters[0].customer.openTime}-{stop.meters[0].customer.closeTime}
                         </Text>
                       )}
                     </Space>

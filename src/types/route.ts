@@ -15,7 +15,7 @@ export interface Route {
   endLng: number;
   
   orderSequence?: Order[];
-  addressMeterSequence: { address: string, lat: number, lng: number, meters: Order[]}[];
+  addressMeterSequence: AddressMetersElement[];
   segmentTimes: number[];
   total_time: number;
   total_distance: number;
@@ -24,4 +24,13 @@ export interface Route {
 
   version: number;
   is_active: boolean;
+}
+
+export interface AddressMetersElement { 
+  address: string, 
+  lat: number, 
+  lng: number, 
+  area: string,
+  district: string,
+  meters: Order[]
 }

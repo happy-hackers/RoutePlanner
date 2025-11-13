@@ -1,7 +1,6 @@
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L, { type LatLngExpression } from 'leaflet';
 import { useEffect, useState } from 'react';
-import type { Order } from '../../types/order';
 import type { DeliveryRoute } from '../../types/delivery-route';
 import { CompassOutlined } from '@ant-design/icons';
 
@@ -10,6 +9,7 @@ import 'leaflet/dist/leaflet.css';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import { Button } from 'antd';
+import type { AddressMetersElement } from '../../types/route';
 
 const DefaultIcon = L.icon({
   iconUrl: icon,
@@ -21,7 +21,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 interface DriverMapProps {
   deliveryRoute: DeliveryRoute;
-  orders: Order[];
+  stops: AddressMetersElement[];
   currentStopIndex: number;
   onStopSelect: (index: number) => void;
 }
@@ -92,7 +92,7 @@ function RecenterButton({ points }: { points: [number, number][] }) {
   );
 }
 
-export default function DriverMap({ deliveryRoute, orders, currentStopIndex, onStopSelect }: DriverMapProps) {
+export default function DriverMap({ deliveryRoute, stops, currentStopIndex, onStopSelect }: DriverMapProps) {
   // Create numbered icons for markers
   const createNumberedIcon = (number: number, isCompleted: boolean, isCurrent: boolean) => {
     const color = isCompleted ? '#52c41a' : isCurrent ? '#1890ff' : '#000000';
@@ -121,12 +121,12 @@ export default function DriverMap({ deliveryRoute, orders, currentStopIndex, onS
   const points: [number, number][] = [
     [deliveryRoute.startLat, deliveryRoute.startLng],
     [deliveryRoute.endLat, deliveryRoute.endLng],
-    ...deliveryRoute.orderSequence.map((o) => [o.lat, o.lng] as [number, number]),
+    ...deliveryRoute.addressMeterSequence.map((s) => [s.lat, s.lng] as [number, number]),
   ];
 
   // Polyline coordinates
   const polylineCoords: LatLngExpression[] = deliveryRoute.polylineCoordinates ||
-    orders.map(o => [o.lat, o.lng]);
+    stops.map(s => [s.lat, s.lng]);
 
   return (
     <MapContainer
@@ -156,13 +156,12 @@ export default function DriverMap({ deliveryRoute, orders, currentStopIndex, onS
       )}
 
       {/* Order markers */}
-      {orders.map((order, index) => (
+      {stops.map((stop, index) => (
         <Marker
-          key={order.id}
-          position={[order.lat, order.lng]}
+          position={[stop.lat, stop.lng]}
           icon={createNumberedIcon(
             index + 1,
-            order.status === 'Delivered',
+            stop.meters.every(order => order.status === 'Delivered'),
             index === currentStopIndex
           )}
           eventHandlers={{

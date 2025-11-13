@@ -24,7 +24,7 @@ import {
 } from "../utils/dbUtils";
 import type { Order } from "../types/order.ts";
 import type { MarkerData } from "../types/markers";
-import { getMarkerWithMultiMeters } from "../utils/markersUtils.ts";
+import { getGroupedMarkers } from "../utils/markersUtils.ts";
 import type { Customer } from "../types/customer.ts";
 
 import { BatchUploadModal } from "../components/batch-upload";
@@ -256,23 +256,7 @@ export default function ViewOrders({
     const dispatchersData = await getAllDispatchers();
     if (!dispatchersData) return;
 
-    const normalizeDispatcherId = (id: number | null | undefined) =>
-      id == null ? "null" : id.toString(); // null and undefined are treated as the same group "null"
-
-    // Group orders by lat, lng and dispatcherId
-    const grouped = selectedOrders.reduce((acc, order) => {
-      // Treat null and undefined as equal
-      const key = `${order.lat},${order.lng},${normalizeDispatcherId(order.dispatcherId)}`;
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(order);
-      return acc;
-    }, {} as Record<string, Order[]>);
-
-    // Convert grouped orders into markers
-    const markers = Object.values(grouped).map((orders) =>
-      getMarkerWithMultiMeters(orders, dispatchersData)
-    );
-
+    const markers = getGroupedMarkers(selectedOrders, dispatchersData)
     setMarkers(markers);
   };
 

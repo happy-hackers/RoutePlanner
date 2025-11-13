@@ -6,12 +6,11 @@ import dayjs from 'dayjs';
 import NextStopCard from '../components/driver/NextStopCard';
 import RouteListView from '../components/driver/RouteListView';
 import DriverMap from '../components/driver/DriverMap';
-import { getDriverActiveRoute, updateOrderStatus } from '../utils/dbUtils';
-import { generateGoogleMapsUrl, getNextIncompleteStopIndex } from '../utils/mapUtils';
+import { getDriverActiveRoute } from '../utils/dbUtils';
+import { generateGoogleMapsUrl } from '../utils/mapUtils';
 import { logoutDriver } from '../utils/authUtils';
 import { useAuth } from '../contexts/AuthContext';
 import type { DeliveryRoute } from '../types/delivery-route';
-import type { Order } from '../types/order';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from "../components/LanguageSwitcher.tsx";
 
@@ -28,7 +27,8 @@ export default function DriverRoute() {
   // State
   const [loading, setLoading] = useState(true);
   const [deliveryRoute, setDeliveryRoute] = useState<DeliveryRoute | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
+  //const [orders, setOrders] = useState<Order[]>([]);
+  const [stops, setStops] = useState<DeliveryRoute['addressMeterSequence']>([]);
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>('next');
   const [selectedDate, setSelectedDate] = useState(dayjs());
@@ -54,17 +54,20 @@ export default function DriverRoute() {
 
       if (!routeData) {
         setDeliveryRoute(null);
-        setOrders([]);
+        setStops([]);
         return;
       }
 
       setDeliveryRoute(routeData);
 
       // Orders are already in the route's orderSequence
-      setOrders(routeData.orderSequence);
+      //setOrders(routeData.orderSequence);
+      setStops(routeData.addressMeterSequence);
 
       // Set current stop to first incomplete
-      const firstIncomplete = routeData.orderSequence.findIndex(o => o.status !== 'Delivered');
+      const firstIncomplete = routeData.addressMeterSequence.findIndex(
+        stop => stop.meters.some(order => order.status !== 'Delivered')
+      );
       setCurrentStopIndex(firstIncomplete !== -1 ? firstIncomplete : 0);
 
     } catch (error) {
@@ -82,8 +85,9 @@ export default function DriverRoute() {
   }, [dispatcher, selectedDate]);
 
   // Handle mark as done
-  const handleDone = async () => {
-    const currentOrder = orders[currentStopIndex];
+  const handleDone = async () => {/*
+    //const currentOrder = orders[currentStopIndex];
+    const currentStop = stops[currentStopIndex];
 
     try {
       // Update database
@@ -97,7 +101,7 @@ export default function DriverRoute() {
       message.success(t('message_done_success'));
 
       // Auto-advance to next incomplete stop
-      const nextIndex = getNextIncompleteStopIndex(orders, currentStopIndex);
+      const nextIndex = getNextIncompleteStopIndex(stops, currentStopIndex);
 
       if (nextIndex !== -1) {
         setCurrentStopIndex(nextIndex);
@@ -108,11 +112,11 @@ export default function DriverRoute() {
 
     } catch (error) {
       message.error(t('message_fail_update_status'));
-    }
+    }*/
   };
 
   // Handle undo (revert delivered status)
-  const handleUndo = async () => {
+  const handleUndo = async () => {/*
     const currentOrder = orders[currentStopIndex];
 
     // Only allow undo for delivered orders
@@ -134,7 +138,7 @@ export default function DriverRoute() {
 
     } catch (error) {
       message.error(t('message_fail_revert_status'));
-    }
+    }*/
   };
 
   // Handle stop selection from list
@@ -145,8 +149,8 @@ export default function DriverRoute() {
 
   // Open Google Maps
   const handleOpenGoogleMaps = () => {
-    if (deliveryRoute && orders.length > 0) {
-      const url = generateGoogleMapsUrl(deliveryRoute, orders);
+    if (deliveryRoute && stops.length > 0) {
+      const url = generateGoogleMapsUrl(deliveryRoute);
       window.open(url, '_blank');
     }
   };
@@ -193,7 +197,7 @@ export default function DriverRoute() {
     );
   }
 
-  const currentOrder = orders[currentStopIndex];
+  const currentStop = stops[currentStopIndex];
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -235,16 +239,16 @@ export default function DriverRoute() {
             {/* Map View */}
             <DriverMap
               deliveryRoute={deliveryRoute}
-              orders={orders}
+              stops={stops}
               currentStopIndex={currentStopIndex}
               onStopSelect={handleStopSelect}
             />
 
             {/* Next Stop Card (overlay at bottom) */}
             <NextStopCard
-              order={currentOrder}
+              stop={currentStop}
               stopNumber={currentStopIndex + 1}
-              totalStops={orders.length}
+              totalStops={stops.length}
               segmentTime={deliveryRoute.segmentTimes[currentStopIndex] || 0}
               onDone={handleDone}
               onUndo={handleUndo}
@@ -272,7 +276,7 @@ export default function DriverRoute() {
           <>
             {/* List View */}
             <RouteListView
-              orders={orders}
+              stops={stops}
               segmentTimes={deliveryRoute.segmentTimes}
               currentStopIndex={currentStopIndex}
               onStopSelect={handleStopSelect}

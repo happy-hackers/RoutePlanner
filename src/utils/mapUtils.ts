@@ -3,18 +3,16 @@ import type { Order } from '../types/order';
 
 export const generateGoogleMapsUrl = (
   deliveryRoute: DeliveryRoute,
-  orders: Order[]
 ): string => {
-  if (!deliveryRoute || orders.length === 0) return '';
+  if (!deliveryRoute || deliveryRoute.addressMeterSequence.length === 0) return '';
 
   const origin = encodeURIComponent(deliveryRoute.startAddress);
   const destination = encodeURIComponent(deliveryRoute.endAddress);
 
-  // Waypoints use addresses with Hong Kong context to avoid ambiguity
-  const waypoints = orders
-    .map(order => {
-      const address = order.detailedAddress;
-      // Add Hong Kong if not already present to prevent geocoding to wrong country
+  // Waypoints: use stop addresses with Hong Kong context
+  const waypoints = deliveryRoute.addressMeterSequence
+    .map(stop => {
+      const address = stop.address;
       const addressWithContext = address.toLowerCase().includes('hong kong')
         ? address
         : `${address}, Hong Kong`;
@@ -29,17 +27,19 @@ export const generateGoogleMapsUrl = (
 };
 
 export const getNextIncompleteStopIndex = (
-  orders: Order[],
+  stops: { meters: Order[] }[],
   currentIndex: number
 ): number => {
-  // Find next incomplete after current position
-  let nextIndex = orders.findIndex(
-    (o, i) => i > currentIndex && o.status !== 'Delivered'
+  // Find next incomplete stop after current position
+  let nextIndex = stops.findIndex(
+    (stop, i) => i > currentIndex && stop.meters.some(order => order.status !== 'Delivered')
   );
 
-  // If none found, find first incomplete from start
+  // If none found, find first incomplete stop from start
   if (nextIndex === -1) {
-    nextIndex = orders.findIndex(o => o.status !== 'Delivered');
+    nextIndex = stops.findIndex(
+      stop => stop.meters.some(order => order.status !== 'Delivered')
+    );
   }
 
   return nextIndex;
