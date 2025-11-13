@@ -1,0 +1,26 @@
+{
+    "nextStopCard": {
+        "header_completed": "已完成",
+        "header_next": "下一站",
+        "text_stop": "第 {{stopNumber}} 站",
+        "text_of": "共",
+        "tag_done": "已完成",
+        "tag_in_progress": "进行中",
+        "placeholder_customer": "客户",
+        "text_time_mins": "{{segmentTime}} 分钟",
+        "text_open": "营业",
+        "button_view_all": "查看所有站点",
+        "button_undo": "撤销",
+        "button_mark_done": "标记为已完成"
+    },
+    "routeListView": {
+        "progress_header_text": "进度",
+        "progress_header_of": "共",
+        "progress_header_completed": "已完成",
+        "placeholder_customer": "客户",
+        "text_time_mins": "{{segmentTime}} 分钟",
+        "tag_next": "下一站",
+        "tag_done": "已完成",
+        "button_undo": "撤销"
+    }
+}

@@ -1,0 +1,18 @@
+{
+  "header_title": "{{dispatcherName}}'s Route",
+  "button_logout": "Logout",
+  "button_google_maps": "Google Maps",
+  "button_back_to_map": "Back to Map",
+  "message_fail_load_route": "Failed to load route",
+  "message_done_success": "Delivery marked as complete!",
+  "message_all_done": "All deliveries completed!",
+  "message_fail_update_status": "Failed to update delivery status",
+  "message_warning_not_delivered": "This delivery has not been marked as complete yet",
+  "message_undo_success": "Delivery status reverted to In Progress",
+  "message_fail_revert_status": "Failed to revert delivery status",
+  "message_logout_success": "Logged out successfully",
+  "message_fail_logout": "Failed to logout",
+  "result_no_route_title": "No Route Found",
+  "result_no_route_subtitle": "No active route found for {{date}}",
+  "language_select": "Language:"
+}

@@ -1,15 +1,15 @@
-import { Layout, Menu, App } from "antd";
+import { Layout, Menu } from "antd";
 import { useNavigate, useLocation } from "react-router-dom";
 import type { MenuProps } from "antd";
-import { useEffect, useState } from "react";
 import {
   ShoppingOutlined,
   UserSwitchOutlined,
   SettingOutlined,
   CompassOutlined,
+  SettingFilled,
+  TeamOutlined
 } from "@ant-design/icons";
-import { getAllDispatchers } from "../utils/dbUtils";
-import type { Dispatcher } from "../types/dispatchers";
+import { useTranslation } from "react-i18next";
 
 type MenuItem = Required<MenuProps>["items"][number];
 
@@ -29,48 +29,19 @@ function getItem(
   } as MenuItem;
 }
 
-export default function Sidebar() {
-  const { message } = App.useApp();
+export default function Navigation() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch orders and dispatchers in parallel
-        const [dispatchersData] = await Promise.all([getAllDispatchers()]);
-
-        if (dispatchersData) {
-          setDispatchers(dispatchersData);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        message.error("Failed to load data. Please try again.");
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const dispatcherItems = dispatchers.map((dispatcher) =>
-    getItem(
-      dispatcher.name,
-      `/route-results/${dispatcher.id}`,
-      <UserSwitchOutlined />
-    )
-  );
+  const { t } = useTranslation('sidebar');
 
   const menuItems: MenuItem[] = [
-    getItem("View Orders", "/view-orders", <ShoppingOutlined />),
-    getItem("Assign Dispatcher", "/assign-dispatcher", <UserSwitchOutlined />),
-    getItem("Set Dispatcher", "/set-dispatcher", <SettingOutlined />),
-    getItem(
-      "Route Results",
-      "/route-results",
-      <CompassOutlined />,
-      dispatcherItems
-    ),
+    getItem(t("menu_view_orders"), "/view-orders", <ShoppingOutlined />),
+    getItem(t("menu_assign_dispatcher"), "/assign-dispatcher", <UserSwitchOutlined />),
+    getItem(t("menu_route_results"), "/route-results", <CompassOutlined />),
+    getItem(t("menu_set_dispatcher"), "/set-dispatcher", <SettingOutlined />),
+    getItem(t("menu_view_customers"), "/view-customers", <TeamOutlined />),
+    getItem(t("menu_settings"), "/settings", <SettingFilled />),
   ];
 
   const handleMenuClick = (e: { key: string }) => {

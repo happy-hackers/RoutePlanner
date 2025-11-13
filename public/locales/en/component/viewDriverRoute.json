@@ -1,0 +1,26 @@
+{
+    "nextStopCard": {
+        "header_completed": "Completed",
+        "header_next": "Next",
+        "text_stop": "Stop {{stopNumber}}",
+        "text_of": "of",
+        "tag_done": "DONE",
+        "tag_in_progress": "IN PROGRESS",
+        "placeholder_customer": "Customer",
+        "text_time_mins": "{{segmentTime}} mins",
+        "text_open": "Open",
+        "button_view_all": "View All",
+        "button_undo": "Undo",
+        "button_mark_done": "Mark as Done"
+    },
+    "routeListView": {
+        "progress_header_text": "Progress",
+        "progress_header_of": "of",
+        "progress_header_completed": "completed",
+        "placeholder_customer": "Customer",
+        "text_time_mins": "{{segmentTime}} mins",
+        "tag_next": "NEXT",
+        "tag_done": "DONE",
+        "button_undo": "Undo"
+    }
+}

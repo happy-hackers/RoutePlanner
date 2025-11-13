@@ -1,9 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
-import timeReducer from "./timeSlice";
+import orderReducer from "./orderSlice";
+import dispatcherReducer from "./dispatcherSlice";
 
 const store = configureStore({
   reducer: {
-    time: timeReducer,
+    order: orderReducer,
+    dispatcher: dispatcherReducer
   },
 });
 

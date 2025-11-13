@@ -1,28 +1,15 @@
-import { GoogleMap, Marker } from "@react-google-maps/api";
-import { Input, Space, Button, App } from "antd";
-//import { useLocation, matchPath } from "react-router-dom";
+import { GoogleMap, Marker, InfoWindow  } from "@react-google-maps/api";
+import { Input, Space, Button } from "antd";
 import { useState, useRef } from "react";
-//import { useSelector } from "react-redux";
-//import type { RootState } from "../store";
-//import type { Order } from "../features/orders";
+import notification from "../utils/notification";
 import type { MarkerData } from "../types/markers";
+//import { supabase } from "../utils/dbUtils";
 
 interface NavigationMapProp {
   markers: MarkerData[];
-  onRouteGenerated?: (routeUrl: string) => void;
-  setMarkers?: (markers: MarkerData[]) => void;
 }
 
-const NavigationMap: React.FC<NavigationMapProp> = ({
-  markers,
-  onRouteGenerated,
-  setMarkers,
-}) => {
-  const { message } = App.useApp();
-  //console.log("markers in map", markers);
-  /*const [markers, setMarkers] = useState<
-    { lat: number; lng: number; address?: string }[]
-  >([]);*/
+const NavigationMap: React.FC<NavigationMapProp> = ({ markers }) => {
 
   const [startAddress, setStartAddress] = useState("");
   const [endAddress, setEndAddress] = useState("");
@@ -34,33 +21,7 @@ const NavigationMap: React.FC<NavigationMapProp> = ({
   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(
     null
   );
-
-  /*const location = useLocation();
-  // Get orders data from Redux store
-  const orders = useSelector((state: RootState) => state.orders);
-  // Add markers automatically when orders data changes
-  useEffect(() => {
-    const addMarkersFromOrders = async () => {
-      // Clear existing markers
-      // Extract orders for a specific person
-      const match = location.pathname.match(/^\/route-results\/(\d+)$/);
-      const id = match ? match[1] : undefined;
-      if (matchPath("/route-results/:id", location.pathname)) {
-        const filteredOrders = orders.filter((order) => order.dispatcherId === Number(id))
-        setSpecificOrders(filteredOrders);
-      }
-      // Add marker for each order
-      if (specificOrders) {
-        for (const order of specificOrders) {
-          if (order.address) {
-            await addMarkerByAddress(order.address);
-          }
-        }
-      }
-    };
-
-    addMarkersFromOrders();
-  }, [orders, location.pathname]);*/ // Re-execute when orders data changes
+  const [activeMarker, setActiveMarker] = useState<number | null>(null);
 
   const onLoad = (map: google.maps.Map) => {
     mapRef.current = map;
@@ -70,10 +31,23 @@ const NavigationMap: React.FC<NavigationMapProp> = ({
       polylineOptions: { strokeColor: "blue" },
     });
   };
-
+  /*const sendToSupabase = async (addresses: (string | undefined)[]) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("route-optimizer/optimize", {
+        body: { name: 'Functions', start_address: startAddress, waypoints: addresses, end_address: endAddress },
+      });
+      console.log("Supabase re-optimized order:", data);
+      if (error) {
+        console.log("Error: ", error);
+      }
+    } catch (err) {
+      console.error("Failed to send to Supabase", err);
+    }
+  };*/
+  
   const calculateRoute = () => {
     if (!startAddress || !endAddress) {
-      message.error("Start location and destination should be entered");
+      notification("error", "Start location and destination should be entered");
       return;
     }
     if (directionsServiceRef.current) {
@@ -88,31 +62,15 @@ const NavigationMap: React.FC<NavigationMapProp> = ({
           travelMode: window.google.maps.TravelMode.DRIVING,
         },
         (result, status) => {
-          if (status === "OK") {
+          if (status === "OK" && result) {
             directionsRendererRef.current?.setDirections(result);
-            if (setMarkers) {
-              setMarkers([]);
-            }
+            // Extract optimized order
+            const order = result.routes[0].waypoint_order;
+            const orderedAddresses = order.map((i) => markers[i].address);
+            console.log("Google optimized order:", orderedAddresses);
+            // Send to Supabase for secondary optimization
+            //sendToSupabase(orderedAddresses);
             console.log("Route calculated and rendered.");
-
-            // Generate Google Maps URL with proper waypoint format
-            let routeUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
-              startAddress
-            )}&destination=${encodeURIComponent(endAddress)}`;
-
-            if (markers && markers.length > 0) {
-              const waypoints = markers
-                .map(
-                  (marker) => `${marker.position.lat},${marker.position.lng}`
-                )
-                .join("|");
-              routeUrl += `&waypoints=${encodeURIComponent(waypoints)}`;
-            }
-
-            // Notify parent component
-            if (onRouteGenerated) {
-              onRouteGenerated(routeUrl);
-            }
           } else {
             console.error("Route calculation failed: " + status);
           }
@@ -167,14 +125,26 @@ const NavigationMap: React.FC<NavigationMapProp> = ({
         zoom={13}
         mapContainerStyle={{ width: "100%", height: "100%" }}
         onLoad={onLoad}
-        center={{ lat: -37.83674422439721, lng: 145.02939105956858 }}
+        center={{ lat: 22.3165316829187, lng: 114.182081980287 }}
       >
         {markers.map((marker, index) => (
           <Marker
-            key={index}
-            position={marker.position}
-            icon={marker.icon?.url}
-          />
+          key={index}
+          position={marker.position}
+          icon={marker.icon?.url}
+          onClick={() => setActiveMarker(index)}
+        >
+          {activeMarker === index && (
+            <InfoWindow
+              position={marker.position}
+              onCloseClick={() => setActiveMarker(null)}
+            >
+              <div>
+                <b>Address:</b> {marker.address ?? "No address available"}
+              </div>
+            </InfoWindow>
+          )}
+        </Marker>
         ))}
       </GoogleMap>
     </div>

@@ -1,0 +1,11 @@
+date,time,status,customerId,detailedAddress,area,district
+2025-01-20,Morning,Pending,9,,,
+2025-01-20,Afternoon,Pending,,"Shop 3, 15 Peking Road, Tsim Sha Tsui",,
+2025-01-20,Afternoon,Pending,,"Tower 2, 8 Finance Street, Central",,
+2025-01-20,Evening,Pending,,"Shop 3, 15 Peking Road, Tsim Sha Tsui",,
+2025-01-21,Morning,Pending,10,"G/F, 100 Nathan Road, Mong Kok, Kowloon",,
+2025-01-21,Afternoon,Pending,,"Shing Wan Rd, Tai Wai",New Territories,Sha Tin
+2025-01-21,Evening,Pending,,"456 Des Voeux Road, Sheung Wan",Hong Kong Island,Central and Western
+2025-01-22,Morning,Pending,,"XYZ Invalid Fake Address 12345",,
+2025-01-22,Afternoon,Pending,,"Tower 2, 8 Finance Street, Central",,
+2025-01-22,Evening,Pending,15,,,

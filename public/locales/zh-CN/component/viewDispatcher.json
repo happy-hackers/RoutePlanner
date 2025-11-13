@@ -1,0 +1,16 @@
+{
+  "table_id": "订单编号",
+  "table_address": "地址",
+  "table_dispatcher": "配送员",
+  "dispatcher_not_assigned": "未分配",
+  "dispatcher_unknown": "未知",
+  "message_unassigned_success": "订单 {{orderId}} 未分配",
+  "message_update_failed": "更新订单 {{orderId}} 失败: {{error}}",
+  "message_assigned_success": "订单 {{orderId}} 已分配给 {{dispatcherName}}",
+  "title_assigned_orders": "分配给 {{dispatcherName}} 的订单",
+  "title_all_orders": "所有订单",
+  "text_responsible_areas": "负责区域:",
+  "text_total_orders": "订单总数: {{count}}",
+  "text_select_dispatcher": "选择一位配送员查看其分配的订单",
+  "pagination_total_orders": "第 {{start}}-{{end}} 条 (共 {{total}} 条订单)"
+}

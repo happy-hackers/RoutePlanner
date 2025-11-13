@@ -13,6 +13,9 @@ dist-ssr
 package-lock.json
 *.local
 
+#scripts
+scripts/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -24,3 +27,14 @@ package-lock.json
 *.njsproj
 *.sln
 *.sw?
+
+# Ignore backend virtual environment
+/backend/.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+#Claude
+.claude/
+*.md

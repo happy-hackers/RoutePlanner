@@ -1,0 +1,20 @@
+{
+  "button_bulk_import": "批量匯入訂單 (上載 JSON/CSV)",
+  "button_selected_orders": "已選取訂單",
+  "label_time": "時間",
+  "time_period_morning": "上午",
+  "time_period_afternoon": "下午",
+  "time_period_evening": "晚上",
+  "label_status": "狀態",
+  "status_all": "全部",
+  "status_complete": "完成",
+  "status_incomplete": "未完成",
+  "label_search": "搜尋",
+  "placeholder_search": "請輸入地址或訂單編號",
+  "label_view_mode": "視圖模式",
+  "table_id": "編號",
+  "table_delivery_time": "派送時間",
+  "table_address": "地址",
+  "table_status": "狀態",
+  "pagination_total": "{{start}}-{{end}} 共 {{total}} 條訂單"
+}

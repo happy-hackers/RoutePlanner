@@ -1,0 +1,18 @@
+{
+    "inputStartPlaceholder": "輸入起點 (經度,緯度)",
+    "inputEndPlaceholder": "輸入終點 (經度,緯度)",
+    "selectOptionPlaceholder": "選擇選項",
+    "optionNormal": "普通",
+    "optionByTime": "營業時間",
+    "selectStartTimePlaceholder": "選擇開始時間",
+    "calculateButton": "計算",
+    "errorStartEndRequired": "請輸入起點和終點位置",
+    "errorStartTimeRequired": "請在計算路線前選擇一個開始時間。",
+    "errorNoRouteFound": "未找到路線",
+    "errorRouteCalculationFailed": "路線計算失敗",
+    "geocodeError": "地理編碼失敗：",
+    "popupStart": "起點",
+    "popupEnd": "終點",
+    "popupStop": "停靠點",
+    "footerTotalTime": "總耗時"
+}

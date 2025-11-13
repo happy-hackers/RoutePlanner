@@ -3,40 +3,24 @@
     "id": 1,
     "date": "2025-06-26",
     "time": "Evening",
-    "state": "Pending",
-    "address": "123 Swanston St, Melbourne VIC",
-    "lat": -37.814825,
-    "lng": 144.965945,
-    "postcode": 3000
+    "customerId": 14
   },
   {
     "id": 2,
     "date": "2025-06-26",
     "time": "Evening",
-    "state": "Pending",
-    "address": "456 St Kilda Rd, Melbourne VIC",
-    "lat": -37.839678,
-    "lng": 144.976319,
-    "postcode": 3005
+    "customerId": 14
   },
   {
     "id": 3,
     "date": "2025-06-26",
     "time": "Evening",
-    "state": "Pending",
-    "address": "789 Whitehorse Rd, Balwyn VIC",
-    "lat": -37.812676,
-    "lng": 145.07974,
-    "postcode": 3103
+    "customerId": 15
   },
   {
     "id": 5,
     "date": "2025-06-26",
     "time": "Evening",
-    "state": "Pending",
-    "address": "202 High St, Thomastown VIC",
-    "lat": -37.680389,
-    "lng": 145.014016,
-    "postcode": 3077
+    "customerId": 15
   }
 ]
