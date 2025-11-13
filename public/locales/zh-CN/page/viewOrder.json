@@ -6,12 +6,10 @@
     "time_period_afternoon": "下午",
     "time_period_evening": "晚上",
     "label_status": "状态",
-    "status_pending": "待处理",
-    "status_in_progress": "进行中",
-    "status_delivered": "已送达",
+
     "table_id": "编号",
     "table_delivery_time": "配送时间",
     "table_address": "地址",
-    "table_status": "状态",
-    "pagination_total": "显示 {{total}} 条中的 {{start}}-{{end}} 条订单"
+    "table_status": "状态"
+
   }

@@ -6,12 +6,9 @@
     "time_period_afternoon": "Afternoon",
     "time_period_evening": "Evening",
     "label_status": "Status",
-    "status_pending": "Pending",
-    "status_in_progress": "In Progress",
-    "status_delivered": "Delivered",
+
     "table_id": "ID",
     "table_delivery_time": "Delivery Time",
     "table_address": "Address",
-    "table_status": "Status",
-    "pagination_total": "{{start}}-{{end}} of {{total}} orders" 
+    "table_status": "Status"
   }

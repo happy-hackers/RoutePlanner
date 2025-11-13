@@ -41,7 +41,7 @@ const getLoadPath = (lng: string, ns: string) => {
     folder = 'area/';
   }
 
-  return `./src/assets/locales/${lng}/${folder}${ns}.json`;
+  return `/locales/${lng}/${folder}${ns}.json`;
 };
 
 i18n
