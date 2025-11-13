@@ -21,7 +21,7 @@ import type { RootState } from "../store/index.ts";
 import {
   addMarkerwithColor,
   generateDispatcherColorsMap,
-  setMarkersList,
+  getGroupedMarkers,
 } from "../utils/markersUtils.ts";
 import type { Route } from "../types/route.ts";
 import type { ColumnsType } from "antd/es/table/index";
@@ -110,6 +110,8 @@ export default function RouteResults() {
     null
   );
 
+  console.log("markers", markers)
+
   console.log("all routes", allRoutes)
 
   const DISPATCHER_COLORS_MAP = generateDispatcherColorsMap(dispatchers);
@@ -153,16 +155,12 @@ export default function RouteResults() {
             !routedDispatcherIds.includes(order.dispatcherId)
         );
         const ids = filteredOrders.map((order) => order.id);
-        const newMarkers = filteredOrders.map((order) =>
-          addMarkerwithColor(order, dispatchers)
-        );
+        const newMarkers = getGroupedMarkers(filteredOrders, dispatchers)
         setMarkers(newMarkers);
         setSelectedRowIds(ids);
       } else {
         const allIds = data.map((order) => order.id);
-        const newMarkers = data.map((order) =>
-          addMarkerwithColor(order, dispatchers)
-        );
+        const newMarkers = getGroupedMarkers(data, dispatchers)
         setMarkers(newMarkers);
         setSelectedRowIds(allIds);
       }
@@ -182,16 +180,12 @@ export default function RouteResults() {
             !routedDispatcherIds.includes(order.dispatcherId)
         );
         const ids = filteredOrders.map((order) => order.id);
-        const newMarkers = filteredOrders.map((order) =>
-          addMarkerwithColor(order, dispatchers)
-        );
+        const newMarkers = getGroupedMarkers(filteredOrders, dispatchers)
         setMarkers(newMarkers);
         setSelectedRowIds(ids);
       } else {
         const allIds = selectedOrders.map((o) => o.id);
-        const allMarkers = selectedOrders.map((o) =>
-          addMarkerwithColor(o, dispatchers)
-        );
+        const allMarkers = getGroupedMarkers(selectedOrders, dispatchers)
         setMarkers(allMarkers);
         setSelectedRowIds(allIds);
       }
@@ -206,23 +200,45 @@ export default function RouteResults() {
     );
   }
 
-
-  const addMarker = (marker: MarkerData) => {
-    setMarkers((prev) => [...prev, marker]);
-  };
-  const removeMarker = (id: number) => {
-    const newMarkers = markers.filter((marker) => marker.id !== id);
-    setMarkers(newMarkers);
-  };
-
   const handleRowSelect = (record: Order, selected: boolean) => {
     if (selected) {
       setSelectedRowIds((prev) => [...prev, record.id]);
-      const newMarker = addMarkerwithColor(record, dispatchers);
-      addMarker(newMarker);
+      setMarkers((prevMarkers) => {
+        
+        const existingMarkerIndex = prevMarkers.findIndex(
+          (marker) =>
+            marker.position.lat === record.lat &&
+            marker.position.lng === record.lng &&
+            marker.dispatcherId == record.dispatcherId
+        );
+
+        if (existingMarkerIndex !== -1) {
+          
+          const updatedMarkers = [...prevMarkers];
+          const existingMarker = updatedMarkers[existingMarkerIndex];
+
+          if (!existingMarker.meters.some((o) => o.id === record.id)) {
+            existingMarker.meters.push(record);
+          }
+          return updatedMarkers;
+        } else {
+          const newMarker = addMarkerwithColor(record, dispatchers);
+          return [...prevMarkers, newMarker];
+        }
+      });
     } else {
       setSelectedRowIds(selectedRowIds.filter((id) => id !== record.id));
-      removeMarker(record.id);
+      setMarkers((prevMarkers) => {
+        return prevMarkers.reduce<MarkerData[]>((acc, marker) => {
+          const updatedMeters = marker.meters.filter((o) => o.id !== record.id);
+
+          // If no meters left, marker is removed, otherwise, update it
+          if (updatedMeters.length > 0) {
+            acc.push({ ...marker, meters: updatedMeters });
+          }
+          return acc;
+        }, []);
+      });
     }
   };
 
@@ -232,19 +248,50 @@ export default function RouteResults() {
     changeRows: Order[]
   ) => {
     if (selected) {
-      changeRows.forEach((record) => {
-        setSelectedRowIds((prev) => [...prev, record.id]);
-        const newMarker = addMarkerwithColor(record, dispatchers);
-        addMarker(newMarker);
+      setSelectedRowIds((prev) => [...prev, ...changeRows.map((r) => r.id)]);
+
+      setMarkers((prevMarkers) => {
+        const updatedMarkers = [...prevMarkers];
+
+        changeRows.forEach((record) => {
+          const existingIndex = updatedMarkers.findIndex(
+            (marker) =>
+              marker.position.lat === record.lat &&
+              marker.position.lng === record.lng &&
+              marker.dispatcherId == record.dispatcherId
+          );
+
+          if (existingIndex !== -1) {
+            const marker = updatedMarkers[existingIndex];
+            const alreadyExists = marker.meters.some((o) => o.id === record.id);
+            if (!alreadyExists) {
+              marker.meters.push(record);
+            }
+          } else {
+            const newMarker = addMarkerwithColor(record, dispatchers);
+            updatedMarkers.push(newMarker);
+          }
+        });
+
+        return updatedMarkers;
       });
     } else {
       setSelectedRowIds((prev) =>
         prev.filter((id) => !changeRows.some((row) => row.id === id))
       );
 
-      setMarkers((prev) =>
-        prev.filter((marker) => !changeRows.some((row) => row.id === marker.id))
-      );
+      setMarkers((prevMarkers) => {
+        return prevMarkers.reduce<MarkerData[]>((acc, marker) => {
+          const updatedMeters = marker.meters.filter(
+            (order) => !changeRows.some((row) => row.id === order.id)
+          );
+          // If no meters left, marker is removed, otherwise, update it
+          if (updatedMeters.length > 0) {
+            acc.push({ ...marker, meters: updatedMeters });
+          }
+          return acc;
+        }, []);
+      });
     }
   };
   const rowSelection = {
@@ -296,7 +343,7 @@ export default function RouteResults() {
               {route ? (
                 <>
                   <Text type="secondary">
-                    {route.orderSequence.length} {t("text_waypoints")}
+                    {route.addressMeterSequence.length} {t("text_waypoints")}
                   </Text>
                   <Button
                     danger
@@ -308,10 +355,7 @@ export default function RouteResults() {
                         (o) => o.dispatcherId === dispatcher.id
                       );
                       const newSelectedIds = filteredOrders.map((o) => o.id);
-                      const newMarker = setMarkersList(
-                        filteredOrders,
-                        dispatchers
-                      );
+                      const newMarker = getGroupedMarkers(filteredOrders, dispatchers);
                       setNewRoutes((prev) =>
                         prev.filter((p) => p.dispatcherId !== dispatcher.id)
                       );
@@ -343,7 +387,7 @@ export default function RouteResults() {
         children: route ? (
           <List
             size="small"
-            dataSource={route.orderSequence.map((o) => o.detailedAddress)}
+            dataSource={route.addressMeterSequence.map((o) => o.address)}
             renderItem={(address, index) => (
               <List.Item style={{ paddingLeft: 8, paddingRight: 8 }}>
                 <div style={{ flex: 1, marginRight: 4 }}>
@@ -493,9 +537,9 @@ export default function RouteResults() {
               <Table
                 rowKey="id"
                 columns={routeModeColumns}
-                dataSource={foundRoute.orderSequence.map((o, index) => ({
+                dataSource={foundRoute.addressMeterSequence.map((o, index) => ({
                   order: index + 1,
-                  address: o.detailedAddress,
+                  address: o.address,
                   travelTime: foundRoute.segmentTimes[index],
                 }))}
                 pagination={false}

@@ -8,7 +8,7 @@ import {
 } from "../utils/dbUtils";
 import type { MarkerData } from "../types/markers";
 import type { Order } from "../types/order";
-import { addMarkerwithColor, setMarkersList } from "../utils/markersUtils";
+import { getGroupedMarkers } from "../utils/markersUtils";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../store";
 import { setSelectedOrders } from "../store/orderSlice";
@@ -58,8 +58,8 @@ export default function AssignDispatchers({
   ];
 
   const handleUpdateOrders = async (
-    order: Order | (Order & { matchedDispatchers: Dispatcher[] }), dispatcher: Dispatcher, newActiveOrders: Order[]
-  ): Promise<Order[]> => {
+    order: Order | (Order & { matchedDispatchers: Dispatcher[] }), dispatcher: Dispatcher, updatedOrders: Order[]
+  ) : Promise<Order[]> => {
     let customer: Customer | undefined;
     let rest: Omit<Order, "customer">;
     let matchedDispatchers: Dispatcher[] = [];
@@ -77,11 +77,12 @@ export default function AssignDispatchers({
     const result = await updateOrder(updatedOrder);
 
     if (result.success) {
-      newActiveOrders = newActiveOrders.map((order) =>
+      updatedOrders = updatedOrders.map((order) =>
         order.id === updatedOrder.id ? { ...updatedOrder, customer: customer ?? undefined } : order
       );
-      const newMarkers = setMarkersList(newActiveOrders, dispatchers);
-      setMarkers(newMarkers);
+      const markers = getGroupedMarkers(updatedOrders, dispatchers);
+  
+      setMarkers(markers);
       message.success(t("message_success", {
         orderId: order.id,
         dispatcherName: dispatcher.name
@@ -92,7 +93,7 @@ export default function AssignDispatchers({
         error: result.error
       }));
     }
-    return newActiveOrders
+    return updatedOrders
   };
 
   const getDispatcherWithLeastAssigned = (
@@ -116,15 +117,19 @@ export default function AssignDispatchers({
     return minDispatcher;
   };
 
-  const assignOrders = async (newActiveOrders: Order[]) => {
+  const assignOrders = async (selectedOrders: Order[]) => {
     setIsAssigning(true);
     if (dispatchers.length === 0) return;
+
+    let updatedOrders = [...selectedOrders];
     // 1. First assign those orders whose area or district only matches to one dispatcher
     // 2. Then assign those orders whose area or district matches more than one dispatcher
     // 3. Lastly assign those orders whose area or district doesn't match any dispatcher
-    let unassignedOrderswithDispatchers: (Order & { matchedDispatchers: Dispatcher[] })[] = [];
+    let unassignedOrderswithDispatchers: (Order & {
+      matchedDispatchers: Dispatcher[];
+    })[] = [];
     let unassignedOrderswithNoDispatchers: Order[] = [];
-    for (const order of newActiveOrders) {
+    for (const order of selectedOrders) {
       // Skip already assigned orders
       if (order.dispatcherId) {
         continue;
@@ -156,7 +161,6 @@ export default function AssignDispatchers({
           unassignedOrderswithNoDispatchers.push(order);
           continue;
         } else if (matchedDispatchers.length === 1) {
-
           matchedDispatcher = matchedDispatchers[0];
         } else if (matchedDispatchers.length > 1) {
           unassignedOrderswithDispatchers.push({
@@ -169,11 +173,18 @@ export default function AssignDispatchers({
         matchedDispatcher = matchedDispatchers[0];
       } else if (matchedDispatchers.length > 1) {
         unassignedOrderswithDispatchers.push({ ...order, matchedDispatchers });
-        console.log("unassignedOrderswithDispatchers", unassignedOrderswithDispatchers)
+        console.log(
+          "unassignedOrderswithDispatchers",
+          unassignedOrderswithDispatchers
+        );
         continue;
       }
       if (matchedDispatcher) {
-        newActiveOrders = await handleUpdateOrders(order, matchedDispatcher, newActiveOrders);
+        updatedOrders = await handleUpdateOrders(
+          order,
+          matchedDispatcher,
+          updatedOrders
+        );
       } else {
         message.warning(t("message_warning_not_found", {
           orderId: order.id
@@ -184,10 +195,14 @@ export default function AssignDispatchers({
       for (const order of unassignedOrderswithDispatchers) {
         const dispatcher = getDispatcherWithLeastAssigned(
           order.matchedDispatchers,
-          newActiveOrders
+          updatedOrders
         );
         if (dispatcher) {
-          newActiveOrders = await handleUpdateOrders(order, dispatcher, newActiveOrders);
+          updatedOrders = await handleUpdateOrders(
+            order,
+            dispatcher,
+            updatedOrders
+          );
         } else {
           message.warning(t("message_warning_not_found", {
             orderId: order.id
@@ -199,10 +214,14 @@ export default function AssignDispatchers({
       for (const order of unassignedOrderswithNoDispatchers) {
         const dispatcher = getDispatcherWithLeastAssigned(
           dispatchers,
-          newActiveOrders
+          updatedOrders
         );
         if (dispatcher) {
-          newActiveOrders = await handleUpdateOrders(order, dispatcher, newActiveOrders);
+          updatedOrders = await handleUpdateOrders(
+            order,
+            dispatcher,
+            updatedOrders
+          );
         } else {
           message.warning(t("message_warning_not_found", {
             orderId: order.id
@@ -210,18 +229,16 @@ export default function AssignDispatchers({
         }
       }
     }
-    dispatch(setSelectedOrders(newActiveOrders));
+    dispatch(setSelectedOrders(updatedOrders));
     setIsAssigning(false);
-
   };
-  const confirm = () => {
-    const newActiveOrders = selectedOrders.map(order => ({
-      ...order,
-      dispatcherId: undefined,
-    }));
-    assignOrders(newActiveOrders);
-    console.log("newActiveOrders", newActiveOrders)
-  };
+    const reAssignOrders = () => {
+      const newSelectedOrders = selectedOrders.map(order => ({
+        ...order,
+        dispatcherId: undefined,
+      }));
+      assignOrders(newSelectedOrders);
+    };
 
   return (
     <Row style={{ height: "100%" }}>
@@ -238,22 +255,13 @@ export default function AssignDispatchers({
                     (dispatcher) => dispatcher.id === id
                   );
                   if (selectedDispatcher) {
-                    const filteredMarkers = selectedOrders.filter(order => order.dispatcherId === id)
-                      .map((order) => {
-                        return addMarkerwithColor(order, dispatchers);
-                      })
-                      .filter(
-                        (marker): marker is MarkerData => marker !== null
-                      );
+                    const filteredOrders = selectedOrders.filter(order => order.dispatcherId === id);
+                    const filteredMarkers = getGroupedMarkers(filteredOrders, dispatchers);
                     setMarkers(filteredMarkers);
                   }
                 } else {
                   // Show all orders when "All Dispatchers" is selected
-                  const allMarkers = selectedOrders
-                    .map((order) => {
-                      return addMarkerwithColor(order, dispatchers);
-                    })
-                    .filter((marker): marker is MarkerData => marker !== null);
+                  const allMarkers = getGroupedMarkers(selectedOrders, dispatchers);
                   setMarkers(allMarkers);
                 }
               }}
@@ -265,7 +273,7 @@ export default function AssignDispatchers({
                 title={t("popconfirm_title")}
                 okText={t("popconfirm_ok")}
                 cancelText={t("popconfirm_cancel")}
-                onConfirm={confirm}
+                onConfirm={reAssignOrders}
               >
                 <Button type="primary" loading={isAssigning} disabled={selectedId !== null}>
                   {isAssigning ? t("button_assigning") : t("button_auto_assign")}

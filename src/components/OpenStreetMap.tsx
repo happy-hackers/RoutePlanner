@@ -103,9 +103,6 @@ const OpenStreetMap = forwardRef(
     const dispatchers = useSelector(
       (state: RootState) => state.dispatcher.dispatchers
     );
-    const selectedOrders = useSelector(
-      (state: RootState) => state.order.selectedOrders
-    );
 
     const DISPATCHER_COLORS_MAP = generateDispatcherColorsMap(dispatchers);
 
@@ -292,13 +289,17 @@ const OpenStreetMap = forwardRef(
         if (!optimizedRouteResult.error) {
           const { order, segment_times, total_time, total_distance } =
             optimizedRouteResult;
-          const sortedOrders = order.map(
-            (i: number) => selectedOrders.find((o) => o.id === oMarkers[i].id)!
-          );
+          const sortedAddressWithMeters = order.map((i: number) => ({
+            address: oMarkers[i].address,
+            lat: oMarkers[i].position.lat,
+            lng: oMarkers[i].position.lng,
+            meters: oMarkers[i].meters
+          }));
 
-          setSelectedRowId?.((prev) =>
-            prev.filter((p) => !oMarkers.map((m) => m.id).includes(p))
-          );
+          const isOrderInMarkers = (id: number, markers: MarkerData[]) =>
+            markers.some((marker) => marker.meters.some((m) => m.id === id));
+
+          setSelectedRowId?.((prev) => prev.filter((id) => !isOrderInMarkers(id, oMarkers)));
           setOrderMarkers((prev) =>
             prev.filter((p) => p.dispatcherId !== oMarkers[0]?.dispatcherId)
           );
@@ -333,7 +334,7 @@ const OpenStreetMap = forwardRef(
               startLng: startCoord.lng,
               endLat: endCoord.lat,
               endLng: endCoord.lng,
-              orderSequence: sortedOrders,
+              addressMeterSequence: sortedAddressWithMeters,
               segmentTimes: segment_times,
               total_time: total_time,
               total_distance: total_distance,
@@ -392,13 +393,17 @@ const OpenStreetMap = forwardRef(
           totalDistance,
         } = optimizedRouteResult;
 
-        const sortedOrders = order.map(
-          (i: number) => selectedOrders.find((o) => o.id === oMarkers[i].id)!
-        );
+        const sortedAddressWithMeters = order.map((i: number) => ({
+            address: oMarkers[i].address,
+            lat: oMarkers[i].position.lat,
+            lng: oMarkers[i].position.lng,
+            meters: oMarkers[i].meters
+        }));
 
-        setSelectedRowId?.((prev) =>
-          prev.filter((p) => !oMarkers.map((m) => m.id).includes(p))
-        );
+        const isOrderInMarkers = (id: number, markers: MarkerData[]) =>
+          markers.some((marker) => marker.meters.some((m) => m.id === id));
+
+        setSelectedRowId?.((prev) => prev.filter((id) => !isOrderInMarkers(id, oMarkers)));
         setOrderMarkers((prev) =>
           prev.filter((p) => p.dispatcherId !== oMarkers[0]?.dispatcherId)
         );
@@ -432,8 +437,7 @@ const OpenStreetMap = forwardRef(
             startLng: startCoord.lng,
             endLat: endCoord.lat,
             endLng: endCoord.lng,
-
-            orderSequence: sortedOrders,
+            addressMeterSequence: sortedAddressWithMeters,
             segmentTimes: segmentTimes,
             total_time: totalTime,
             total_distance: totalDistance,
@@ -595,7 +599,13 @@ const OpenStreetMap = forwardRef(
                 position={[marker.position.lat, marker.position.lng]}
                 icon={leafletIcon}
               >
-                <Popup>{marker.address}</Popup>
+                <Popup>
+                  <div>
+                    <strong>{marker.address}</strong>
+                    <br />
+                    Meter IDs: {marker.meters.map((m) => m.id).join(", ")}
+                  </div>
+                </Popup>
               </Marker>
             );
           })}
@@ -610,14 +620,14 @@ const OpenStreetMap = forwardRef(
                       {t("popupStart")} ({routeIndex + 1}): {route.startAddress}
                     </Popup>
                   </Marker>
-                  {route.orderSequence.map((waypoint, i) => (
+                  {route.addressMeterSequence.map((waypoint, i) => (
                     <Marker
                       key={`${routeIndex}-waypoint-${i}`}
                       position={[waypoint.lat, waypoint.lng]}
                       icon={createNumberIcon(i + 1)}
                     >
                       <Popup>
-                        {t("popupStop")} {i + 1}: {waypoint.detailedAddress}
+                        {t("popupStop")} Stop {i + 1}: {waypoint.address}
                       </Popup>
                     </Marker>
                   ))}
@@ -652,14 +662,14 @@ const OpenStreetMap = forwardRef(
                     >
                       <Popup>{t("popupStart")}: {foundRoute.startAddress}</Popup>
                     </Marker>
-                    {foundRoute.orderSequence.map((wp, i) => (
+                    {foundRoute.addressMeterSequence.map((wp, i) => (
                       <Marker
                         key={`wp-${i}`}
                         position={[wp.lat, wp.lng]}
                         icon={createNumberIcon(i + 1)}
                       >
                         <Popup>
-                          {t("popupStop")} {i + 1}: {wp.detailedAddress}
+                          {t("popupStop")} Stop {i + 1}: {wp.address}
                         </Popup>
                       </Marker>
                     ))}

@@ -6,8 +6,8 @@ import type { RootState } from "../store";
 import { updateOrder } from "../utils/dbUtils";
 import { setSelectedOrders } from "../store/orderSlice";
 import type { MarkerData } from "../types/markers";
-import { setMarkersList } from "../utils/markersUtils";
 import { useTranslation } from "react-i18next";
+import { getGroupedMarkers } from "../utils/markersUtils";
 
 const { Title, Text } = Typography;
 
@@ -55,8 +55,9 @@ export default function Dispatcherform({
           order.id === updatedOrder.id ? {...updatedOrder, customer} : order
         );
         dispatch(setSelectedOrders(newOrders));
-        const newMarkers = setMarkersList(newOrders, dispatchers)
-        setMarkers(newMarkers);
+        const markers = getGroupedMarkers(newOrders, dispatchers);
+          
+        setMarkers(markers);
         message.success(t('message_unassigned_success', { orderId: order.id }));
       } else {
         message.error(t('message_update_failed', { orderId: order.id, error: result.error }));
@@ -76,9 +77,9 @@ export default function Dispatcherform({
         let newMarkers;
         if (selectedDispatcher) {
           const newOrderData = newOrders.filter(order => order.dispatcherId === selectedDispatcher.id);
-          newMarkers = setMarkersList(newOrderData, dispatchers)
+          newMarkers = getGroupedMarkers(newOrderData, dispatchers);
         } else {
-          newMarkers = setMarkersList(newOrders, dispatchers)
+          newMarkers = getGroupedMarkers(newOrders, dispatchers);
         }
         setMarkers(newMarkers);
         message.success(t('message_assigned_success', { orderId: order.id, dispatcherName: name || t('dispatcher_unknown') }));
