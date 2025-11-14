@@ -1,45 +1,56 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Layout, Button, Spin, Result, DatePicker, Typography, App } from 'antd';
-import { EnvironmentOutlined, LogoutOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import NextStopCard from '../components/driver/NextStopCard';
-import RouteListView from '../components/driver/RouteListView';
-import DriverMap from '../components/driver/DriverMap';
-import { getDriverActiveRoute, updateOrderStatus } from '../utils/dbUtils';
-import { generateGoogleMapsUrl } from '../utils/mapUtils';
-import { logoutDriver } from '../utils/authUtils';
-import { useAuth } from '../contexts/AuthContext';
-import type { DeliveryRoute } from '../types/delivery-route';
-import { useTranslation } from 'react-i18next';
+import { useState, useEffect } from "react";
+import sound from "../assets/sounds/sms-received1.mp3";
+import { useNavigate } from "react-router-dom";
+import {
+  Layout,
+  Button,
+  Spin,
+  Result,
+  DatePicker,
+  Typography,
+  App,
+} from "antd";
+import { EnvironmentOutlined, LogoutOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
+import NextStopCard from "../components/driver/NextStopCard";
+import RouteListView from "../components/driver/RouteListView";
+import DriverMap from "../components/driver/DriverMap";
+import { getDriverActiveRoute, updateOrderStatus } from "../utils/dbUtils";
+import { generateGoogleMapsUrl } from "../utils/mapUtils";
+import { logoutDriver } from "../utils/authUtils";
+import { useAuth } from "../contexts/AuthContext";
+import type { DeliveryRoute } from "../types/delivery-route";
+import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../components/LanguageSwitcher.tsx";
-import type { AddressMetersElement } from '../types/route.ts';
+import type { AddressMetersElement } from "../types/route.ts";
 
 const { Header, Content } = Layout;
 const { Title } = Typography;
 
-type ViewMode = 'next' | 'list';
+type ViewMode = "next" | "list";
 
 export default function DriverRoute() {
-  const { t } = useTranslation('driverRoute');
+  const { t } = useTranslation("driverRoute");
   const navigate = useNavigate();
   const { user, dispatcher, loading: authLoading } = useAuth();
 
   // State
   const [loading, setLoading] = useState(true);
-  const [deliveryRoute, setDeliveryRoute] = useState<DeliveryRoute | null>(null);
+  const [deliveryRoute, setDeliveryRoute] = useState<DeliveryRoute | null>(
+    null
+  );
   //const [orders, setOrders] = useState<Order[]>([]);
-  const [stops, setStops] = useState<DeliveryRoute['addressMeterSequence']>([]);
+  const [stops, setStops] = useState<DeliveryRoute["addressMeterSequence"]>([]);
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
-  const [viewMode, setViewMode] = useState<ViewMode>('next');
+  const [viewMode, setViewMode] = useState<ViewMode>("next");
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [driverLocation, setDriverLocation] = useState<{
     lat: number;
     lng: number;
   } | null>(null);
-  const [hasWarned, setHasWarned] = useState(false);
+  const [hasWarned, setHasWarned] = useState(true);
 
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const currentStop = stops[currentStopIndex];
 
   // This uses the ‘haversine’ formula to calculate the great-circle distance between two points
@@ -101,9 +112,15 @@ export default function DriverRoute() {
         const incompleteCount = currentStop.meters.filter(
           (m) => m.status !== "Delivered"
         ).length;
-        message.info(
-          `You have ${incompleteCount} incompleted meters in the current stop`
-        );
+
+        modal.info({
+          title: `You have ${incompleteCount} incompleted meters in the current stop`,
+        });
+        const notification_sound = new Audio(sound);
+        notification_sound.play();
+        if (navigator.vibrate) {
+          navigator.vibrate([200, 100, 200]);
+        }
         setHasWarned(true);
       }
       if (distance <= 100) {
@@ -116,12 +133,13 @@ export default function DriverRoute() {
 
   // Reset warn message on stop change
   useEffect(() => {
-    setHasWarned(false);
+    setHasWarned(true);
   }, [currentStop]);
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/driver-login');
+      navigate("/driver-login");
     }
   }, [user, authLoading, navigate]);
 
@@ -150,13 +168,12 @@ export default function DriverRoute() {
       setStops(routeData.addressMeterSequence);
 
       // Set current stop to first incomplete
-      const firstIncomplete = routeData.addressMeterSequence.findIndex(
-        stop => stop.meters.some(order => order.status !== 'Delivered')
+      const firstIncomplete = routeData.addressMeterSequence.findIndex((stop) =>
+        stop.meters.some((order) => order.status !== "Delivered")
       );
       setCurrentStopIndex(firstIncomplete !== -1 ? firstIncomplete : 0);
-
     } catch (error) {
-      message.error(t('message_fail_load_route'));
+      message.error(t("message_fail_load_route"));
     } finally {
       setLoading(false);
     }
@@ -165,7 +182,7 @@ export default function DriverRoute() {
   // Load route on mount and date change
   useEffect(() => {
     if (dispatcher) {
-      fetchRouteData(selectedDate.format('YYYY-MM-DD'));
+      fetchRouteData(selectedDate.format("YYYY-MM-DD"));
     }
   }, [dispatcher, selectedDate]);
 
@@ -216,14 +233,14 @@ export default function DriverRoute() {
   // Handle stop selection from list
   const handleStopSelect = (index: number) => {
     setCurrentStopIndex(index);
-    setViewMode('next');
+    setViewMode("next");
   };
 
   // Open Google Maps
   const handleOpenGoogleMaps = () => {
     if (deliveryRoute && stops.length > 0) {
       const url = generateGoogleMapsUrl(deliveryRoute);
-      window.open(url, '_blank');
+      window.open(url, "_blank");
     }
   };
 
@@ -231,17 +248,24 @@ export default function DriverRoute() {
   const handleLogout = async () => {
     const result = await logoutDriver();
     if (result.success) {
-      message.success(t('message_logout_success'));
-      navigate('/driver-login');
+      message.success(t("message_logout_success"));
+      navigate("/driver-login");
     } else {
-      message.error(t('message_fail_logout'));
+      message.error(t("message_fail_logout"));
     }
   };
 
   // Loading state
   if (authLoading || loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
         <Spin size="large" />
       </div>
     );
@@ -257,8 +281,10 @@ export default function DriverRoute() {
     return (
       <Result
         status="info"
-        title={t('result_no_route_title')}
-        subTitle={t('result_no_route_subtitle', { date: selectedDate.format('YYYY-MM-DD') })}
+        title={t("result_no_route_title")}
+        subTitle={t("result_no_route_subtitle", {
+          date: selectedDate.format("YYYY-MM-DD"),
+        })}
         extra={
           <DatePicker
             value={selectedDate}
@@ -317,7 +343,7 @@ export default function DriverRoute() {
               stopNumber={currentStopIndex + 1}
               totalStops={stops.length}
               segmentTime={deliveryRoute.segmentTimes[currentStopIndex] || 0}
-              onViewAll={() => setViewMode('list')}
+              onViewAll={() => setViewMode("list")}
               onMeterDone={handleMeterDone}
               onMeterUndo={handleMeterUndo}
             />
