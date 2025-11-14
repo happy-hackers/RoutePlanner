@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Layout, Button, message, Spin, Result, DatePicker, Typography } from 'antd';
+import { Layout, Button, Spin, Result, DatePicker, Typography, App } from 'antd';
 import { EnvironmentOutlined, LogoutOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import NextStopCard from '../components/driver/NextStopCard';
@@ -13,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import type { DeliveryRoute } from '../types/delivery-route';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from "../components/LanguageSwitcher.tsx";
+import type { AddressMetersElement } from '../types/route.ts';
 
 const { Header, Content } = Layout;
 const { Title } = Typography;
@@ -32,8 +33,91 @@ export default function DriverRoute() {
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>('next');
   const [selectedDate, setSelectedDate] = useState(dayjs());
-  
+  const [driverLocation, setDriverLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const [hasWarned, setHasWarned] = useState(false);
 
+  const { message } = App.useApp();
+  const currentStop = stops[currentStopIndex];
+
+  // This uses the ‘haversine’ formula to calculate the great-circle distance between two points
+  // – that is, the shortest distance over the earth’s surface
+  function getDistance(
+    lat1: number,
+    lng1: number,
+    lat2: number,
+    lng2: number
+  ): number {
+    const R = 6371e3;
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lng2 - lng1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(Δφ / 2) ** 2 +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  }
+
+  function hasIncompleteMeters(stop: AddressMetersElement): boolean {
+    return stop.meters.some((meter) => meter.status !== "Delivered");
+  }
+
+  // Watch driver location
+  useEffect(() => {
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setDriverLocation({ lat: latitude, lng: longitude });
+      },
+      (error) => console.error("Geolocation error:", error),
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
+  // Detect departure and trigger alert
+  useEffect(() => {
+    if (!driverLocation || !currentStop) return;
+
+    const timeout = setTimeout(() => {
+      const stopLat = currentStop.lat;
+      const stopLng = currentStop.lng;
+
+      const distance = getDistance(
+        driverLocation.lat,
+        driverLocation.lng,
+        stopLat,
+        stopLng
+      );
+
+      if (distance > 100 && hasIncompleteMeters(currentStop) && !hasWarned) {
+        const incompleteCount = currentStop.meters.filter(
+          (m) => m.status !== "Delivered"
+        ).length;
+        message.info(
+          `You have ${incompleteCount} incompleted meters in the current stop`
+        );
+        setHasWarned(true);
+      }
+      if (distance <= 100) {
+        setHasWarned(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [driverLocation, currentStop, hasWarned]);
+
+  // Reset warn message on stop change
+  useEffect(() => {
+    setHasWarned(false);
+  }, [currentStop]);
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
@@ -101,7 +185,7 @@ export default function DriverRoute() {
         }))
       );
 
-      message.success(t("message_done_success"));
+      message.success(t("message_done_success"), 1);
     } catch (error) {
       message.error(t("message_fail_update_status"));
     }
@@ -123,7 +207,7 @@ export default function DriverRoute() {
         }))
       );
 
-      message.success(t("message_undo_success"));
+      message.success(t("message_undo_success"), 1);
     } catch (error) {
       message.error(t("message_fail_revert_status"));
     }
@@ -184,8 +268,6 @@ export default function DriverRoute() {
       />
     );
   }
-
-  const currentStop = stops[currentStopIndex];
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
