@@ -40,7 +40,7 @@ export default function DriverRoute() {
     null
   );
   //const [orders, setOrders] = useState<Order[]>([]);
-  const [stops, setStops] = useState<DeliveryRoute["addressMeterSequence"]>([]);
+  const [stops, setStops] = useState<AddressMetersElement[]>([]);
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("next");
   const [selectedDate, setSelectedDate] = useState(dayjs());
@@ -87,7 +87,7 @@ export default function DriverRoute() {
         setDriverLocation({ lat: latitude, lng: longitude });
       },
       (error) => console.error("Geolocation error:", error),
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 5000 }
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
@@ -97,44 +97,35 @@ export default function DriverRoute() {
   useEffect(() => {
     if (!driverLocation || !currentStop) return;
 
-    const timeout = setTimeout(() => {
-      const stopLat = currentStop.lat;
-      const stopLng = currentStop.lng;
+    const stopLat = currentStop.lat;
+    const stopLng = currentStop.lng;
 
-      const distance = getDistance(
-        driverLocation.lat,
-        driverLocation.lng,
-        stopLat,
-        stopLng
-      );
+    const distance = getDistance(
+      driverLocation.lat,
+      driverLocation.lng,
+      stopLat,
+      stopLng
+    );
 
-      if (distance > 100 && hasIncompleteMeters(currentStop) && !hasWarned) {
-        const incompleteCount = currentStop.meters.filter(
-          (m) => m.status !== "Delivered"
-        ).length;
+    if (distance > 80 && hasIncompleteMeters(currentStop) && !hasWarned) {
+      const incompleteCount = currentStop.meters.filter(
+        (m) => m.status !== "Delivered"
+      ).length;
 
-        modal.info({
-          title: `You have ${incompleteCount} incompleted meters in the current stop`,
-        });
-        const notification_sound = new Audio(sound);
-        notification_sound.play();
-        if (navigator.vibrate) {
-          navigator.vibrate([200, 100, 200]);
-        }
-        setHasWarned(true);
+      modal.info({
+        title: `You have ${incompleteCount} incompleted meters in the current stop`,
+      });
+      const notification_sound = new Audio(sound);
+      notification_sound.play();
+      if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200]);
       }
-      if (distance <= 100) {
-        setHasWarned(false);
-      }
-    }, 500);
-
-    return () => clearTimeout(timeout);
+      setHasWarned(true);
+    }
+    if (distance <= 80) {
+      setHasWarned(false);
+    }
   }, [driverLocation, currentStop, hasWarned]);
-
-  // Reset warn message on stop change
-  useEffect(() => {
-    setHasWarned(true);
-  }, [currentStop]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -234,6 +225,7 @@ export default function DriverRoute() {
   const handleStopSelect = (index: number) => {
     setCurrentStopIndex(index);
     setViewMode("next");
+    setHasWarned(true);
   };
 
   // Open Google Maps
