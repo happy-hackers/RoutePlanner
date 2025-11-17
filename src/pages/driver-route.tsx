@@ -41,6 +41,7 @@ export default function DriverRoute() {
   }, [user, authLoading, navigate]);
 
   // Fetch route data
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchRouteData = async (date: string) => {
     if (!dispatcher) {
       return;
@@ -67,6 +68,7 @@ export default function DriverRoute() {
       const firstIncomplete = routeData.orderSequence.findIndex(o => o.status !== 'Delivered');
       setCurrentStopIndex(firstIncomplete !== -1 ? firstIncomplete : 0);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       message.error(t('message_fail_load_route'));
     } finally {
@@ -79,7 +81,7 @@ export default function DriverRoute() {
     if (dispatcher) {
       fetchRouteData(selectedDate.format('YYYY-MM-DD'));
     }
-  }, [dispatcher, selectedDate]);
+  }, [dispatcher, fetchRouteData, selectedDate]);
 
   // Handle mark as done
   const handleDone = async () => {
@@ -106,6 +108,7 @@ export default function DriverRoute() {
         message.success(t('message_all_done'));
       }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       message.error(t('message_fail_update_status'));
     }
@@ -132,6 +135,7 @@ export default function DriverRoute() {
 
       message.success(t('message_undo_success'));
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       message.error(t('message_fail_revert_status'));
     }

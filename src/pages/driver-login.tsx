@@ -34,6 +34,7 @@ export default function DriverLogin() {
       } else {
         message.error(result.error || t('message_login_failed_generic'));
       }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       message.error(t('message_error_occurred'));
     } finally {

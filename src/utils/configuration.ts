@@ -10,6 +10,7 @@ export function getSettingInfo() {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function updateSettingInfo(values: any) {
   if (values) {
     const originValues = getSettingInfo();

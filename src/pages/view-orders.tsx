@@ -295,8 +295,7 @@ export default function ViewOrders({
             <BatchUploadModal
               isOpen={isUploadModalOpen}
               setOpen={setIsUploadModalOpen}
-              onUploadComplete={fetchOrders}
-            />
+              onUploadComplete={fetchOrders} isMapReady={false} isGoogleMapSelected={false}            />
           </Space>
           <DatePicker
             defaultValue={date}

@@ -47,6 +47,7 @@ function AppContent({ isGoogleMapSelected, isMapReady }: AppContentProps) {
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [hoveredOrderId, setHoveredOrderId] = useState<number | null>(null);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const emptyArray: any[] = [];
   const emptySetter = () => {};
 

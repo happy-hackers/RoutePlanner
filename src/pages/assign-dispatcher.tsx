@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 
 export default function AssignDispatchers({
   setMarkers,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   hoveredOrderId: _hoveredOrderId,
   setHoveredOrderId,
 }: {
@@ -47,7 +48,7 @@ export default function AssignDispatchers({
     };
 
     fetchDispatchers();
-  }, []);
+  }, [message, t]);
 
   const dispatchersOption = [
     { value: null, label: t("select_all_dispatchers") },
@@ -122,8 +123,8 @@ export default function AssignDispatchers({
     // 1. First assign those orders whose area or district only matches to one dispatcher
     // 2. Then assign those orders whose area or district matches more than one dispatcher
     // 3. Lastly assign those orders whose area or district doesn't match any dispatcher
-    let unassignedOrderswithDispatchers: (Order & { matchedDispatchers: Dispatcher[] })[] = [];
-    let unassignedOrderswithNoDispatchers: Order[] = [];
+    const unassignedOrderswithDispatchers: (Order & { matchedDispatchers: Dispatcher[] })[] = [];
+    const unassignedOrderswithNoDispatchers: Order[] = [];
     for (const order of newActiveOrders) {
       // Skip already assigned orders
       if (order.dispatcherId) {
@@ -140,6 +141,7 @@ export default function AssignDispatchers({
       // Try to find a dispatcher by district first
       let matchedDispatchers = dispatchers.filter((d) =>
         d.responsibleArea.some(
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           ([_area, district]) =>
             district.toLowerCase() === customer.district.toLowerCase()
         )

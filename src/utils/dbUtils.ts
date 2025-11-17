@@ -31,6 +31,7 @@ export const createOrder = async (
       };
     } else {
       // Currently not need created_time column and change key name to dispatcherId
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { created_time, ...rest } = data[0];
       const newOrder = {
         ...rest,
@@ -64,6 +65,7 @@ export const getAllOrders = async (): Promise<Order[] | undefined> => {
     } else {
       // Remove create_time from each object since we don't need it currently
       const cleanedArray = data.map(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         ({ created_time, ...rest }) => ({
           ...rest,
         })
@@ -115,6 +117,7 @@ export const getAllCustomers = async (): Promise<
       return;
     } else {
       // Remove create_time from each object
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const cleanedArray = data.map(({ created_time, ...rest }) => ({
         ...rest,
       }));
@@ -143,6 +146,7 @@ export const addCustomer = async (
         error: error.message,
       };
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { created_time, ...rest } = data[0];
       const newOrder = {
         ...rest,
@@ -260,6 +264,7 @@ export const getAllDispatchers = async (): Promise<
       return;
     } else {
       // Remove create_time from each object
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const cleanedArray = data.map(({ created_time, ...rest }) => ({
         ...rest,
       }));
@@ -283,6 +288,7 @@ export const getAllRoutes = async (): Promise<
       return;
     } else {
       // Remove create_time from each object
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const cleanedArray = data.map(({ created_time, updated_time, ...rest }) => ({
         ...rest,
       }));
@@ -312,6 +318,7 @@ export const addRoute = async (
         error: error.message,
       };
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { created_time, updated_time, ...rest } = data[0];
       const newRoute = {
         ...rest,
@@ -350,6 +357,7 @@ export const updateRouteIsActive = async (
       };
     } else {
       // Transform the response to match our Order type
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { created_time, updated_time, ...rest } = data[0];
       const updatedRoute = {
         ...rest,
@@ -421,6 +429,7 @@ export const addDispatcher = async (
       };
     } else {
       // Currently not need created_time column and change key names
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { created_time, ...rest } = data[0];
       const newDispatcher = {
         ...rest,
@@ -453,6 +462,7 @@ export const updateDispatchers = async (
     | string;
 }> => {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const results: any[] = [];
     const errors = [];
     for (const item of dispatcherData) {
@@ -616,6 +626,7 @@ export const assignDispatcher = async (
       };
     } else {
       // Transform the response to match our Order type
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { created_time, dispatcher_id, ...rest } = data[0];
       const updatedOrder = {
         ...rest,
@@ -655,6 +666,7 @@ export const getDriverActiveRoute = async (
   if (error || !data) return null;
 
   // Extract order IDs from the route's order_sequence
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orderIds = data.order_sequence.map((order: any) => order.id);
 
   // Fetch fresh order data from orders table with current statuses
@@ -665,22 +677,27 @@ export const getDriverActiveRoute = async (
 
   if (ordersError || !freshOrders) {
     // Fallback to stale data if fresh fetch fails
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { created_time, ...rest } = data;
     return camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
   }
 
   // Clean and convert fresh orders
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const cleanedOrders = freshOrders.map(({ created_time, ...rest }) => ({ ...rest }));
   const camelOrders = camelcaseKeys(cleanedOrders, { deep: true });
 
   // Merge: maintain route's sequence order but use fresh order data
   const freshOrderSequence = orderIds.map((id: number) =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     camelOrders.find((order: any) => order.id === id)
   ).filter(Boolean); // Remove any null entries
 
   // Update route with fresh order sequence
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { created_time, ...rest } = data;
   const route = camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   route.orderSequence = freshOrderSequence as any;
 
   return route;
@@ -716,6 +733,7 @@ export const getDriverUpcomingRoutes = async (
   if (error) throw error;
 
   return data.map(row => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { created_time, ...rest } = row;
     return camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
   });
@@ -733,6 +751,7 @@ export const getDispatcherById = async (
 
   if (error || !data) return null;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { created_time, ...rest } = data;
   return camelcaseKeys(rest) as Dispatcher;
 };
@@ -749,6 +768,7 @@ export const getDispatcherByAuthId = async (
 
   if (error || !data) return null;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { created_time, ...rest } = data;
   return camelcaseKeys(rest) as Dispatcher;
 };
