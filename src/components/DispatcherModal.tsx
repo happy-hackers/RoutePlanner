@@ -13,7 +13,11 @@ import {
 } from "antd";
 import { CopyOutlined, ReloadOutlined, CheckOutlined } from "@ant-design/icons";
 import { addDispatcher, updateDispatchers } from "../utils/dbUtils";
-import { createDriverAuth, updateDriverPassword } from "../utils/authUtils";
+import {
+  createDriverAuth,
+  generateRandomPassword,
+  updateDriverPassword,
+} from "../utils/authUtils";
 import type { Dispatcher } from "../types/dispatchers";
 import areaData from "../hong_kong_areas.json";
 import { useTranslation } from "react-i18next";
@@ -50,16 +54,6 @@ export default function DispatcherModal({
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [loading, setLoading] = useState(false);
   const { t } = useTranslation(["addDispatcher", "hongkong"]);
-
-  const generateRandomPassword = () => {
-    const chars =
-      "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%";
-    let pwd = "";
-    for (let i = 0; i < 12; i++) {
-      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return pwd;
-  };
 
   const handleGeneratePassword = () => {
     const newPassword = generateRandomPassword();

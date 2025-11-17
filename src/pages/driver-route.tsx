@@ -16,7 +16,7 @@ import NextStopCard from "../components/driver/NextStopCard";
 import RouteListView from "../components/driver/RouteListView";
 import DriverMap from "../components/driver/DriverMap";
 import { getDriverActiveRoute, updateOrderStatus } from "../utils/dbUtils";
-import { generateGoogleMapsUrl } from "../utils/mapUtils";
+import { generateGoogleMapsUrl, getDistance } from "../utils/mapUtils";
 import { logoutDriver } from "../utils/authUtils";
 import { useAuth } from "../contexts/AuthContext";
 import type { DeliveryRoute } from "../types/delivery-route";
@@ -52,28 +52,6 @@ export default function DriverRoute() {
 
   const { message, modal } = App.useApp();
   const currentStop = stops[currentStopIndex];
-
-  // This uses the ‘haversine’ formula to calculate the great-circle distance between two points
-  // – that is, the shortest distance over the earth’s surface
-  function getDistance(
-    lat1: number,
-    lng1: number,
-    lat2: number,
-    lng2: number
-  ): number {
-    const R = 6371e3;
-    const φ1 = (lat1 * Math.PI) / 180;
-    const φ2 = (lat2 * Math.PI) / 180;
-    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-    const Δλ = ((lng2 - lng1) * Math.PI) / 180;
-
-    const a =
-      Math.sin(Δφ / 2) ** 2 +
-      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c;
-  }
 
   function hasIncompleteMeters(stop: AddressMetersElement): boolean {
     return stop.meters.some((meter) => meter.status !== "Delivered");
