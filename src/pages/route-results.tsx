@@ -377,6 +377,46 @@ export default function RouteResults() {
     ? newRoutes.find((r) => r.dispatcherId === selectedDispatcher.id)
     : null;
 
+  const handleClearCurrentRoute = () => {
+    const dispatcher = selectedDispatcher;
+
+    if (!dispatcher) return;
+
+    const filteredOrders = selectedOrders.filter(
+      (o) => o.dispatcherId === dispatcher.id
+    );
+
+    if (filteredOrders.length === 0) {
+      message.info(t("message_no_orders_to_clear"));
+      return;
+    }
+
+    const newSelectedIds = filteredOrders.map((o) => o.id);
+
+    const newMarker = setMarkersList(
+      filteredOrders,
+      dispatchers
+    );
+
+    setNewRoutes((prev) =>
+      prev.filter((p) => p.dispatcherId !== dispatcher.id)
+    );
+
+    setSelectedRowIds((prev) => {
+      const existingIds = new Set(prev);
+      const idsToAdd = newSelectedIds.filter(id => !existingIds.has(id));
+      return [...prev, ...idsToAdd];
+    });
+
+    setMarkers((prev) => {
+      const markersWithoutRoute = prev.filter(m => m.dispatcherId !== dispatcher.id);
+      const markersToAdd = newMarker.filter(nm => !markersWithoutRoute.some(m => m.id === nm.id));
+      return [...markersWithoutRoute, ...markersToAdd];
+    });
+
+    message.success(t("message_route_cleared_for") + dispatcher.name);
+  };
+
   const saveRoutes = async () => {
     let allSuccess = true;
     let errorMsg = "";
@@ -494,17 +534,29 @@ export default function RouteResults() {
             </>
           ) : selectedDispatcher ? (
             foundRoute ? (
-              <Table
-                rowKey="id"
-                columns={routeModeColumns}
-                dataSource={foundRoute.orderSequence.map((o, index) => ({
-                  order: index + 1,
-                  address: o.detailedAddress,
-                  travelTime: foundRoute.segmentTimes[index],
-                }))}
-                pagination={false}
-                size="small"
-              />
+              <>
+                <Table
+                  rowKey="id"
+                  columns={routeModeColumns}
+                  dataSource={foundRoute.orderSequence.map((o, index) => ({
+                    order: index + 1,
+                    address: o.detailedAddress,
+                    travelTime: foundRoute.segmentTimes[index],
+                  }))}
+                  pagination={false}
+                  size="small"
+                />
+
+                <Button
+                  danger
+                  type="primary"
+                  onClick={handleClearCurrentRoute}
+                  style={{ marginTop: 16 }}
+                >
+                  {t("button_clear_route")}
+                </Button>
+              </>
+
             ) : (
               <Table
                 rowKey="id"
