@@ -16,14 +16,18 @@ interface BatchUploadModalProps {
   isOpen: boolean;
   setOpen: (open: boolean) => void;
   onUploadComplete: () => void;
+  isMapReady: boolean;
+  isGoogleMapSelected: boolean;
 }
 
 export default function BatchUploadModal({
   isOpen,
   setOpen,
   onUploadComplete,
+  isMapReady,
+  isGoogleMapSelected,
 }: BatchUploadModalProps) {
-  const { t } = useTranslation('upload'); 
+  const { t } = useTranslation('upload');
   const keyPath = "batchUploadModel";
   const { message } = App.useApp();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -45,18 +49,18 @@ export default function BatchUploadModal({
   const [isProcessing, setIsProcessing] = useState(false);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
 
-  // Default values for auto-fill (always enabled)
   const [defaultDate, setDefaultDate] = useState(getCurrentDateHK());
   const [defaultTimePeriod, setDefaultTimePeriod] = useState<TimePeriod>(
     getCurrentTimePeriod()
   );
 
-  // Initialize geocoder
   useEffect(() => {
-    if (window.google && window.google.maps && !geocoderRef.current) {
-      geocoderRef.current = new google.maps.Geocoder();
+    if (isGoogleMapSelected && isMapReady && !geocoderRef.current) {
+      if (window.google && window.google.maps) {
+        geocoderRef.current = new window.google.maps.Geocoder();
+      }
     }
-  }, []);
+  }, [isGoogleMapSelected, isMapReady]);
 
   const handleClose = () => {
     setOpen(false);
@@ -78,7 +82,7 @@ export default function BatchUploadModal({
       return;
     }
 
-    if (!geocoderRef.current) {
+    if (isGoogleMapSelected && !geocoderRef.current) {
       message.error(t(`${keyPath}.error_maps_not_loaded`));
       return;
     }
@@ -108,7 +112,6 @@ export default function BatchUploadModal({
           setInvalidDateFormats(csvResult.invalidDateFormats);
         }
 
-        // validate basic fields
         const validOrders = orders.filter((order) => {
           return (
             order.date &&
@@ -122,17 +125,24 @@ export default function BatchUploadModal({
           return;
         }
 
-        if (!geocoderRef.current) {
-          message.error(t(`${keyPath}.error_geocoder_not_available`));
-          return;
+        if (isGoogleMapSelected) {
+          if (!geocoderRef.current) {
+            message.error(t(`${keyPath}.error_geocoder_not_available`));
+            return;
+          }
+
+          const processor = new OrderProcessor(geocoderRef.current);
+          const result = await processor.processOrders(validOrders);
+
+          setNewCustomers(result.customersToCreate);
+          setProcessedOrders(result.ordersToCreate);
+          setFailedAddresses(result.failed);
+        } else {
+          // OpenStreetMap mode: Skip Geocoding, process without lat/lng
+          // Note: Your OrderProcessor or subsequent logic must handle missing lat/lng
+          setProcessedOrders(validOrders as Omit<Order, "id">[]);
         }
 
-        const processor = new OrderProcessor(geocoderRef.current);
-        const result = await processor.processOrders(validOrders);
-
-        setNewCustomers(result.customersToCreate);
-        setProcessedOrders(result.ordersToCreate);
-        setFailedAddresses(result.failed);
         setShowPreview(true);
       } catch (err) {
         message.error(
@@ -152,7 +162,6 @@ export default function BatchUploadModal({
     try {
       const customerIdMap = new Map<string, number>();
 
-      // Step 1: Create new customers
       for (const newCustomer of newCustomers) {
         const { tempId, ...customerWithoutTempId } = newCustomer;
         const result = await addCustomer(customerWithoutTempId);
@@ -168,7 +177,6 @@ export default function BatchUploadModal({
         }
       }
 
-      // Step 2: Update orders with new customer IDs and create them
       let successCount = 0;
       for (const order of processedOrders) {
         if (order.customerId === 0) {
@@ -219,7 +227,7 @@ export default function BatchUploadModal({
             key="upload"
             type="primary"
             onClick={handleUpload}
-            disabled={!selectedFile || isProcessing}
+            disabled={!selectedFile || isProcessing || (isGoogleMapSelected && !isMapReady)}
             loading={isProcessing}
           >
             {t(`${keyPath}.button_upload`)}

@@ -15,7 +15,7 @@ import type { Order } from "../types/order.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MarkerData } from "../types/markers.ts";
 import type { Dispatcher } from "../types/dispatchers";
-import OpenStreetMap from "../components/OpenStreetMap";
+import DynamicMap from "../components/DynamicMap";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../store/index.ts";
 import {
@@ -170,7 +170,7 @@ export default function RouteResults() {
       setSelectedRowIds([]);
       setMarkers([]);
     }
-  }, [data, dispatchers]);
+  }, [data, dispatchers, isAllRoutes, newRoutes, selectedDispatcher]);
   // Work for all route option
   useEffect(() => {
     if (isAllRoutes && selectedOrders.length > 0) {
@@ -196,13 +196,15 @@ export default function RouteResults() {
         setSelectedRowIds(allIds);
       }
     }
-  }, [isAllRoutes, selectedOrders, dispatchers]);
+  }, [isAllRoutes, selectedOrders, dispatchers, newRoutes]);
 
   if (selectedOrders.length === 0) {
     return (
-      <div>
-        <Title level={4}>{t("title_no_orders_found")}</Title>
-      </div>
+      <Row justify="center" align="middle" style={{ height: "80vh" }}>
+        <Col style={{ textAlign: "center" }}>
+          <Title level={4}>{t("title_no_orders_found")}</Title>
+        </Col>
+      </Row>
     );
   }
 
@@ -429,6 +431,7 @@ export default function RouteResults() {
             errorMsg = result.error || t("message_error_save_route_failed");
           }
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         allSuccess = false;
         errorMsg = err.message || "An unexpected error occurred.";
@@ -439,6 +442,7 @@ export default function RouteResults() {
       message.success(t("message_success_all_routes_saved"));
       setNewRoutes([]);
       dispatch(setSelectedOrders([]));
+      setMarkers([]);
     } else {
       message.error(errorMsg);
     }
@@ -518,9 +522,8 @@ export default function RouteResults() {
         </Space>
       </Col>
 
-      {/* Map Section */}
       <Col xs={24} sm={24} md={24} lg={16} style={{ height: "100%" }}>
-        <OpenStreetMap
+        <DynamicMap
           orderMarkers={markers}
           setOrderMarkers={setMarkers}
           setSelectedRowId={setSelectedRowIds}

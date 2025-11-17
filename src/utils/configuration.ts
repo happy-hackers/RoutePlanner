@@ -6,7 +6,7 @@ export function getSettingInfo() {
     const settingJson = JSON.parse(settingInfo);
     return settingJson;
   } else {
-    return { startAddress: "", endAddress: "", useDefaultAddress: false };
+    return { startAddress: "", endAddress: "", useDefaultAddress: false, mapProvider: "OpenStreetMap" };
   }
 }
 

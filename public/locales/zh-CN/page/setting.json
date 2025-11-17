@@ -4,6 +4,7 @@
   "label_start_address": "默认起始地址",
   "label_end_address": "默认结束地址",
   "label_language": "语言",
+  "label_map_option": "显示地图",
   "button_submit": "提交",
   "message_save_success": "保存成功"
 }

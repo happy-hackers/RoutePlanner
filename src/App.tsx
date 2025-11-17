@@ -10,14 +10,15 @@ import SetDispatcher from "./pages/set-dispatcher";
 import Settings from "./pages/settings";
 import DriverRoute from "./pages/driver-route";
 import DriverLogin from "./pages/driver-login";
-import OpenStreetMap from "./components/OpenStreetMap";
+import DynamicMap from "./components/DynamicMap";
 import { AuthProvider } from "./contexts/AuthContext";
 import { useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import type { MarkerData } from "./types/markers";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { getAllDispatchers } from "./utils/dbUtils";
 import { setDispatchers } from "./store/dispatcherSlice";
+import type { RootState } from "./store";
 import { useTranslation } from 'react-i18next';
 import zhCN from 'antd/locale/zh_CN';
 import zhTW from 'antd/locale/zh_TW';
@@ -26,6 +27,7 @@ import type { Locale } from 'antd/es/locale';
 
 const { Content } = Layout;
 const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+const GOOGLE_MAPS_LIBRARIES: ("maps" | "marker" | "routes")[] = ["maps", "marker", "routes"];
 
 type LocaleKey = 'zh-CN' | 'zh-HK' | 'en';
 const antdLocales: Record<LocaleKey, Locale> = {
@@ -34,11 +36,21 @@ const antdLocales: Record<LocaleKey, Locale> = {
   'en': enUS,
 };
 
-function AppContent() {
+interface AppContentProps {
+  isGoogleMapSelected: boolean;
+  isMapReady: boolean;
+}
+
+function AppContent({ isGoogleMapSelected, isMapReady }: AppContentProps) {
   const dispatch = useDispatch();
   const location = useLocation();
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [hoveredOrderId, setHoveredOrderId] = useState<number | null>(null);
+
+  const emptyArray: any[] = [];
+  const emptySetter = () => {};
+
+  const [isInitialRenderComplete, setIsInitialRenderComplete] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,7 +63,8 @@ function AppContent() {
       }
     };
     fetchData();
-  }, []);
+    setIsInitialRenderComplete(true);
+  }, [dispatch]);
 
 
   const needMap = ["/view-orders", "/assign-dispatcher"].some((path) => {
@@ -59,7 +72,6 @@ function AppContent() {
     return pattern.test(location.pathname);
   });
 
-  // Driver pages are fullscreen without navigation
   const isDriverPage = location.pathname.startsWith("/driver-route") || location.pathname.startsWith("/driver-login");
 
   if (isDriverPage) {
@@ -68,6 +80,14 @@ function AppContent() {
         <Route path="/driver-login" element={<DriverLogin />} />
         <Route path="/driver-route" element={<DriverRoute />} />
       </Routes>
+    );
+  }
+
+  if (needMap && !isInitialRenderComplete) {
+    return (
+      <div style={{ padding: '50px', textAlign: 'center' }}>
+        Loading Application Data...
+      </div>
     );
   }
 
@@ -84,7 +104,7 @@ function AppContent() {
               />
               <Route
                 path="/view-orders"
-                element={<ViewOrders setMarkers={setMarkers} />}
+                element={<ViewOrders setMarkers={setMarkers} />} 
               />
               <Route
                 path="/assign-dispatcher"
@@ -99,7 +119,24 @@ function AppContent() {
           </Col>
           {needMap && (
             <Col flex="auto">
-              <OpenStreetMap orderMarkers={markers} setOrderMarkers={setMarkers} />
+              {!isMapReady ? (
+                isGoogleMapSelected ? (
+                  <div>Loading Google Map Service...</div>
+                ) : (
+                  <div>Loading Map...</div>
+                )
+              ) : (
+                <DynamicMap 
+                  orderMarkers={markers} 
+                  setOrderMarkers={setMarkers} 
+                  setSelectedRowId={() => {}} 
+                  isRouteResultsPage={false}
+                  newRoutes={emptyArray}
+                  setNewRoutes={emptySetter}
+                  isAllRoutes={false}
+                  selectedDispatcher={null}
+                />
+              )}
             </Col>
           )}
         </Row>
@@ -111,16 +148,44 @@ function AppContent() {
 function App() {
   const { i18n } = useTranslation();
   const language = i18n.language as LocaleKey;
-  //set default component language english
-  const currentLocale = antdLocales[language] || antdLocales['en'];
-  // useJsApiLoader() loads Google Maps API script with API key globally
+
+  const mapProvider = useSelector((state: RootState) => state.config.mapProvider);
+
+  const isGoogleMapSelected = mapProvider === "GoogleMap";
+
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: apiKey || "",
+    libraries: GOOGLE_MAPS_LIBRARIES, 
   });
+
+  const isMapReady = !isGoogleMapSelected || isLoaded;
+
+  const currentLocale = antdLocales[language] || antdLocales['en'];
+
+  if (isGoogleMapSelected && !isLoaded) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        fontSize: '18px'
+      }}>
+        Loading Map Service...
+      </div>
+    );
+  }
+
   return (
     <AuthProvider>
       <ConfigProvider locale={currentLocale}>
-        <AntApp>{isLoaded ? <AppContent /> : <div>Loading Map...</div>}</AntApp>
+        <AntApp>
+          <AppContent
+            key={mapProvider} 
+            isGoogleMapSelected={isGoogleMapSelected}
+            isMapReady={isMapReady}
+          />
+        </AntApp>
       </ConfigProvider>
     </AuthProvider>
   );

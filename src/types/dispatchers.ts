@@ -1,4 +1,5 @@
 export interface Dispatcher {
+  orders: any;
   id: number;
   name: string;
   email?: string;

@@ -10,15 +10,11 @@ import violetIconImage from "../assets/icons/marker-icon-2x-violet.png"
 import greenIconImage from "../assets/icons/marker-icon-2x-green.png"
 import type { Dispatcher } from "../types/dispatchers";
 
-const generateDispatcherColorsMap = (dispatchers: Dispatcher[]) => {
-  const map: Record<number, { url: string; color: string }> = {};
-  
-  dispatchers.forEach((dispatcher, index) => {
-    map[dispatcher.id] = ICONS[index];
-  });
-
-  return map;
-};
+export interface DispatcherColorMap {
+  url: string;
+  color: string;
+  name: string;
+}
 
 const greyIcon = {
   url: greyIconImage,
@@ -61,6 +57,20 @@ const greenIcon = {
 };
 
 const ICONS = [redIcon, blueIcon, orangeIcon, blackIcon, goldIcon, violetIcon, greenIcon];
+
+const generateDispatcherColorsMap = (dispatchers: Dispatcher[]): Record<number, DispatcherColorMap> => {
+  const map: Record<number, DispatcherColorMap> = {};
+  
+  dispatchers.forEach((dispatcher, index) => {
+    const iconData = ICONS[index % ICONS.length];
+    map[dispatcher.id] = {
+      ...iconData, 
+      name: dispatcher.name,
+    };
+  });
+
+  return map;
+};
 
 const setMarkersList = (orders: Order[], dispatchers: Dispatcher[]): MarkerData[] => {
   const DISPATCHER_COLORS_MAP = generateDispatcherColorsMap(dispatchers);
