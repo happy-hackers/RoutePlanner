@@ -24,7 +24,7 @@ import {
 } from "../utils/dbUtils";
 import type { Order } from "../types/order.ts";
 import type { MarkerData } from "../types/markers";
-import { setMarkersList } from "../utils/markersUtils.ts";
+import { getGroupedMarkers } from "../utils/markersUtils.ts";
 import type { Customer } from "../types/customer.ts";
 
 import { BatchUploadModal } from "../components/batch-upload";
@@ -63,7 +63,7 @@ export default function ViewOrders({
   const [isSelectedOrderModal, setIsSelectedOrderModal] = useState(false);
   const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
   const [searchText, setSearchText] = useState("");
-  const [groupView, setGroupView] = useState(true);
+  const [groupView, setGroupView] = useState(false);
   const [groupPage, setGroupPage] = useState(1);
   const groupsPerPage = 20;
 
@@ -252,14 +252,16 @@ export default function ViewOrders({
   const sortedOrders = sortOrders(filteredOrders);
 
   useEffect(() => {
-    const fetchAndSetMarkers = async () => {
-      const dispatchersData = await getAllDispatchers();
-      if (dispatchersData)
-        setMarkers(setMarkersList(selectedOrders, dispatchersData));
-    };
+  const fetchAndSetMarkers = async () => {
+    const dispatchersData = await getAllDispatchers();
+    if (!dispatchersData) return;
 
-    fetchAndSetMarkers();
-  }, [selectedOrders, setMarkers]);
+    const markers = getGroupedMarkers(selectedOrders, dispatchersData)
+    setMarkers(markers);
+  };
+
+  fetchAndSetMarkers();
+}, [selectedOrders, setMarkers]);
 
   return (
     <Row style={{ height: "100vh" }}>

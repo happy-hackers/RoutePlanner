@@ -1,10 +1,25 @@
 import { useEffect, useState } from "react";
-import { Modal, Form, Input, Select, Checkbox, Button, Space, App, Cascader, type CascaderProps } from "antd";
-import { CopyOutlined, ReloadOutlined } from "@ant-design/icons";
+import {
+  Modal,
+  Form,
+  Input,
+  Select,
+  Checkbox,
+  Button,
+  Space,
+  App,
+  Cascader,
+  type CascaderProps,
+} from "antd";
+import { CopyOutlined, ReloadOutlined, CheckOutlined } from "@ant-design/icons";
 import { addDispatcher, updateDispatchers } from "../utils/dbUtils";
-import { createDriverAuth, updateDriverPassword } from "../utils/authUtils";
+import {
+  createDriverAuth,
+  generateRandomPassword,
+  updateDriverPassword,
+} from "../utils/authUtils";
 import type { Dispatcher } from "../types/dispatchers";
-import areaData from "../hong_kong_areas.json"
+import areaData from "../hong_kong_areas.json";
 import { useTranslation } from "react-i18next";
 
 const { Option } = Select;
@@ -35,29 +50,40 @@ export default function DispatcherModal({
 }: DispatcherModalProps) {
   const [form] = Form.useForm();
   const { message } = App.useApp();
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState("");
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { t } = useTranslation(["addDispatcher", 'hongkong']);
-
-  const generateRandomPassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
-    let pwd = '';
-    for (let i = 0; i < 12; i++) {
-      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return pwd;
-  };
+  const { t } = useTranslation(["addDispatcher", "hongkong"]);
 
   const handleGeneratePassword = () => {
     const newPassword = generateRandomPassword();
     setPassword(newPassword);
-    message.success(t('msg_password_generated'));
+    message.success(t("msg_password_generated"));
   };
 
   const handleCopyPassword = () => {
     navigator.clipboard.writeText(password);
-    message.success(t('msg_password_copied'));
+    message.success(t("msg_password_copied"));
+  };
+
+  const resetPassword = async () => {
+    if (showPasswordReset && password && dispatcher?.authUserId) {
+      const pwdResult = await updateDriverPassword(
+        dispatcher.authUserId,
+        password
+      );
+      if (pwdResult.success) {
+        message.success(t("msg_edit_pwd_success"));
+        navigator.clipboard.writeText(password);
+      } else {
+        message.warning(t("msg_edit_pwd_fail", { error: pwdResult.error }));
+      }
+    }
+  };
+
+  const handleResetPassword = async () => {
+    await resetPassword();
+    setShowPasswordReset(false);
   };
 
   useEffect(() => {
@@ -70,7 +96,7 @@ export default function DispatcherModal({
           activeDay: dispatcher.activeDay,
           responsibleArea: dispatcher.responsibleArea,
         });
-        setPassword('');
+        setPassword("");
         setShowPasswordReset(false);
       } else {
         form.resetFields();
@@ -102,7 +128,7 @@ export default function DispatcherModal({
           });
 
           if (!authResult.success) {
-            message.error(authResult.error || t('msg_auth_fail_default'));
+            message.error(authResult.error || t("msg_auth_fail_default"));
             setLoading(false);
             return;
           }
@@ -121,15 +147,15 @@ export default function DispatcherModal({
 
         if (result.success && result.data) {
           if (values.email && password) {
-            message.success(t('msg_add_auth_success'));
+            message.success(t("msg_add_auth_success"));
             navigator.clipboard.writeText(password);
           } else {
-            message.success(t('msg_add_noauth_success'));
+            message.success(t("msg_add_noauth_success"));
           }
           onSuccess();
           onCancel();
         } else {
-          message.error(t('msg_add_fail', { error: result.error }));
+          message.error(t("msg_add_fail", { error: result.error }));
         }
       } else {
         if (!dispatcher) return;
@@ -146,26 +172,17 @@ export default function DispatcherModal({
         const result = await updateDispatchers([updatedDispatcher]);
 
         if (result.success) {
-          if (showPasswordReset && password && dispatcher.authUserId) {
-            const pwdResult = await updateDriverPassword(dispatcher.authUserId, password);
-            if (pwdResult.success) {
-              message.success(t('msg_edit_pwd_success'));
-              navigator.clipboard.writeText(password);
-            } else {
-              message.warning(t('msg_edit_pwd_fail', { error: pwdResult.error }));
-            }
-          } else {
-            message.success(t('msg_edit_success'));
-          }
+          resetPassword();
+          message.success(t("msg_edit_success"));
           onSuccess();
           onCancel();
         } else {
-          message.error(t('msg_edit_fail', { error: result.error }));
+          message.error(t("msg_edit_fail", { error: result.error }));
         }
       }
     } catch (error) {
       console.error("Network error:", error);
-      message.error(t('msg_network_error'));
+      message.error(t("msg_network_error"));
     } finally {
       setLoading(false);
     }
@@ -175,22 +192,26 @@ export default function DispatcherModal({
     form.resetFields();
     onCancel();
   };
-  const onChange: CascaderProps<Option, 'value', true>['onChange'] = (value) => {
+  const onChange: CascaderProps<Option, "value", true>["onChange"] = (
+    value
+  ) => {
     console.log(value);
   };
 
-  const options: Option[] = Object.entries(areaData).map(([region, districts]) => ({
-    label: t(`region_${region}`.replace(/ /g, '_'), { ns: 'hongkong' }),
-    value: region,
-    children: Object.keys(districts).map((district) => ({
-      label: t(`area_${district}`.replace(/ /g, '_'), { ns: 'hongkong' }),
-      value: district,
-    })),
-  }));
+  const options: Option[] = Object.entries(areaData).map(
+    ([region, districts]) => ({
+      label: t(`region_${region}`.replace(/ /g, "_"), { ns: "hongkong" }),
+      value: region,
+      children: Object.keys(districts).map((district) => ({
+        label: t(`area_${district}`.replace(/ /g, "_"), { ns: "hongkong" }),
+        value: district,
+      })),
+    })
+  );
 
   return (
     <Modal
-      title={mode === "add" ? t('modal_title_add') : t('modal_title_edit')}
+      title={mode === "add" ? t("modal_title_add") : t("modal_title_edit")}
       open={visible}
       onCancel={handleCancel}
       footer={null}
@@ -207,54 +228,52 @@ export default function DispatcherModal({
       >
         <Form.Item
           name="name"
-          label={t('label_name')}
-          rules={[{ required: true, message: t('validation_name_required') }]}
+          label={t("label_name")}
+          rules={[{ required: true, message: t("validation_name_required") }]}
         >
-          <Input placeholder={t('placeholder_name')} />
+          <Input placeholder={t("placeholder_name")} />
         </Form.Item>
 
         <Form.Item
           name="email"
-          label={t('label_email')}
-          rules={[
-            { type: 'email', message: t('validation_email_invalid') },
-          ]}
+          label={t("label_email")}
+          rules={[{ type: "email", message: t("validation_email_invalid") }]}
         >
-          <Input placeholder={t('placeholder_email')} type="email" />
+          <Input placeholder={t("placeholder_email")} type="email" />
         </Form.Item>
 
-        <Form.Item name="phone" label={t('label_phone')}>
-          <Input placeholder={t('placeholder_phone')} />
+        <Form.Item name="phone" label={t("label_phone")}>
+          <Input placeholder={t("placeholder_phone")} />
         </Form.Item>
 
         {/* Password Section */}
         {mode === "add" ? (
-          <Form.Item label={t('label_password_add')}>
-            <Space.Compact style={{ width: '100%' }}>
+          <Form.Item label={t("label_password_add")}>
+            <Space.Compact style={{ width: "100%" }}>
               <Input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={t('placeholder_password')}
+                placeholder={t("placeholder_password")}
               />
               <Button
                 icon={<ReloadOutlined />}
                 onClick={handleGeneratePassword}
-                title={t('button_generate_password')}
+                title={t("button_generate_password")}
               />
               <Button
                 icon={<CopyOutlined />}
                 onClick={handleCopyPassword}
                 type="primary"
-                title={t('button_copy_password')}
+                title={t("button_copy_password")}
               />
             </Space.Compact>
-            <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
-              {t('text_copy_password_tip')}
+            <div style={{ marginTop: "8px", fontSize: "12px", color: "#666" }}>
+              {t("text_copy_password_tip")}
             </div>
           </Form.Item>
         ) : (
           dispatcher?.authUserId && (
-            <Form.Item label={t('label_password_edit')}>
+            <Form.Item label={t("label_password_edit")}>
               {!showPasswordReset ? (
                 <Button
                   onClick={() => {
@@ -262,15 +281,23 @@ export default function DispatcherModal({
                     setPassword(generateRandomPassword());
                   }}
                 >
-                  {t('button_reset_password')}
+                  {t("button_reset_password")}
                 </Button>
               ) : (
                 <>
-                  <Space.Compact style={{ width: '100%' }}>
+                  <Space.Compact style={{ width: "100%" }}>
                     <Input
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder={t('placeholder_new_password')}
+                      placeholder={t("placeholder_new_password")}
+                    />
+                    <Button
+                      icon={<CheckOutlined />}
+                      onClick={handleResetPassword}
+                      type="primary"
+                      style={{
+                        backgroundColor: "green",
+                      }}
                     />
                     <Button
                       icon={<ReloadOutlined />}
@@ -282,8 +309,14 @@ export default function DispatcherModal({
                       type="primary"
                     />
                   </Space.Compact>
-                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
-                    {t('text_new_password_tip')}
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      fontSize: "12px",
+                      color: "#666",
+                    }}
+                  >
+                    {t("text_new_password_tip")}
                   </div>
                 </>
               )}
@@ -291,12 +324,16 @@ export default function DispatcherModal({
           )
         )}
 
-        <Form.Item name="activeDay" label={t('label_active_days')}>
+        <Form.Item name="activeDay" label={t("label_active_days")}>
           <Form.Item noStyle shouldUpdate>
             {({ getFieldValue, setFieldValue }) => {
               const activeDay = getFieldValue("activeDay") || {};
 
-              const handleCheckboxChange = (day: string, period: string, checked: boolean) => {
+              const handleCheckboxChange = (
+                day: string,
+                period: string,
+                checked: boolean
+              ) => {
                 const currentPeriods = activeDay[day] || [];
                 const newPeriods = checked
                   ? [...currentPeriods, period]
@@ -312,7 +349,10 @@ export default function DispatcherModal({
                 setFieldValue("activeDay", newActiveDay);
               };
 
-              const handleDayCheckboxChange = (day: string, checked: boolean) => {
+              const handleDayCheckboxChange = (
+                day: string,
+                checked: boolean
+              ) => {
                 const newActiveDay = { ...activeDay };
                 if (checked) {
                   // Select all periods for this day
@@ -325,13 +365,33 @@ export default function DispatcherModal({
               };
 
               return (
-                <div style={{ border: "1px solid #d9d9d9", borderRadius: "4px", padding: "12px" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "40px 60px repeat(3, 1fr)", gap: "8px", alignItems: "center" }}>
+                <div
+                  style={{
+                    border: "1px solid #d9d9d9",
+                    borderRadius: "4px",
+                    padding: "12px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "40px 60px repeat(3, 1fr)",
+                      gap: "8px",
+                      alignItems: "center",
+                    }}
+                  >
                     {/* Header row */}
                     <div></div>
                     <div></div>
                     {periods.map((period) => (
-                      <div key={period} style={{ fontWeight: "bold", textAlign: "center", color: "black" }}>
+                      <div
+                        key={period}
+                        style={{
+                          fontWeight: "bold",
+                          textAlign: "center",
+                          color: "black",
+                        }}
+                      >
                         {t(`period_${period.toLowerCase()}`)}
                       </div>
                     ))}
@@ -339,24 +399,42 @@ export default function DispatcherModal({
                     {/* Day rows */}
                     {days.map((day) => {
                       const dayPeriods = activeDay[day] || [];
-                      const isAllSelected = dayPeriods.length === periods.length;
+                      const isAllSelected =
+                        dayPeriods.length === periods.length;
 
                       return (
                         <>
-                          <div key={`${day}-checkbox`} style={{ textAlign: "center" }}>
+                          <div
+                            key={`${day}-checkbox`}
+                            style={{ textAlign: "center" }}
+                          >
                             <Checkbox
                               checked={isAllSelected}
-                              onChange={(e) => handleDayCheckboxChange(day, e.target.checked)}
+                              onChange={(e) =>
+                                handleDayCheckboxChange(day, e.target.checked)
+                              }
                             />
                           </div>
-                          <div key={`${day}-label`} style={{ fontWeight: "500", color: "black" }}>
+                          <div
+                            key={`${day}-label`}
+                            style={{ fontWeight: "500", color: "black" }}
+                          >
                             {t(`day_${day}`)}
                           </div>
                           {periods.map((period) => (
-                            <div key={`${day}-${period}`} style={{ textAlign: "center" }}>
+                            <div
+                              key={`${day}-${period}`}
+                              style={{ textAlign: "center" }}
+                            >
                               <Checkbox
                                 checked={dayPeriods.includes(period)}
-                                onChange={(e) => handleCheckboxChange(day, period, e.target.checked)}
+                                onChange={(e) =>
+                                  handleCheckboxChange(
+                                    day,
+                                    period,
+                                    e.target.checked
+                                  )
+                                }
                               />
                             </div>
                           ))}
@@ -370,9 +448,9 @@ export default function DispatcherModal({
           </Form.Item>
         </Form.Item>
 
-        <Form.Item name="responsibleArea" label={t('label_responsible_areas')}>
+        <Form.Item name="responsibleArea" label={t("label_responsible_areas")}>
           <Cascader
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
             options={options}
             onChange={onChange}
             multiple
@@ -383,9 +461,9 @@ export default function DispatcherModal({
         <Form.Item>
           <Space>
             <Button type="primary" htmlType="submit" loading={loading}>
-              {mode === "add" ? t('button_add') : t('button_update')}
+              {mode === "add" ? t("button_add") : t("button_update")}
             </Button>
-            <Button onClick={handleCancel}>{t('button_cancel')}</Button>
+            <Button onClick={handleCancel}>{t("button_cancel")}</Button>
           </Space>
         </Form.Item>
       </Form>
