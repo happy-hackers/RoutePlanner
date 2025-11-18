@@ -41,12 +41,12 @@ function isIcon(icon: L.DivIcon | L.Icon): icon is L.Icon {
 function createNumberIcon(number: number): L.DivIcon {
   return L.divIcon({
     className: "custom-marker",
-    html: `<div style="position: relative; width: 40px; height: 56px;">
-<img src="${orderedMarkerImg}" style="width: 40px; height: 56px;" />
+    html: `<div style="position: relative; width: 75px; height: 56px;">
+<img src="${orderedMarkerImg}" style="width: 75px; height: 56px;" />
 <div style="
 position: absolute;
 top: 8px;
-left: 8px;
+left: 38px;
 width: 30px;
 text-align: center;
 font-weight: bold;
@@ -56,28 +56,28 @@ text-shadow: 0 0 2px black;
 ${number}
 </div>
 </div>`,
-    iconAnchor: [20, 56],
-    iconSize: [40, 56],
+    iconAnchor: [38, 54],
+    iconSize: [75, 56],
   });
 }
 
 const startIcon = new L.Icon({
   iconUrl: startMarkerImg,
-  iconSize: [40, 56] as PointExpression,
-  iconAnchor: [20, 56] as PointExpression,
+  iconSize: [56, 56],
+  iconAnchor: [28, 56],
 });
 
 const endIcon = new L.Icon({
   iconUrl: endMarkerImg,
-  iconSize: [40, 56] as PointExpression,
-  iconAnchor: [20, 56] as PointExpression,
+  iconSize: [56, 56],
+  iconAnchor: [28, 56],
 });
 
 const defaultIcon = new L.Icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconSize: [25, 41] as PointExpression,
-  iconAnchor: [12, 41] as PointExpression,
-  popupAnchor: [1, -34] as PointExpression,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
   shadowUrl:
     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
@@ -136,10 +136,39 @@ const HoverMarker: React.FC<HoverMarkerProps> = ({
   const markerRef = useRef<L.Marker | null>(null);
   const originalSizeTuple = originalIconSize as L.PointTuple;
 
+  const SCALE_FACTOR = 1.8;
+
+  const originalIcon = useMemo(() => {
+    return icon;
+  }, [icon]);
+
   const largeIconSize: PointExpression = useMemo(() => [
-    originalSizeTuple[0] * 1.8,
-    originalSizeTuple[1] * 1.8,
+    originalSizeTuple[0] * SCALE_FACTOR,
+    originalSizeTuple[1] * SCALE_FACTOR,
   ], [originalSizeTuple]);
+
+  const originalAnchor: L.PointTuple = useMemo(() => {
+    if (isIcon(icon) || isDivIcon(icon)) {
+      return icon.options.iconAnchor as L.PointTuple;
+    }
+    return [originalSizeTuple[0] / 2, originalSizeTuple[1]];
+  }, [icon, originalSizeTuple]);
+
+  const largeAnchor: L.PointTuple = useMemo(() => {
+    return [
+      originalAnchor[0] * SCALE_FACTOR,
+      originalAnchor[1] * SCALE_FACTOR
+    ] as L.PointTuple;
+  }, [originalAnchor]);
+
+  const largePopupAnchor: PointExpression = useMemo(() => {
+    const largeHeight = largeIconSize[1];
+    return [
+      0,
+      -(largeHeight * 0.95)
+    ] as PointExpression;
+  }, [largeIconSize]);
+
 
   const handleMouseOver = () => {
     if (markerRef.current) {
@@ -148,27 +177,52 @@ const HoverMarker: React.FC<HoverMarkerProps> = ({
           iconUrl: icon.options.iconUrl,
           iconSize: largeIconSize,
           iconAnchor: [(largeIconSize as L.PointTuple)[0] / 2, (largeIconSize as L.PointTuple)[1]],
+          popupAnchor: largePopupAnchor,
           shadowUrl: icon.options.shadowUrl,
         });
         markerRef.current.setIcon(newIcon);
+
       } else if (isDivIcon(icon)) {
-        const divIconElement = markerRef.current.getElement();
-        if (divIconElement) {
-          divIconElement.style.transform = `${divIconElement.style.transform} scale(1.5)`;
-        }
+        const divIconOptions = (originalIcon as L.DivIcon).options;
+        const originalHtml = divIconOptions.html;
+
+        const newDivIcon = L.divIcon({
+          className: divIconOptions.className,
+          html: originalHtml,
+          iconSize: largeIconSize,
+          iconAnchor: largeAnchor,
+          popupAnchor: largePopupAnchor,
+        });
+
+        markerRef.current.setIcon(newDivIcon);
+
+        setTimeout(() => {
+          const iconElement = markerRef.current?.getElement();
+          const innerContent = iconElement?.firstChild as HTMLElement;
+          if (innerContent) {
+            innerContent.style.transform = `scale(${SCALE_FACTOR})`;
+            innerContent.style.transformOrigin = '0 0';
+          }
+        }, 0);
       }
+      markerRef.current.openPopup();
     }
   };
 
   const handleMouseOut = () => {
     if (markerRef.current) {
-      if (isIcon(icon)) {
-        markerRef.current.setIcon(icon as L.Icon);
-      } else if (isDivIcon(icon)) {
-        const divIconElement = markerRef.current.getElement();
-        if (divIconElement) {
-          divIconElement.style.transform = divIconElement.style.transform.replace(' scale(1.5)', '');
-        }
+      markerRef.current.closePopup();
+      markerRef.current.setIcon(originalIcon as L.Icon | L.DivIcon);
+
+      if (isDivIcon(icon)) {
+        setTimeout(() => {
+          const iconElement = markerRef.current?.getElement();
+          const innerContent = iconElement?.firstChild as HTMLElement;
+          if (innerContent) {
+            innerContent.style.transform = '';
+            innerContent.style.transformOrigin = '';
+          }
+        }, 0);
       }
     }
   };
@@ -176,7 +230,7 @@ const HoverMarker: React.FC<HoverMarkerProps> = ({
   return (
     <Marker
       position={position}
-      icon={icon}
+      icon={originalIcon}
       ref={markerRef}
       eventHandlers={{
         mouseover: handleMouseOver,

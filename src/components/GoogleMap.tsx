@@ -39,6 +39,9 @@ const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 
 const DISPLAY_WIDTH = 32;
 const DISPLAY_HEIGHT = 48;
+const ORDERED_MARKER_WIDTH = 75;
+const ORDERED_MARKER_HEIGHT = 56;
+const START_END_MARKER_SIZE = 56;
 
 const InputBarStyle: React.CSSProperties = {
   position: "absolute",
@@ -104,14 +107,15 @@ const createMarkerContent = (url: string, number: number | null, width: number, 
     const numberDiv = document.createElement('div');
     numberDiv.textContent = String(number);
     numberDiv.style.position = 'absolute';
-    numberDiv.style.top = `${height * 0.16}px`;
-    numberDiv.style.left = '50%';
+    numberDiv.style.top = '10px';
+    numberDiv.style.left = '70%';
+    numberDiv.style.width = '30px';
     numberDiv.style.transform = 'translateX(-50%)';
     numberDiv.style.fontWeight = 'bold';
     numberDiv.style.color = 'white';
     numberDiv.style.fontSize = '12px';
     numberDiv.style.textAlign = 'center';
-    numberDiv.style.textShadow = '0 0 1px black, 0 0 1px black';
+    numberDiv.style.textShadow = '0 0 2px black';
 
     element.appendChild(numberDiv);
     element.className = 'advanced-marker-icon numbered';
@@ -121,7 +125,9 @@ const createMarkerContent = (url: string, number: number | null, width: number, 
 
   element.onmouseover = (e) => {
     const target = e.currentTarget as HTMLElement;
-    target.style.transform = `scale(${isNumbered ? 1.5 : 1.8})`;
+    const scaleFactor = 1.8;
+    target.style.transformOrigin = '50% 100%';
+    target.style.transform = `scale(${scaleFactor})`;
     target.style.transition = 'transform 0.1s ease-in-out';
     target.style.zIndex = '9999';
   };
@@ -258,108 +264,102 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
         : (foundRoute ? [foundRoute] : []);
 
       const allCoords: google.maps.LatLngLiteral[] = [];
+      const assignedPositions = new Set<string>();
 
-      if (routesToRender.length === 0) {
-        const markerWidth = DISPLAY_WIDTH;
-        const markerHeight = DISPLAY_HEIGHT;
-        orderMarkers.forEach((markerData) => {
-          const iconURL = markerData.icon?.url || orderedMarkerImg;
+      routesToRender.forEach((route) => {
+        const color = DISPATCHER_COLORS_MAP[route.dispatcherId]?.color || '#0000FF';
+        const dispatcherName = DISPATCHER_COLORS_MAP[route.dispatcherId]?.name || '';
 
-          const dispatcherName = markerData.dispatcherId
-            ? DISPATCHER_COLORS_MAP[markerData.dispatcherId]?.name
-            : t('unassigned');
+        const polyline = new google.maps.Polyline({
+          path: (route.polylineCoordinates as [number, number][]).map(c => ({ lat: c[0], lng: c[1] })),
+          geodesic: true,
+          strokeColor: color,
+          strokeOpacity: 0.8,
+          strokeWeight: 4,
+          map: map,
+        });
+        polylinesRef.current.push(polyline);
 
-          const contentElement = createMarkerContent(iconURL, null, markerWidth, markerHeight);
+        const startPosition = { lat: route.startLat, lng: route.startLng };
+        const startContent = createMarkerContent(startMarkerImg, null, START_END_MARKER_SIZE, START_END_MARKER_SIZE);
+
+        const startMarker = new google.maps.marker.AdvancedMarkerElement({
+          map: map,
+          position: startPosition,
+          title: t("popupStart") + ": " + route.startAddress,
+          content: startContent,
+        });
+
+        markersRef.current.push(startMarker);
+        allCoords.push(startPosition);
+        addMarkerListener(startMarker, `
+          <div style="font-weight: bold;">${t('popupStart')}: ${route.startAddress}</div>
+          <div>${t('dispatcher')}: ${dispatcherName}</div>
+          `);
+
+        (route.orderSequence as Order[]).forEach((order, i) => {
+          const position = { lat: order.lat, lng: order.lng };
+          assignedPositions.add(`${order.lat},${order.lng}`);
+
+          const numberedContent = createMarkerContent(orderedMarkerImg, i + 1, ORDERED_MARKER_WIDTH, ORDERED_MARKER_HEIGHT);
 
           const marker = new google.maps.marker.AdvancedMarkerElement({
             map: map,
-            position: markerData.position,
-            title: markerData.address,
-            content: contentElement,
+            position: position,
+            title: t("popupStop") + ` ${i + 1}: ${order.detailedAddress}`,
+            content: numberedContent,
           });
-
           markersRef.current.push(marker);
-          allCoords.push(markerData.position);
+          allCoords.push(position);
           addMarkerListener(marker, `
-            <div style="font-weight: bold;">${markerData.address}</div>
-            <div>${t('dispatcher')}: ${dispatcherName}</div>
-            `);
-        });
-      }
-
-      if (routesToRender.length > 0) {
-        routesToRender.forEach((route) => {
-          const color = DISPATCHER_COLORS_MAP[route.dispatcherId]?.color || '#0000FF';
-          const dispatcherName = DISPATCHER_COLORS_MAP[route.dispatcherId]?.name || '';
-
-          const polyline = new google.maps.Polyline({
-            path: (route.polylineCoordinates as [number, number][]).map(c => ({ lat: c[0], lng: c[1] })),
-            geodesic: true,
-            strokeColor: color,
-            strokeOpacity: 0.8,
-            strokeWeight: 4,
-            map: map,
-          });
-          polylinesRef.current.push(polyline);
-
-          const startPosition = { lat: route.startLat, lng: route.startLng };
-          const startContent = createMarkerContent(startMarkerImg, null, DISPLAY_WIDTH, DISPLAY_HEIGHT);
-
-          const startMarker = new google.maps.marker.AdvancedMarkerElement({
-            map: map,
-            position: startPosition,
-            title: t("popupStart") + ": " + route.startAddress,
-            content: startContent,
-          });
-
-          markersRef.current.push(startMarker);
-          allCoords.push(startPosition);
-          addMarkerListener(startMarker, `
-            <div style="font-weight: bold;">${t('popupStart')}: ${route.startAddress}</div>
-            <div>${t('dispatcher')}: ${dispatcherName}</div>
-            `);
-
-          (route.orderSequence as Order[]).forEach((order, i) => {
-            const position = { lat: order.lat, lng: order.lng };
-
-            const numberedContent = createMarkerContent(orderedMarkerImg, i + 1, DISPLAY_WIDTH, DISPLAY_HEIGHT);
-
-            const marker = new google.maps.marker.AdvancedMarkerElement({
-              map: map,
-              position: position,
-              title: t("popupStop") + ` ${i + 1}: ${order.detailedAddress}`,
-              content: numberedContent,
-            });
-            markersRef.current.push(marker);
-            allCoords.push(position);
-            addMarkerListener(marker, `
             <div style="font-weight: bold;">${t('popupStop')} ${i + 1}: ${order.detailedAddress}</div>
             <div>${t('dispatcher')}: ${dispatcherName}</div>
             `);
-          });
+        });
 
-          const endPosition = { lat: route.endLat, lng: route.endLng };
-          const endContent = createMarkerContent(endMarkerImg, null, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+        const endPosition = { lat: route.endLat, lng: route.endLng };
+        const endContent = createMarkerContent(endMarkerImg, null, START_END_MARKER_SIZE, START_END_MARKER_SIZE);
 
-          const endMarker = new google.maps.marker.AdvancedMarkerElement({
-            map: map,
-            position: endPosition,
-            title: t("popupEnd") + ": " + route.endAddress,
-            content: endContent,
-          });
-          markersRef.current.push(endMarker);
-          allCoords.push(endPosition);
-          addMarkerListener(endMarker, `
-            <div style="font-weight: bold;">${t('popupEnd')}: ${route.endAddress}</div>
+        const endMarker = new google.maps.marker.AdvancedMarkerElement({
+          map: map,
+          position: endPosition,
+          title: t("popupEnd") + ": " + route.endAddress,
+          content: endContent,
+        });
+        markersRef.current.push(endMarker);
+        allCoords.push(endPosition);
+        addMarkerListener(endMarker, `
+          <div style="font-weight: bold;">${t('popupEnd')}: ${route.endAddress}</div>
+          <div>${t('dispatcher')}: ${dispatcherName}</div>
+          `);
+      });
+
+      orderMarkers.forEach((markerData) => {
+        const positionKey = `${markerData.position.lat},${markerData.position.lng}`;
+        if (routesToRender.length > 0 && assignedPositions.has(positionKey)) {
+          return;
+        }
+        const iconURL = markerData.icon?.url || orderedMarkerImg;
+        const dispatcherName = markerData.dispatcherId
+          ? DISPATCHER_COLORS_MAP[markerData.dispatcherId]?.name
+          : t('unassigned');
+
+        const contentElement = createMarkerContent(iconURL, null, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+          map: map,
+          position: markerData.position,
+          title: markerData.address,
+          content: contentElement,
+        });
+
+        markersRef.current.push(marker);
+        allCoords.push(markerData.position);
+        addMarkerListener(marker, `
+            <div style="font-weight: bold;">${markerData.address}</div>
             <div>${t('dispatcher')}: ${dispatcherName}</div>
             `);
-        });
-
-      } else if (!foundRoute && !isAllRoutes && orderMarkers.length > 0) {
-        orderMarkers.forEach(markerData => {
-          allCoords.push(markerData.position);
-        });
-      }
+      });
 
       if (allCoords.length > 0) {
         const bounds = new google.maps.LatLngBounds();

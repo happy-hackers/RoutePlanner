@@ -49,6 +49,7 @@ export const useRoutingAndGeocoding = ({
     newRoutes,
     setNewRoutes,
     selectedDispatcher,
+    isAllRoutes,
     message,
     t,
 }: RoutingHookProps) => {
@@ -348,17 +349,25 @@ export const useRoutingAndGeocoding = ({
     };
 
     const handleCalculate = () => {
+        if (!isAllRoutes && !selectedDispatcher) {
+            message.error(t('errorRouteCalculationFailed'));
+            return;
+        }
+        if (!startAddress || !endAddress) {
+            message.error(t("errorStartEndRequired"));
+            return;
+        }
+        const idToCalculate = selectedDispatcher?.id;
         if (searchOptions === "normal") {
-            calculateRoute();
+            calculateRoute(idToCalculate); 
         } else {
             if (!startTime) {
                 message.error(t("errorStartTimeRequired"));
                 return;
             }
-            calculateRoutebyTime();
+            calculateRoutebyTime(idToCalculate);
         }
     };
-
 
     return {
         startAddress,
