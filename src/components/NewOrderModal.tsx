@@ -80,7 +80,7 @@ export default function NewOrderModal({
       autocompleteService.current = new google.maps.places.AutocompleteSuggestion();
       geocoderRef.current = new google.maps.Geocoder();
     })();
-  }, []);
+  }, [GOOGLE_API_KEY]);
 
   useEffect(() => {
     if (!autocompleteService.current) return;

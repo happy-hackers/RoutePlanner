@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@googlemaps/js-api-loader": "^2.0.1",
+    "@googlemaps/js-api-loader": "^2.0.2",
     "@googlemaps/markerclusterer": "^2.5.1",
     "@react-google-maps/api": "^2.20.6",
     "@reduxjs/toolkit": "^2.8.2",

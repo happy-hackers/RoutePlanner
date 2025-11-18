@@ -12,7 +12,6 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 //const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY!;
 
-
 export const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export const createOrder = async (
@@ -31,6 +30,7 @@ export const createOrder = async (
       };
     } else {
       // Currently not need created_time column and change key name to dispatcherId
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { created_time, ...rest } = data[0];
       const newOrder = {
         ...rest,
@@ -52,9 +52,7 @@ export const createOrder = async (
 
 export const getAllOrders = async (): Promise<Order[] | undefined> => {
   try {
-    const { data, error } = await supabase
-    .from("orders")
-    .select(`
+    const { data, error } = await supabase.from("orders").select(`
       *, 
       customer:customers(*)
       `);
@@ -64,6 +62,7 @@ export const getAllOrders = async (): Promise<Order[] | undefined> => {
     } else {
       // Remove create_time from each object since we don't need it currently
       const cleanedArray = data.map(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         ({ created_time, ...rest }) => ({
           ...rest,
         })
@@ -77,9 +76,7 @@ export const getAllOrders = async (): Promise<Order[] | undefined> => {
   }
 };
 
-export const updateOrder = async (
-  orderData: Order
-) => {
+export const updateOrder = async (orderData: Order) => {
   try {
     const { id, ...fieldsToUpdate } = orderData;
     const { error } = await supabase
@@ -87,27 +84,25 @@ export const updateOrder = async (
       .update(snakecaseKeys(fieldsToUpdate))
       .eq("id", id);
     if (error) {
-        console.error("Error updating ID:", `${id}: ${error.message}`);
-        return {
-          success: false,
-          error: error
-        }
-    } else {
-      return {
-        success: true
-      }
-    }  
-  } catch (error) {
+      console.error("Error updating ID:", `${id}: ${error.message}`);
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Network error occurred",
+        error: error,
+      };
+    } else {
+      return {
+        success: true,
       };
     }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Network error occurred",
+    };
+  }
 };
 
-export const getAllCustomers = async (): Promise<
-  Customer[] | undefined
-> => {
+export const getAllCustomers = async (): Promise<Customer[] | undefined> => {
   try {
     const { data, error } = await supabase.from("customers").select("*");
     if (error) {
@@ -115,6 +110,7 @@ export const getAllCustomers = async (): Promise<
       return;
     } else {
       // Remove create_time from each object
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const cleanedArray = data.map(({ created_time, ...rest }) => ({
         ...rest,
       }));
@@ -143,6 +139,7 @@ export const addCustomer = async (
         error: error.message,
       };
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { created_time, ...rest } = data[0];
       const newOrder = {
         ...rest,
@@ -162,9 +159,7 @@ export const addCustomer = async (
   }
 };
 
-export const updateCustomer = async (
-  customerData: Customer
-) => {
+export const updateCustomer = async (customerData: Customer) => {
   try {
     const { id, ...fieldsToUpdate } = customerData;
     const { error } = await supabase
@@ -172,22 +167,22 @@ export const updateCustomer = async (
       .update(snakecaseKeys(fieldsToUpdate))
       .eq("id", id);
     if (error) {
-        console.error("Error updating ID:", `${id}: ${error.message}`);
-        return {
-          success: false,
-          error: error
-        }
-    } else {
-      return {
-        success: true
-      }
-    }
-  } catch (error) {
+      console.error("Error updating ID:", `${id}: ${error.message}`);
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Network error occurred",
+        error: error,
+      };
+    } else {
+      return {
+        success: true,
       };
     }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Network error occurred",
+    };
+  }
 };
 
 export const deleteCustomer = async (
@@ -254,12 +249,17 @@ export const getAllDispatchers = async (): Promise<
   Dispatcher[] | undefined
 > => {
   try {
-    const { data, error } = await supabase.from("dispatchers").select("id, name, email, phone, auth_user_id, active_day, responsible_area, created_time");
+    const { data, error } = await supabase
+      .from("dispatchers")
+      .select(
+        "id, name, email, phone, auth_user_id, active_day, responsible_area, created_time"
+      );
     if (error) {
       console.error("Fetch error:", error);
       return;
     } else {
       // Remove create_time from each object
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const cleanedArray = data.map(({ created_time, ...rest }) => ({
         ...rest,
       }));
@@ -273,9 +273,7 @@ export const getAllDispatchers = async (): Promise<
   }
 };
 
-export const getAllRoutes = async (): Promise<
-  Route[] | undefined
-> => {
+export const getAllRoutes = async (): Promise<Route[] | undefined> => {
   try {
     const { data, error } = await supabase.from("delivery_routes").select("*");
     if (error) {
@@ -283,9 +281,12 @@ export const getAllRoutes = async (): Promise<
       return;
     } else {
       // Remove create_time from each object
-      const cleanedArray = data.map(({ created_time, updated_time, ...rest }) => ({
-        ...rest,
-      }));
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const cleanedArray = data.map(
+        ({ created_time, updated_time, ...rest }) => ({
+          ...rest,
+        })
+      );
       // Change the key name xxx_axx to xxxAxx format
       const camelData = camelcaseKeys(cleanedArray, { deep: true });
       return camelData;
@@ -312,6 +313,7 @@ export const addRoute = async (
         error: error.message,
       };
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { created_time, updated_time, ...rest } = data[0];
       const newRoute = {
         ...rest,
@@ -350,6 +352,7 @@ export const updateRouteIsActive = async (
       };
     } else {
       // Transform the response to match our Order type
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { created_time, updated_time, ...rest } = data[0];
       const updatedRoute = {
         ...rest,
@@ -371,7 +374,14 @@ export const addRoutes = async (
   routes: Omit<Route, "id">[]
 ): Promise<{ success: boolean; data?: Route[]; error?: string }> => {
   try {
-    console.log("payload", JSON.stringify(routes.map(r => snakecaseKeys(r)), null, 2));
+    console.log(
+      "payload",
+      JSON.stringify(
+        routes.map((r) => snakecaseKeys(r)),
+        null,
+        2
+      )
+    );
     const { data, error } = await supabase
       .from("delivery_routes")
       .insert(routes.map((r) => snakecaseKeys(r)))
@@ -421,6 +431,7 @@ export const addDispatcher = async (
       };
     } else {
       // Currently not need created_time column and change key names
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { created_time, ...rest } = data[0];
       const newDispatcher = {
         ...rest,
@@ -453,6 +464,7 @@ export const updateDispatchers = async (
     | string;
 }> => {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const results: any[] = [];
     const errors = [];
     for (const item of dispatcherData) {
@@ -549,7 +561,10 @@ export const deleteDispatcher = async (
         .in("status", ["Delivered", "Cancelled"]);
 
       if (updateCompletedOrdersError) {
-        console.error("Error updating completed orders:", updateCompletedOrdersError);
+        console.error(
+          "Error updating completed orders:",
+          updateCompletedOrdersError
+        );
         return {
           success: false,
           error: updateCompletedOrdersError.message,
@@ -573,15 +588,16 @@ export const deleteDispatcher = async (
 
     // Delete associated auth user if exists
     if (authUserId) {
-      const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(
-        authUserId
-      );
+      const { error: deleteAuthError } =
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
 
       if (deleteAuthError) {
         console.error("Error deleting auth user:", deleteAuthError);
         // Don't fail the whole operation if auth deletion fails
         // The dispatcher record is already deleted
-        console.warn(`Dispatcher deleted but auth user ${authUserId} could not be deleted`);
+        console.warn(
+          `Dispatcher deleted but auth user ${authUserId} could not be deleted`
+        );
       }
     }
 
@@ -616,6 +632,7 @@ export const assignDispatcher = async (
       };
     } else {
       // Transform the response to match our Order type
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { created_time, dispatcher_id, ...rest } = data[0];
       const updatedOrder = {
         ...rest,
@@ -642,53 +659,61 @@ export const getDriverActiveRoute = async (
   dispatcherId: number,
   routeDate?: string
 ): Promise<DeliveryRoute | null> => {
-  const date = routeDate || new Date().toISOString().split('T')[0];
+  const date = routeDate || new Date().toISOString().split("T")[0];
 
   const { data, error } = await supabase
-    .from('delivery_routes')
-    .select('*')
-    .eq('dispatcher_id', dispatcherId)
-    .eq('route_date', date)
-    .eq('is_active', true)
+    .from("delivery_routes")
+    .select("*")
+    .eq("dispatcher_id", dispatcherId)
+    .eq("route_date", date)
+    .eq("is_active", true)
     .single();
 
   if (error || !data) return null;
 
   // Extract order IDs from the route's order_sequence
-  const orderIds = data.address_meter_sequence
-    .flatMap((entry: any) => entry.meters.map((order: any) => order.id));
+  const orderIds = data.address_meter_sequence.flatMap((entry: any) =>
+    entry.meters.map((order: any) => order.id)
+  );
 
   // Fetch fresh order data from orders table with current statuses
   const { data: freshOrders, error: ordersError } = await supabase
-    .from('orders')
-    .select('*, customers(*)')
-    .in('id', orderIds);
+    .from("orders")
+    .select("*, customers(*)")
+    .in("id", orderIds);
 
   if (ordersError || !freshOrders) {
     // Fallback to stale data if fresh fetch fails
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { created_time, ...rest } = data;
     return camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
   }
 
   // Clean and convert fresh orders
-  const cleanedOrders = freshOrders.map(({ created_time, ...rest }) => ({ ...rest }));
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const cleanedOrders = freshOrders.map(({ created_time, ...rest }) => ({
+    ...rest,
+  }));
   const camelOrders = camelcaseKeys(cleanedOrders, { deep: true });
 
   // Merge: maintain route's address meter sequence order but use fresh order data
-  const freshAddressMeterSequence = data.address_meter_sequence.map((entry: any) => {
-    const freshMeters = entry.meters.map((order: any) =>
-      camelOrders.find((o: any) => o.id === order.id)
-    ).filter(Boolean); // Remove any null entries
+  const freshAddressMeterSequence = data.address_meter_sequence.map(
+    (entry: any) => {
+      const freshMeters = entry.meters
+        .map((order: any) => camelOrders.find((o: any) => o.id === order.id))
+        .filter(Boolean); // Remove any null entries
 
-    return {
-      address: entry.address,
-      lat: entry.lat,
-      lng: entry.lng,
-      meters: freshMeters,
-    };
-  });
+      return {
+        address: entry.address,
+        lat: entry.lat,
+        lng: entry.lng,
+        meters: freshMeters,
+      };
+    }
+  );
 
   // Update route with fresh order sequence
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { created_time, ...rest } = data;
   const route = camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
   route.addressMeterSequence = freshAddressMeterSequence as any;
@@ -702,9 +727,9 @@ export const updateOrderStatus = async (
   newStatus: OrderStatus
 ): Promise<void> => {
   const { error } = await supabase
-    .from('orders')
+    .from("orders")
     .update({ status: newStatus })
-    .eq('id', orderId);
+    .eq("id", orderId);
 
   if (error) throw error;
 };
@@ -713,19 +738,20 @@ export const updateOrderStatus = async (
 export const getDriverUpcomingRoutes = async (
   dispatcherId: number
 ): Promise<DeliveryRoute[]> => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split("T")[0];
 
   const { data, error } = await supabase
-    .from('delivery_routes')
-    .select('*')
-    .eq('dispatcher_id', dispatcherId)
-    .eq('is_active', true)
-    .gte('route_date', today)
-    .order('route_date', { ascending: true });
+    .from("delivery_routes")
+    .select("*")
+    .eq("dispatcher_id", dispatcherId)
+    .eq("is_active", true)
+    .gte("route_date", today)
+    .order("route_date", { ascending: true });
 
   if (error) throw error;
 
-  return data.map(row => {
+  return data.map((row) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { created_time, ...rest } = row;
     return camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
   });
@@ -736,13 +762,16 @@ export const getDispatcherById = async (
   dispatcherId: number
 ): Promise<Dispatcher | null> => {
   const { data, error } = await supabase
-    .from('dispatchers')
-    .select('id, name, email, phone, auth_user_id, active_day, responsible_area, created_time')
-    .eq('id', dispatcherId)
+    .from("dispatchers")
+    .select(
+      "id, name, email, phone, auth_user_id, active_day, responsible_area, created_time"
+    )
+    .eq("id", dispatcherId)
     .single();
 
   if (error || !data) return null;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { created_time, ...rest } = data;
   return camelcaseKeys(rest) as Dispatcher;
 };
@@ -752,13 +781,16 @@ export const getDispatcherByAuthId = async (
   authUserId: string
 ): Promise<Dispatcher | null> => {
   const { data, error } = await supabase
-    .from('dispatchers')
-    .select('id, name, email, phone, auth_user_id, active_day, responsible_area, created_time')
-    .eq('auth_user_id', authUserId)
+    .from("dispatchers")
+    .select(
+      "id, name, email, phone, auth_user_id, active_day, responsible_area, created_time"
+    )
+    .eq("auth_user_id", authUserId)
     .single();
 
   if (error || !data) return null;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { created_time, ...rest } = data;
   return camelcaseKeys(rest) as Dispatcher;
 };
@@ -771,17 +803,17 @@ export const updateDispatcherAuth = async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const { error } = await supabase
-      .from('dispatchers')
+      .from("dispatchers")
       .update({
         email,
-        auth_user_id: authUserId
+        auth_user_id: authUserId,
       })
-      .eq('id', dispatcherId);
+      .eq("id", dispatcherId);
 
     if (error) {
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
 
@@ -789,7 +821,10 @@ export const updateDispatcherAuth = async (
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update dispatcher auth'
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to update dispatcher auth",
     };
   }
 };

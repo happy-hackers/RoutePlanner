@@ -6,10 +6,11 @@ export function getSettingInfo() {
     const settingJson = JSON.parse(settingInfo);
     return settingJson;
   } else {
-    return { startAddress: "", endAddress: "", useDefaultAddress: false };
+    return { startAddress: "", endAddress: "", useDefaultAddress: false, mapProvider: "OpenStreetMap" };
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function updateSettingInfo(values: any) {
   if (values) {
     const originValues = getSettingInfo();

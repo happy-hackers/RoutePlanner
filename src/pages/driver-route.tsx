@@ -113,6 +113,7 @@ export default function DriverRoute() {
   }, [user, authLoading, navigate]);
 
   // Fetch route data
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchRouteData = async (date: string) => {
     if (!dispatcher) {
       return;
@@ -121,7 +122,7 @@ export default function DriverRoute() {
     try {
       setLoading(true);
 
-      // Get active route (orderSequence already contains full Order objects)
+      // Get active route
       const routeData = await getDriverActiveRoute(dispatcher.id, date);
 
       if (!routeData) {
@@ -132,8 +133,6 @@ export default function DriverRoute() {
 
       setDeliveryRoute(routeData);
 
-      // Orders are already in the route's orderSequence
-      //setOrders(routeData.orderSequence);
       setStops(routeData.addressMeterSequence);
 
       // Set current stop to first incomplete
@@ -153,7 +152,7 @@ export default function DriverRoute() {
     if (dispatcher) {
       fetchRouteData(selectedDate.format("YYYY-MM-DD"));
     }
-  }, [dispatcher, selectedDate]);
+  }, [dispatcher, fetchRouteData, selectedDate]);
 
   // Handle mark as done
   const handleMeterDone = async (orderId: number) => {

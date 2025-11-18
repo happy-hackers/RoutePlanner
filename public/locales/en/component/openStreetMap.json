@@ -14,5 +14,6 @@
     "popupStart": "Start",
     "popupEnd": "End",
     "popupStop": "Stop",
-    "footerTotalTime": "Total Time"
+    "footerTotalTime": "Total Time",
+    "dispatcher": "dispatcher"
   }

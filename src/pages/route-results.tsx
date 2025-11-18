@@ -15,7 +15,7 @@ import type { Order } from "../types/order.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MarkerData } from "../types/markers.ts";
 import type { Dispatcher } from "../types/dispatchers";
-import OpenStreetMap from "../components/OpenStreetMap";
+import DynamicMap from "../components/DynamicMap";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../store/index.ts";
 import {
@@ -25,7 +25,11 @@ import {
 } from "../utils/markersUtils.ts";
 import type { Route } from "../types/route.ts";
 import type { ColumnsType } from "antd/es/table/index";
-import { addRoute, getAllRoutes, updateRouteIsActive } from "../utils/dbUtils.ts";
+import {
+  addRoute,
+  getAllRoutes,
+  updateRouteIsActive,
+} from "../utils/dbUtils.ts";
 import { setSelectedOrders } from "../store/orderSlice.ts";
 import { useTranslation } from "react-i18next";
 
@@ -84,7 +88,11 @@ export default function RouteResults() {
         else if (time <= 30) color = "orange";
         else color = "red";
 
-        return <span style={{ color, fontWeight: 600 }}>{time} {t("unit_mins")} </span>;
+        return (
+          <span style={{ color, fontWeight: 600 }}>
+            {time} {t("unit_mins")}{" "}
+          </span>
+        );
       },
     },
   ];
@@ -110,9 +118,9 @@ export default function RouteResults() {
     null
   );
 
-  console.log("markers", markers)
+  console.log("markers", markers);
 
-  console.log("all routes", allRoutes)
+  console.log("all routes", allRoutes);
 
   const DISPATCHER_COLORS_MAP = generateDispatcherColorsMap(dispatchers);
 
@@ -155,12 +163,12 @@ export default function RouteResults() {
             !routedDispatcherIds.includes(order.dispatcherId)
         );
         const ids = filteredOrders.map((order) => order.id);
-        const newMarkers = getGroupedMarkers(filteredOrders, dispatchers)
+        const newMarkers = getGroupedMarkers(filteredOrders, dispatchers);
         setMarkers(newMarkers);
         setSelectedRowIds(ids);
       } else {
         const allIds = data.map((order) => order.id);
-        const newMarkers = getGroupedMarkers(data, dispatchers)
+        const newMarkers = getGroupedMarkers(data, dispatchers);
         setMarkers(newMarkers);
         setSelectedRowIds(allIds);
       }
@@ -168,7 +176,7 @@ export default function RouteResults() {
       setSelectedRowIds([]);
       setMarkers([]);
     }
-  }, [data, dispatchers]);
+  }, [data, dispatchers, isAllRoutes, newRoutes, selectedDispatcher]);
   // Work for all route option
   useEffect(() => {
     if (isAllRoutes && selectedOrders.length > 0) {
@@ -180,23 +188,25 @@ export default function RouteResults() {
             !routedDispatcherIds.includes(order.dispatcherId)
         );
         const ids = filteredOrders.map((order) => order.id);
-        const newMarkers = getGroupedMarkers(filteredOrders, dispatchers)
+        const newMarkers = getGroupedMarkers(filteredOrders, dispatchers);
         setMarkers(newMarkers);
         setSelectedRowIds(ids);
       } else {
         const allIds = selectedOrders.map((o) => o.id);
-        const allMarkers = getGroupedMarkers(selectedOrders, dispatchers)
+        const allMarkers = getGroupedMarkers(selectedOrders, dispatchers);
         setMarkers(allMarkers);
         setSelectedRowIds(allIds);
       }
     }
-  }, [isAllRoutes, selectedOrders, dispatchers]);
+  }, [isAllRoutes, selectedOrders, dispatchers, newRoutes]);
 
   if (selectedOrders.length === 0) {
     return (
-      <div>
-        <Title level={4}>{t("title_no_orders_found")}</Title>
-      </div>
+      <Row justify="center" align="middle" style={{ height: "80vh" }}>
+        <Col style={{ textAlign: "center" }}>
+          <Title level={4}>{t("title_no_orders_found")}</Title>
+        </Col>
+      </Row>
     );
   }
 
@@ -204,7 +214,6 @@ export default function RouteResults() {
     if (selected) {
       setSelectedRowIds((prev) => [...prev, record.id]);
       setMarkers((prevMarkers) => {
-        
         const existingMarkerIndex = prevMarkers.findIndex(
           (marker) =>
             marker.position.lat === record.lat &&
@@ -213,7 +222,6 @@ export default function RouteResults() {
         );
 
         if (existingMarkerIndex !== -1) {
-          
           const updatedMarkers = [...prevMarkers];
           const existingMarker = updatedMarkers[existingMarkerIndex];
 
@@ -355,7 +363,10 @@ export default function RouteResults() {
                         (o) => o.dispatcherId === dispatcher.id
                       );
                       const newSelectedIds = filteredOrders.map((o) => o.id);
-                      const newMarker = getGroupedMarkers(filteredOrders, dispatchers);
+                      const newMarker = getGroupedMarkers(
+                        filteredOrders,
+                        dispatchers
+                      );
                       setNewRoutes((prev) =>
                         prev.filter((p) => p.dispatcherId !== dispatcher.id)
                       );
@@ -419,6 +430,37 @@ export default function RouteResults() {
     ? newRoutes.find((r) => r.dispatcherId === selectedDispatcher.id)
     : null;
 
+  const handleClearCurrentRoute = () => {
+    const dispatcher = selectedDispatcher;
+
+    if (!dispatcher) return;
+
+    const filteredOrders = selectedOrders.filter(
+      (o) => o.dispatcherId === dispatcher.id
+    );
+
+    if (filteredOrders.length === 0) {
+      message.info(t("message_no_orders_to_clear"));
+      return;
+    }
+
+    const newSelectedIds = filteredOrders.map((o) => o.id);
+
+    const newMarker = getGroupedMarkers(filteredOrders, dispatchers);
+
+    setNewRoutes((prev) =>
+      prev.filter((p) => p.dispatcherId !== dispatcher.id)
+    );
+
+    setNewRoutes((prev) =>
+      prev.filter((p) => p.dispatcherId !== dispatcher.id)
+    );
+    setSelectedRowIds((prev) => [...prev, ...newSelectedIds]);
+    setMarkers((prev) => [...prev, ...newMarker]);
+
+    message.success(t("message_route_cleared_for") + dispatcher.name);
+  };
+
   const saveRoutes = async () => {
     let allSuccess = true;
     let errorMsg = "";
@@ -473,6 +515,7 @@ export default function RouteResults() {
             errorMsg = result.error || t("message_error_save_route_failed");
           }
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         allSuccess = false;
         errorMsg = err.message || "An unexpected error occurred.";
@@ -483,6 +526,7 @@ export default function RouteResults() {
       message.success(t("message_success_all_routes_saved"));
       setNewRoutes([]);
       dispatch(setSelectedOrders([]));
+      setMarkers([]);
     } else {
       message.error(errorMsg);
     }
@@ -497,8 +541,8 @@ export default function RouteResults() {
               isAllRoutes
                 ? -1
                 : selectedDispatcher
-                  ? selectedDispatcher.id
-                  : null
+                ? selectedDispatcher.id
+                : null
             }
             onChange={(id) => {
               if (id === -1) {
@@ -534,17 +578,30 @@ export default function RouteResults() {
             </>
           ) : selectedDispatcher ? (
             foundRoute ? (
-              <Table
-                rowKey="id"
-                columns={routeModeColumns}
-                dataSource={foundRoute.addressMeterSequence.map((o, index) => ({
-                  order: index + 1,
-                  address: o.address,
-                  travelTime: foundRoute.segmentTimes[index],
-                }))}
-                pagination={false}
-                size="small"
-              />
+              <>
+                <Table
+                  rowKey="id"
+                  columns={routeModeColumns}
+                  dataSource={foundRoute.addressMeterSequence.map(
+                    (o, index) => ({
+                      order: index + 1,
+                      address: o.address,
+                      travelTime: foundRoute.segmentTimes[index],
+                    })
+                  )}
+                  pagination={false}
+                  size="small"
+                />
+
+                <Button
+                  danger
+                  type="primary"
+                  onClick={handleClearCurrentRoute}
+                  style={{ marginTop: 16 }}
+                >
+                  {t("button_clear_route")}
+                </Button>
+              </>
             ) : (
               <Table
                 rowKey="id"
@@ -562,9 +619,8 @@ export default function RouteResults() {
         </Space>
       </Col>
 
-      {/* Map Section */}
       <Col xs={24} sm={24} md={24} lg={16} style={{ height: "100%" }}>
-        <OpenStreetMap
+        <DynamicMap
           orderMarkers={markers}
           setOrderMarkers={setMarkers}
           setSelectedRowId={setSelectedRowIds}

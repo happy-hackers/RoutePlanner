@@ -54,6 +54,7 @@ const SelectedOrderModal: React.FC<ServerListModalProps> = ({
     {
       title: t("tableColumnAction"),
       key: "action",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       render: (_: any, record: any) => (
         <Text
           type="danger"
