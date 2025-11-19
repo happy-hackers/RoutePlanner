@@ -113,7 +113,6 @@ export default function DriverRoute() {
   }, [user, authLoading, navigate]);
 
   // Fetch route data
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchRouteData = async (date: string) => {
     if (!dispatcher) {
       return;
@@ -152,7 +151,7 @@ export default function DriverRoute() {
     if (dispatcher) {
       fetchRouteData(selectedDate.format("YYYY-MM-DD"));
     }
-  }, [dispatcher, fetchRouteData, selectedDate]);
+  }, [dispatcher, selectedDate]);
 
   // Handle mark as done
   const handleMeterDone = async (orderId: number) => {
