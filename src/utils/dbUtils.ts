@@ -739,6 +739,19 @@ export const updateOrderStatus = async (
   if (error) throw error;
 };
 
+// Update order note
+export const updateMeterNote = async (
+  orderId: number,
+  newNote: string
+): Promise<void> => {
+  const { error } = await supabase
+    .from("orders")
+    .update({ note: newNote })
+    .eq("id", orderId);
+
+  if (error) throw error;
+};
+
 // Get all upcoming active routes for driver
 export const getDriverUpcomingRoutes = async (
   dispatcherId: number

@@ -15,7 +15,11 @@ import dayjs from "dayjs";
 import NextStopCard from "../components/driver/NextStopCard";
 import RouteListView from "../components/driver/RouteListView";
 import DriverMap from "../components/driver/DriverMap";
-import { getDriverActiveRoute, updateOrderStatus } from "../utils/dbUtils";
+import {
+  getDriverActiveRoute,
+  updateMeterNote,
+  updateOrderStatus,
+} from "../utils/dbUtils";
 import { generateGoogleMapsUrl, getDistance } from "../utils/mapUtils";
 import { logoutDriver } from "../utils/authUtils";
 import { useAuth } from "../contexts/AuthContext";
@@ -201,6 +205,23 @@ export default function DriverRoute() {
     }
   };
 
+  const handleSaveNote = async (orderId: number, note: string) => {
+    try {
+      await updateMeterNote(orderId, note);
+      setStops((prev) =>
+        prev.map((stop) => ({
+          ...stop,
+          meters: stop.meters.map((order) =>
+            order.id === orderId ? { ...order, note: note } : order
+          ),
+        }))
+      );
+      message.success("Note saved!");
+    } catch (e) {
+      message.error("Failed to save note");
+    }
+  };
+
   // Handle stop selection from list
   const handleStopSelect = (index: number) => {
     setCurrentStopIndex(index);
@@ -318,6 +339,7 @@ export default function DriverRoute() {
               onViewAll={() => setViewMode("list")}
               onMeterDone={handleMeterDone}
               onMeterUndo={handleMeterUndo}
+              onNoteSave={handleSaveNote}
             />
 
             {/* Floating Google Maps Button */}
