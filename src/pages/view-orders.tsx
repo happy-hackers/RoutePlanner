@@ -167,12 +167,12 @@ export default function ViewOrders({
   const timeOptions: TimePeriod[] = ["Morning", "Afternoon", "Evening"];
   const statusOptions = ["All", "Complete", "Incomplete"];
 
-  const translatedTimeOptions = timeOptions.map(time => ({
+  const translatedTimeOptions = timeOptions.map((time) => ({
     label: t(`time_period_${time.toLowerCase()}`),
     value: time,
   }));
 
-  const translatedStatusOptions = statusOptions.map(status => ({
+  const translatedStatusOptions = statusOptions.map((status) => ({
     label: t(`status_${status.toLowerCase()}`),
     value: status,
   }));
@@ -194,9 +194,9 @@ export default function ViewOrders({
   // Use useMemo to cache filtered orders and prevent infinite re-renders
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
-      const orderDate = dayjs(order.date);
-
-      const matchesDate = date ? orderDate.isSame(date, "day") : true; // If there is a date selected, filter by the selected date. OtherWise, show the orders in all date
+      const matchesDate = date
+        ? order.date === date.format("YYYY-MM-DD")
+        : true; // If there is a date selected, filter by the selected date. OtherWise, show the orders in all date
       const matchesTimePeriod =
         timePeriod && timePeriod.length > 0
           ? timePeriod.includes(order.time)
@@ -251,21 +251,21 @@ export default function ViewOrders({
   }, [groupPage, groupsPerPage, groupedEntries]);
 
   const totalOrders = filteredOrders.length;
-  const pageSizeOptions = ['20', '50', '100', String(totalOrders)];
+  const pageSizeOptions = ["20", "50", "100", String(totalOrders)];
 
   const sortedOrders = sortOrders(filteredOrders);
 
   useEffect(() => {
-  const fetchAndSetMarkers = async () => {
-    const dispatchersData = await getAllDispatchers();
-    if (!dispatchersData) return;
+    const fetchAndSetMarkers = async () => {
+      const dispatchersData = await getAllDispatchers();
+      if (!dispatchersData) return;
 
-    const markers = getGroupedMarkers(selectedOrders, dispatchersData)
-    setMarkers(markers);
-  };
+      const markers = getGroupedMarkers(selectedOrders, dispatchersData);
+      setMarkers(markers);
+    };
 
-  fetchAndSetMarkers();
-}, [selectedOrders, setMarkers]);
+    fetchAndSetMarkers();
+  }, [selectedOrders, setMarkers]);
 
   return (
     <Row style={{ height: "100vh" }}>
@@ -297,11 +297,16 @@ export default function ViewOrders({
             <BatchUploadModal
               isOpen={isUploadModalOpen}
               setOpen={setIsUploadModalOpen}
-              onUploadComplete={fetchOrders} isMapReady={false} isGoogleMapSelected={false}            />
+              onUploadComplete={fetchOrders}
+              isMapReady={false}
+              isGoogleMapSelected={false}
+            />
           </Space>
           <DatePicker
-            defaultValue={date}
-            onChange={(value) => dispatch(setDate(value))}
+            value={date}
+            onChange={(value) =>
+              dispatch(setDate(value ? value.startOf("day") : null))
+            }
             style={{ width: "300px" }}
             format="YYYY-MM-DD"
           />
@@ -480,15 +485,15 @@ export default function ViewOrders({
                 scroll={{ y: "calc(100vh - 390px)" }}
                 pagination={{
                   pageSize: tablePageSize,
-                  onShowSizeChange: (_, size) => setTablePageSize(size), 
+                  onShowSizeChange: (_, size) => setTablePageSize(size),
                   showSizeChanger: true,
                   pageSizeOptions: pageSizeOptions,
                   showQuickJumper: true,
                   showTotal: (total, range) =>
-                    t('pagination_total', {
+                    t("pagination_total", {
                       start: range[0],
                       end: range[1],
-                      total: total
+                      total: total,
                     }),
                   position: ["bottomCenter"],
                   showLessItems: true,
