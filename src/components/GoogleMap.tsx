@@ -14,6 +14,7 @@ import type { Dispatcher } from "../types/dispatchers";
 import { generateDispatcherColorsMap } from "../utils/markersUtils";
 import { useTranslation } from "react-i18next";
 import { useRoutingAndGeocoding } from "./useRoutingAndGeocoding";
+import { getSettingInfo } from "../utils/configuration";
 
 import orderedMarkerImg from "../assets/icons/orderedMarker.png";
 import startMarkerImg from "../assets/icons/startMarker.png";
@@ -32,6 +33,13 @@ interface NavigationMapProp {
 
 export interface MapRef {
   triggerCalculate: (dispatcherId: number) => void;
+}
+
+interface SettingConfig {
+  useDefaultAddress: boolean;
+  startAddress: string;
+  endAddress: string;
+  mapProvider: string;
 }
 
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
@@ -197,6 +205,14 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
       message,
       t,
     });
+    
+    useEffect(() => {
+      const settingInfo: SettingConfig = getSettingInfo();
+      if (settingInfo && settingInfo.useDefaultAddress) {
+        setStartAddress(settingInfo.startAddress);
+        setEndAddress(settingInfo.endAddress);
+      }
+    }, [setStartAddress, setEndAddress]);
 
     useImperativeHandle(ref, () => ({
       triggerCalculate(dispatcherId: number) {
