@@ -16,5 +16,8 @@
   "table_delivery_time": "派送時間",
   "table_address": "地址",
   "table_status": "狀態",
-  "pagination_total": "{{start}}-{{end}} 共 {{total}} 條訂單"
+  "table_complete": "已完成",
+  "table_incomplete": "未完成",
+  "pagination_total": "{{start}}-{{end}} 共 {{total}} 條訂單",
+  "grouped_pagination_total": "共 {{total}} 個地址，顯示 {{start}}-{{end}} 條"
 }

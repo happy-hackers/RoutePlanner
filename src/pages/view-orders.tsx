@@ -12,8 +12,6 @@ import {
   Radio,
   Input,
   Switch,
-  Collapse,
-  Pagination,
 } from "antd";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo } from "react";
@@ -42,7 +40,6 @@ import { useTranslation } from "react-i18next";
 type TimePeriod = "Morning" | "Afternoon" | "Evening";
 
 const { Text } = Typography;
-const { Panel } = Collapse;
 
 export default function ViewOrders({
   setMarkers,
@@ -397,82 +394,110 @@ export default function ViewOrders({
           />
           {groupView ? (
             <>
-              <div
-                style={{
-                  flex: 1,
-                  maxHeight: "calc(100vh - 320px)",
-                  minHeight: 0,
-                  overflowY: "auto",
-                  paddingTop: 8,
-                }}
-              >
-                <Collapse accordion>
-                  {paginatedGroups.map(([address, ordersInGroup]) => {
-                    const completedCount = ordersInGroup.filter(
-                      (o) => o.status === "Delivered"
-                    ).length;
-                    const incompleteCount =
-                      ordersInGroup.length - completedCount;
+              <Table
+                rowKey="groupKey"
+                columns={[
+                  {
+                    title: t("table_address"),
+                    dataIndex: "address",
+                    key: "address",
+                    render: (text: string) => <Text strong>{text}</Text>,
+                  },
+                  {
+                    title: t("table_complete"),
+                    dataIndex: "completeCount",
+                    align: "center",
+                    width: "10%",
+                    render: (count: number) => <span>✔️ {count}</span>,
+                  },
+                  {
+                    title: t("table_incomplete"),
+                    dataIndex: "incompleteCount",
+                    align: "center",
+                    width: "10%",
+                    render: (count: number) => <span>❌ {count}</span>,
+                  },
+                ]}
+                dataSource={paginatedGroups.map(([address, ordersInGroup]) => {
+                  const completeCount = ordersInGroup.filter(
+                    (o) => o.status === "Delivered"
+                  ).length;
 
-                    return (
-                      <Panel
-                        key={address}
-                        header={
-                          <Row
-                            justify="space-between"
-                            style={{ width: "100%" }}
-                          >
-                            <Text strong>{address}</Text>
-                            <Text>
-                              ✔️ {completedCount} | ❌ {incompleteCount}
-                            </Text>
-                          </Row>
-                        }
-                        style={{
-                          background:
-                            incompleteCount > 0 ? "#fff2f0" : "#f6ffed",
-                          borderRadius: 6,
-                          marginBottom: 8,
-                        }}
-                      >
-                        <Table
-                          rowKey="id"
-                          dataSource={ordersInGroup}
-                          size="small"
-                          pagination={false}
-                          columns={[
-                            { title: t("table_id"), dataIndex: "id" },
-                            {
-                              title: t("table_address"),
-                              dataIndex: "detailedAddress",
-                            },
-                            {
-                              title: t("table_status"),
-                              dataIndex: "status",
-                              render: (s: string) =>
-                                s === "Delivered"
-                                  ? `✔️ ${t("status_complete")}`
-                                  : `❌ ${t("status_incomplete")}`,
-                            },
-                          ]}
-                        />
-                      </Panel>
-                    );
-                  })}
-                </Collapse>
-              </div>
-              <Pagination
-                current={groupPage}
-                pageSize={groupsPerPage}
-                total={groupedEntries.length}
-                onChange={(page) => setGroupPage(page)}
-                showSizeChanger={true}
-                pageSizeOptions={pageSizeOptions}
-                onShowSizeChange={(_, size) => {
-                  setGroupsPerPage(size);
-                  setGroupPage(1);
+                  return {
+                    groupKey: address,
+                    address,
+                    completeCount,
+                    incompleteCount: ordersInGroup.length - completeCount,
+                    orders: ordersInGroup, // store inner orders for expandable table
+                  };
+                })}
+                expandable={{
+                  expandedRowRender: (record) => (
+                    <Table
+                      rowKey="id"
+                      dataSource={record.orders}
+                      pagination={false}
+                      size="small"
+                      columns={[
+                        {
+                          title: t("table_id"),
+                          dataIndex: "id",
+                          key: "id",
+                          width: 100,
+                        },
+                        {
+                          title: t("table_delivery_time"),
+                          dataIndex: "time",
+                          key: "time",
+                          render: (time: string, order: Order) => {
+                            const date = dayjs(order.date).format("YYYY-MM-DD");
+                            const translatedTime = t(
+                              `time_period_${time.toLowerCase()}`
+                            );
+                            return `${date} ${translatedTime}`;
+                          },
+                        },
+                        {
+                          title: t("table_status"),
+                          dataIndex: "status",
+                          key: "status",
+                          render: (s: string) =>
+                            s === "Delivered"
+                              ? `✔️ ${t("status_complete")}`
+                              : `❌ ${t("status_incomplete")}`,
+                        },
+                      ]}
+                    />
+                  ),
+                  rowExpandable: (record) =>
+                    Array.isArray(record.orders) && record.orders.length > 0,
                 }}
-                style={{ marginTop: 16, textAlign: "center" }}
+                pagination={{
+                  current: groupPage,
+                  pageSize: groupsPerPage,
+                  total: groupedEntries.length,
+                  showSizeChanger: true,
+                  pageSizeOptions: pageSizeOptions,
+                  onChange: (page) => setGroupPage(page),
+                  onShowSizeChange: (_, size) => {
+                    setGroupsPerPage(size);
+                    setGroupPage(1);
+                  },
+                  showTotal: (total, range) =>
+                    t("grouped_pagination_total", {
+                      start: range[0],
+                      end: range[1],
+                      total: total,
+                    }),
+                  position: ["bottomCenter"],
+                  showLessItems: true,
+                  size: "small",
+                  style: { marginTop: 16, textAlign: "center" },
+                }}
+                scroll={{ y: "calc(100vh - 390px)" }}
+                size="middle"
+                bordered
+                style={{ maxWidth: 650, height: "100%" }}
               />
             </>
           ) : (
