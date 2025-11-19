@@ -33,6 +33,15 @@ import {
 import { setSelectedOrders } from "../store/orderSlice.ts";
 import { useTranslation } from "react-i18next";
 
+const WIDE_DROPDOWN_CLASS = "local-wide-select-dropdown";
+
+const dropdownStyleContent = `
+  .ant-select-dropdown.${WIDE_DROPDOWN_CLASS} {
+    width: 250px !important; 
+    min-width: 250px !important;
+  }
+`;
+
 export default function RouteResults() {
   const { t } = useTranslation("routeResult");
 
@@ -124,10 +133,14 @@ export default function RouteResults() {
 
   const DISPATCHER_COLORS_MAP = generateDispatcherColorsMap(dispatchers);
 
+  const sortedDispatchers = [...dispatchers].sort((a, b) => {
+    return a.name.localeCompare(b.name);
+  });
+
   const dispatchersOption = [
     { value: null, label: t("select_placeholder") },
     { value: -1, label: t("option_all_routes") },
-    ...dispatchers.map((dispatcher) => ({
+    ...sortedDispatchers.map((dispatcher) => ({
       value: dispatcher.id,
       label: dispatcher.name,
     })),
@@ -534,15 +547,19 @@ export default function RouteResults() {
 
   return (
     <Row gutter={[16, 16]} style={{ height: "100%" }}>
+      <style>{dropdownStyleContent}</style>
       <Col xs={24} sm={24} md={24} lg={8}>
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
           <Select
+            rootClassName={WIDE_DROPDOWN_CLASS}
+            virtual={true}
+            listHeight={300}
             value={
               isAllRoutes
                 ? -1
                 : selectedDispatcher
-                ? selectedDispatcher.id
-                : null
+                  ? selectedDispatcher.id
+                  : null
             }
             onChange={(id) => {
               if (id === -1) {

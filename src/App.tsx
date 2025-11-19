@@ -24,6 +24,7 @@ import zhCN from 'antd/locale/zh_CN';
 import zhTW from 'antd/locale/zh_TW';
 import enUS from 'antd/locale/en_US';
 import type { Locale } from 'antd/es/locale';
+//import './app.css';
 
 const { Content } = Layout;
 const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;

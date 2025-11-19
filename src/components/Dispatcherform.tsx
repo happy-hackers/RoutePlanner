@@ -52,11 +52,11 @@ export default function Dispatcherform({
       const result = await updateOrder(updatedOrder);
       if (result.success) {
         const newOrders = selectedOrders.map((order) =>
-          order.id === updatedOrder.id ? {...updatedOrder, customer} : order
+          order.id === updatedOrder.id ? { ...updatedOrder, customer } : order
         );
         dispatch(setSelectedOrders(newOrders));
         const markers = getGroupedMarkers(newOrders, dispatchers);
-          
+
         setMarkers(markers);
         message.success(t('message_unassigned_success', { orderId: order.id }));
       } else {
@@ -71,7 +71,7 @@ export default function Dispatcherform({
       const result = await updateOrder(updatedOrder);
       if (result.success) {
         const newOrders = selectedOrders.map((order) =>
-          order.id === updatedOrder.id ? {...updatedOrder, customer} : order
+          order.id === updatedOrder.id ? { ...updatedOrder, customer } : order
         );
         dispatch(setSelectedOrders(newOrders));
         let newMarkers;
@@ -88,13 +88,20 @@ export default function Dispatcherform({
       }
     }
   };
+
+  const sortedDispatchers = [...dispatchers].sort((a, b) => {
+    return a.name.localeCompare(b.name);
+  });
+
   const options = [
     { value: -1, label: t("dispatcher_not_assigned") },
-    ...dispatchers.map((dispatcher) => ({
+    ...sortedDispatchers.map((dispatcher) => ({
       value: dispatcher.id,
       label: dispatcher.name,
     })),
   ];
+
+  const WIDE_DROPDOWN_CLASS = "local-wide-select-dropdown";
 
   const columns = [
     {
@@ -114,7 +121,7 @@ export default function Dispatcherform({
       ellipsis: true,
       width: "60%",
       sorter: (a: Order, b: Order) =>
-        a.detailedAddress.localeCompare(b.detailedAddress), 
+        a.detailedAddress.localeCompare(b.detailedAddress),
       sortDirections: ["ascend", "descend"] as unknown as ("ascend" | "descend" | null)[],
       render: (detailedAddress: string, record: Order) => (
         <Text>
@@ -140,12 +147,15 @@ export default function Dispatcherform({
         return (
           <Select
             style={{ width: "100%" }}
-            value={value?? -1}
+            value={value ?? -1}
             onChange={(value) => {
               const label = options.find((opt) => opt.value === value)?.label;
               handleChange(value, label, record);
             }}
             options={options}
+            rootClassName={WIDE_DROPDOWN_CLASS}
+            virtual={true}
+            listHeight={300}
           />
         );
       },

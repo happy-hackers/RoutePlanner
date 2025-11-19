@@ -12,6 +12,15 @@ import { setSelectedOrders } from "../store/orderSlice";
 import type { Customer } from "../types/customer";
 import { useTranslation } from "react-i18next";
 
+const WIDE_DROPDOWN_CLASS = "local-wide-select-dropdown";
+
+const dropdownStyleContent = `
+  .ant-select-dropdown.${WIDE_DROPDOWN_CLASS} {
+    width: 250px !important; 
+    min-width: 250px !important;
+  }
+`;
+
 export default function AssignDispatchers({
   setMarkers,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -51,9 +60,13 @@ export default function AssignDispatchers({
     fetchDispatchers();
   }, [message, t]);
 
+  const sortedDispatchers = [...dispatchers].sort((a, b) => {
+    return a.name.localeCompare(b.name);
+  });
+
   const dispatchersOption = [
     { value: null, label: t("select_all_dispatchers") },
-    ...dispatchers.map((dispatcher) => ({
+    ...sortedDispatchers.map((dispatcher) => ({
       value: dispatcher.id,
       label: dispatcher.name,
     })),
@@ -261,8 +274,12 @@ export default function AssignDispatchers({
     <Row style={{ height: "100%" }}>
       <Col>
         <Space direction="vertical" size={0} style={{ width: "100%" }}>
+          <style>{dropdownStyleContent}</style>
           <Space direction="horizontal" size="middle">
             <Select
+              rootClassName={WIDE_DROPDOWN_CLASS}
+              virtual={true}
+              listHeight={300}
               defaultValue={null}
               onChange={(id: number) => {
                 setSelectedId(id);
