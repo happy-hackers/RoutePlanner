@@ -281,8 +281,8 @@ export const getAllRoutes = async (): Promise<Route[] | undefined> => {
       return;
     } else {
       // Remove create_time from each object
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const cleanedArray = data.map(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         ({ created_time, updated_time, ...rest }) => ({
           ...rest,
         })
@@ -672,7 +672,9 @@ export const getDriverActiveRoute = async (
   if (error || !data) return null;
 
   // Extract order IDs from the route's order_sequence
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orderIds = data.address_meter_sequence.flatMap((entry: any) =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     entry.meters.map((order: any) => order.id)
   );
 
@@ -698,8 +700,10 @@ export const getDriverActiveRoute = async (
 
   // Merge: maintain route's address meter sequence order but use fresh order data
   const freshAddressMeterSequence = data.address_meter_sequence.map(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (entry: any) => {
       const freshMeters = entry.meters
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map((order: any) => camelOrders.find((o: any) => o.id === order.id))
         .filter(Boolean); // Remove any null entries
 
@@ -716,6 +720,7 @@ export const getDriverActiveRoute = async (
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { created_time, ...rest } = data;
   const route = camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   route.addressMeterSequence = freshAddressMeterSequence as any;
 
   return route;

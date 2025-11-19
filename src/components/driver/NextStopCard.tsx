@@ -124,7 +124,7 @@ export default function NextStopCard({
                       {order.customer?.name ||
                         t(`${keyPath}.placeholder_customer`)}
                     </Text>
-                    <Text type="secondary">Meter ID: {order.id}</Text>
+                    <Text type="secondary">{t(`${keyPath}.text_meter_id`)} {order.id}</Text>
                   </Space>
                   <Space>
                     <Tag
@@ -132,7 +132,9 @@ export default function NextStopCard({
                         order.status === "Delivered" ? "success" : "processing"
                       }
                     >
-                      {order.status}
+                      {order.status === "Delivered"
+                        ? t(`${keyPath}.tag_done`)
+                        : t(`${keyPath}.tag_in_progress`)}
                     </Tag>
                     {order.status !== "Delivered" ? (
                       <Button

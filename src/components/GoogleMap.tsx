@@ -220,8 +220,8 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
 
     const addMarkerListener = useCallback(
       (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         marker: {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           addListener: (event: string, handler: (e: any) => void) => void;
         },
         content: string

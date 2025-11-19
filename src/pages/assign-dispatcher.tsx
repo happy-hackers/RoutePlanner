@@ -135,10 +135,10 @@ export default function AssignDispatchers({
     // 1. First assign those orders whose area or district only matches to one dispatcher
     // 2. Then assign those orders whose area or district matches more than one dispatcher
     // 3. Lastly assign those orders whose area or district doesn't match any dispatcher
-    let unassignedOrderswithDispatchers: (Order & {
+    const unassignedOrderswithDispatchers: (Order & {
       matchedDispatchers: Dispatcher[];
     })[] = [];
-    let unassignedOrderswithNoDispatchers: Order[] = [];
+    const unassignedOrderswithNoDispatchers: Order[] = [];
     for (const order of selectedOrders) {
       // Skip already assigned orders
       if (order.dispatcherId) {

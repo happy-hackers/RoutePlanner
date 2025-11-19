@@ -4,6 +4,7 @@ import {
   forwardRef,
   useRef,
   useMemo,
+  type SetStateAction,
 } from "react";
 import { Input, Space, Button, Select, App, TimePicker } from "antd";
 import {
@@ -15,7 +16,7 @@ import {
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
-import type { LatLngTuple, LatLngLiteral, PointExpression } from "leaflet";
+import type { LatLngTuple, LatLngLiteral } from "leaflet";
 import type { MarkerData } from "../types/markers";
 import orderedMarkerImg from "../assets/icons/orderedMarker.png";
 import startMarkerImg from "../assets/icons/startMarker.png";
@@ -28,56 +29,86 @@ import { generateDispatcherColorsMap } from "../utils/markersUtils";
 import { useTranslation } from "react-i18next";
 import { useRoutingAndGeocoding } from "./useRoutingAndGeocoding";
 
-function isDivIcon(icon: L.DivIcon | L.Icon): icon is L.DivIcon {
-  return (icon as L.DivIcon).options.html !== undefined;
-}
+const ORDERED_ICON_SIZE: [number, number] = [75, 56];
+const ORDERED_ICON_ANCHOR: [number, number] = [38, 54];
+const START_END_ICON_SIZE: [number, number] = [56, 56];
+const START_END_ICON_ANCHOR: [number, number] = [28, 56];
 
-function isIcon(icon: L.DivIcon | L.Icon): icon is L.Icon {
-  return (icon as L.Icon).options.iconUrl !== undefined;
-}
+const createInnerHtml = (imgUrl: string, size: [number, number], number?: number) => {
+  return `
+    <div class="marker-visual-content" style="
+      position: relative; 
+      width: ${size[0]}px; 
+      height: ${size[1]}px; 
+      transform-origin: 50% 100%; 
+      transition: none;
+    ">
+      <img src="${imgUrl}" style="width: 100%; height: 100%; display: block;" />
+      ${number !== undefined ? `
+        <div style="
+          position: absolute;
+          top: 10px;
+          left: 70%;
+          width: 30px;
+          text-align: center;
+          font-weight: bold;
+          color: white;
+          text-shadow: 0 0 2px black;
+          transform: translateX(-50%);
+        ">
+          ${number}
+        </div>
+      ` : ''}
+    </div>
+  `;
+};
 
 function createNumberIcon(number: number): L.DivIcon {
   return L.divIcon({
-    className: "custom-marker",
-    html: `<div style="position: relative; width: 75px; height: 56px;">
-<img src="${orderedMarkerImg}" style="width: 75px; height: 56px;" />
-<div style="
-position: absolute;
-top: 8px;
-left: 38px;
-width: 30px;
-text-align: center;
-font-weight: bold;
-color: white;
-text-shadow: 0 0 2px black;
-">
-${number}
-</div>
-</div>`,
-    iconAnchor: [38, 54],
-    iconSize: [75, 56],
+    className: "custom-div-icon", 
+    html: createInnerHtml(orderedMarkerImg, ORDERED_ICON_SIZE, number),
+    iconAnchor: ORDERED_ICON_ANCHOR, 
+    iconSize: ORDERED_ICON_SIZE,
+    popupAnchor: [0, -50],
   });
 }
 
-const startIcon = new L.Icon({
-  iconUrl: startMarkerImg,
-  iconSize: [56, 56],
-  iconAnchor: [28, 56],
-});
+const createStartIcon = (): L.DivIcon => {
+  return L.divIcon({
+    className: "custom-div-icon",
+    html: createInnerHtml(startMarkerImg, START_END_ICON_SIZE),
+    iconAnchor: START_END_ICON_ANCHOR, 
+    iconSize: START_END_ICON_SIZE,
+    popupAnchor: [0, -50],
+  });
+};
 
-const endIcon = new L.Icon({
-  iconUrl: endMarkerImg,
-  iconSize: [56, 56],
-  iconAnchor: [28, 56],
-});
+const createEndIcon = (): L.DivIcon => {
+  return L.divIcon({
+    className: "custom-div-icon",
+    html: createInnerHtml(endMarkerImg, START_END_ICON_SIZE),
+    iconAnchor: START_END_ICON_ANCHOR, 
+    iconSize: START_END_ICON_SIZE,
+    popupAnchor: [0, -50],
+  });
+};
 
-const defaultIcon = new L.Icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+const createGenericDivIcon = (imgUrl: string, size: [number, number], anchor: [number, number]): L.DivIcon => {
+  return L.divIcon({
+    className: "custom-div-icon",
+    html: createInnerHtml(imgUrl, size),
+    iconAnchor: anchor,
+    iconSize: size,
+    popupAnchor: [1, -34], 
+  });
+};
+
+const startDivIcon = createStartIcon();
+const endDivIcon = createEndIcon();
+
+const defaultImgUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png";
+const defaultDivIcon = createGenericDivIcon(defaultImgUrl, [25, 41], [12, 41]);
+
 
 interface NavigationMapProp {
   orderMarkers: MarkerData[];
@@ -85,7 +116,7 @@ interface NavigationMapProp {
   setSelectedRowId?: React.Dispatch<React.SetStateAction<number[]>>;
   isRouteResultsPage?: boolean;
   newRoutes?: Omit<Route, "id">[];
-  setNewRoutes?: React.Dispatch<React.SetStateAction<Omit<Route, "id">[]>>;
+  setNewRoutes?: React.Dispatch<SetStateAction<Omit<Route, "id">[]>>;
   isAllRoutes?: boolean;
   selectedDispatcher?: Dispatcher | null;
 }
@@ -119,110 +150,51 @@ const MapCentering = ({ markers, routes }: MapCenteringProps) => {
   return null;
 };
 
+
 interface HoverMarkerProps {
   position: L.LatLngExpression;
   icon: L.DivIcon | L.Icon;
-  originalIconSize: PointExpression;
   popupContent: string;
 }
 
 const HoverMarker: React.FC<HoverMarkerProps> = ({
   position,
   icon,
-  originalIconSize,
   popupContent,
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
-  const originalSizeTuple = originalIconSize as L.PointTuple;
-
   const SCALE_FACTOR = 1.8;
 
-  const originalIcon = useMemo(() => {
-    return icon;
-  }, [icon]);
-
-  const largeIconSize: PointExpression = useMemo(
-    () => [
-      originalSizeTuple[0] * SCALE_FACTOR,
-      originalSizeTuple[1] * SCALE_FACTOR,
-    ],
-    [originalSizeTuple]
-  );
-
-  const originalAnchor: L.PointTuple = useMemo(() => {
-    if (isIcon(icon) || isDivIcon(icon)) {
-      return icon.options.iconAnchor as L.PointTuple;
-    }
-    return [originalSizeTuple[0] / 2, originalSizeTuple[1]];
-  }, [icon, originalSizeTuple]);
-
-  const largeAnchor: L.PointTuple = useMemo(() => {
-    return [
-      originalAnchor[0] * SCALE_FACTOR,
-      originalAnchor[1] * SCALE_FACTOR,
-    ] as L.PointTuple;
-  }, [originalAnchor]);
-
-  const largePopupAnchor: PointExpression = useMemo(() => {
-    const largeHeight = largeIconSize[1];
-    return [0, -(largeHeight * 0.95)] as PointExpression;
-  }, [largeIconSize]);
-
   const handleMouseOver = () => {
-    if (markerRef.current) {
-      if (isIcon(icon)) {
-        const newIcon = L.icon({
-          iconUrl: icon.options.iconUrl,
-          iconSize: largeIconSize,
-          iconAnchor: [
-            (largeIconSize as L.PointTuple)[0] / 2,
-            (largeIconSize as L.PointTuple)[1],
-          ],
-          popupAnchor: largePopupAnchor,
-          shadowUrl: icon.options.shadowUrl,
-        });
-        markerRef.current.setIcon(newIcon);
-      } else if (isDivIcon(icon)) {
-        const divIconOptions = (originalIcon as L.DivIcon).options;
-        const originalHtml = divIconOptions.html;
-
-        const newDivIcon = L.divIcon({
-          className: divIconOptions.className,
-          html: originalHtml,
-          iconSize: largeIconSize,
-          iconAnchor: largeAnchor,
-          popupAnchor: largePopupAnchor,
-        });
-
-        markerRef.current.setIcon(newDivIcon);
-
-        setTimeout(() => {
-          const iconElement = markerRef.current?.getElement();
-          const innerContent = iconElement?.firstChild as HTMLElement;
-          if (innerContent) {
+    const marker = markerRef.current;
+    if (marker) {
+      marker.openPopup();
+      
+      const element = marker.getElement();
+      if (element) {
+        element.style.zIndex = "1000";
+        
+        const innerContent = element.querySelector('.marker-visual-content') as HTMLElement;
+        if (innerContent) {
             innerContent.style.transform = `scale(${SCALE_FACTOR})`;
-            innerContent.style.transformOrigin = "0 0";
-          }
-        }, 0);
+        }
       }
-      markerRef.current.openPopup();
     }
   };
 
   const handleMouseOut = () => {
-    if (markerRef.current) {
-      markerRef.current.closePopup();
-      markerRef.current.setIcon(originalIcon as L.Icon | L.DivIcon);
-
-      if (isDivIcon(icon)) {
-        setTimeout(() => {
-          const iconElement = markerRef.current?.getElement();
-          const innerContent = iconElement?.firstChild as HTMLElement;
-          if (innerContent) {
-            innerContent.style.transform = "";
-            innerContent.style.transformOrigin = "";
-          }
-        }, 0);
+    const marker = markerRef.current;
+    if (marker) {
+      marker.closePopup();
+      
+      const element = marker.getElement();
+      if (element) {
+        element.style.zIndex = "";
+        
+        const innerContent = element.querySelector('.marker-visual-content') as HTMLElement;
+        if (innerContent) {
+            innerContent.style.transform = "scale(1)";
+        }
       }
     }
   };
@@ -230,7 +202,7 @@ const HoverMarker: React.FC<HoverMarkerProps> = ({
   return (
     <Marker
       position={position}
-      icon={originalIcon}
+      icon={icon}
       ref={markerRef}
       eventHandlers={{
         mouseover: handleMouseOver,
@@ -248,43 +220,40 @@ interface RouteRendererProps {
   t: (key: string) => string;
 }
 
-const RouteRenderer: React.FC<RouteRendererProps> = ({ route, color, t }) => (
-  <>
-    <Marker position={[route.startLat, route.startLng]} icon={startIcon}>
-      <Popup>
-        {t("popupStart")}: {route.startAddress}
-      </Popup>
-    </Marker>
-    {route.addressMeterSequence.map((waypoint, i) => {
-      const numberIcon = createNumberIcon(i + 1);
-      const originalSize: PointExpression = numberIcon.options.iconSize || [
-        40, 56,
-      ];
+const RouteRenderer: React.FC<RouteRendererProps> = ({ route, color, t }) => {
+  return (
+    <>
+      <HoverMarker
+        position={[route.startLat, route.startLng]}
+        icon={startDivIcon} 
+        popupContent={`${t("popupStart")}: ${route.startAddress}`}
+      />
 
-      return (
-        <HoverMarker
-          key={`waypoint-${i}`}
-          position={[waypoint.lat, waypoint.lng]}
-          icon={numberIcon}
-          originalIconSize={originalSize}
-          popupContent={`${t("popupStop")} ${i + 1}: ${waypoint.address}`}
-        />
-      );
-    })}
-    <Marker position={[route.endLat, route.endLng]} icon={endIcon}>
-      <Popup>
-        {t("popupEnd")}: {route.endAddress}
-      </Popup>
-    </Marker>
-    <Polyline
-      positions={route.polylineCoordinates}
-      pathOptions={{
-        color,
-        weight: 4,
-      }}
-    />
-  </>
-);
+      {route.addressMeterSequence.map((waypoint, i) => {
+        const numberIcon = createNumberIcon(i + 1);
+        return (
+          <HoverMarker
+            key={`waypoint-${i}`}
+            position={[waypoint.lat, waypoint.lng]}
+            icon={numberIcon}
+            popupContent={`${t("popupStop")} ${i + 1}: ${waypoint.address}`}
+          />
+        );
+      })}
+
+      <HoverMarker
+        position={[route.endLat, route.endLng]}
+        icon={endDivIcon} 
+        popupContent={`${t("popupEnd")}: ${route.endAddress}`}
+      />
+
+      <Polyline
+        positions={route.polylineCoordinates}
+        pathOptions={{ color, weight: 4 }}
+      />
+    </>
+  );
+};
 
 const InputBarStyle: React.CSSProperties = {
   position: "absolute",
@@ -471,27 +440,23 @@ const OpenStreetMap = forwardRef(
           />
 
           {orderMarkers.map((marker, index) => {
-            const originalSize: PointExpression = marker.icon?.scaledSize
+            const iconSize: [number, number] = marker.icon?.scaledSize
               ? [marker.icon.scaledSize, marker.icon.scaledSize]
               : [25, 41];
 
-            const leafletIcon = marker.icon
-              ? L.icon({
-                  iconUrl: marker.icon.url,
-                  iconSize: originalSize,
-                  iconAnchor: [originalSize[0] / 2, originalSize[1]],
-                  popupAnchor: [1, -34],
-                  shadowUrl:
-                    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-                })
-              : defaultIcon;
+            const iconAnchor: [number, number] = marker.icon?.scaledSize
+                ? [marker.icon.scaledSize / 2, marker.icon.scaledSize]
+                : [12, 41];
+
+            const divIcon = marker.icon?.url
+              ? createGenericDivIcon(marker.icon.url, iconSize, iconAnchor)
+              : defaultDivIcon;
 
             return (
               <HoverMarker
                 key={index}
                 position={[marker.position.lat, marker.position.lng]}
-                icon={leafletIcon}
-                originalIconSize={originalSize}
+                icon={divIcon}
                 popupContent={marker.address}
               />
             );
