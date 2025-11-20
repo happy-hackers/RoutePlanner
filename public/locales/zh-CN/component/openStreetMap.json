@@ -15,5 +15,6 @@
     "popupEnd": "终点",
     "popupStop": "停靠点",
     "footerTotalTime": "总耗时",
-    "dispatcher": "调度员"
+    "dispatcher": "调度员",
+    "timeNotAvailable": "N/A"
 }

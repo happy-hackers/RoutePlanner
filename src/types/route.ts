@@ -17,8 +17,8 @@ export interface Route {
   orderSequence?: Order[];
   addressMeterSequence: AddressMetersElement[];
   segmentTimes: number[];
-  total_time: number;
-  total_distance: number;
+  totalTime: number;
+  totalDistance: number;
   polylineCoordinates: LatLngExpression[];
   createdBy: string;
 

@@ -65,9 +65,9 @@ const createInnerHtml = (imgUrl: string, size: [number, number], number?: number
 
 function createNumberIcon(number: number): L.DivIcon {
   return L.divIcon({
-    className: "custom-div-icon", 
+    className: "custom-div-icon",
     html: createInnerHtml(orderedMarkerImg, ORDERED_ICON_SIZE, number),
-    iconAnchor: ORDERED_ICON_ANCHOR, 
+    iconAnchor: ORDERED_ICON_ANCHOR,
     iconSize: ORDERED_ICON_SIZE,
     popupAnchor: [0, -50],
   });
@@ -77,7 +77,7 @@ const createStartIcon = (): L.DivIcon => {
   return L.divIcon({
     className: "custom-div-icon",
     html: createInnerHtml(startMarkerImg, START_END_ICON_SIZE),
-    iconAnchor: START_END_ICON_ANCHOR, 
+    iconAnchor: START_END_ICON_ANCHOR,
     iconSize: START_END_ICON_SIZE,
     popupAnchor: [0, -50],
   });
@@ -87,7 +87,7 @@ const createEndIcon = (): L.DivIcon => {
   return L.divIcon({
     className: "custom-div-icon",
     html: createInnerHtml(endMarkerImg, START_END_ICON_SIZE),
-    iconAnchor: START_END_ICON_ANCHOR, 
+    iconAnchor: START_END_ICON_ANCHOR,
     iconSize: START_END_ICON_SIZE,
     popupAnchor: [0, -50],
   });
@@ -99,7 +99,7 @@ const createGenericDivIcon = (imgUrl: string, size: [number, number], anchor: [n
     html: createInnerHtml(imgUrl, size),
     iconAnchor: anchor,
     iconSize: size,
-    popupAnchor: [1, -34], 
+    popupAnchor: [1, -34],
   });
 };
 
@@ -169,14 +169,14 @@ const HoverMarker: React.FC<HoverMarkerProps> = ({
     const marker = markerRef.current;
     if (marker) {
       marker.openPopup();
-      
+
       const element = marker.getElement();
       if (element) {
         element.style.zIndex = "1000";
-        
+
         const innerContent = element.querySelector('.marker-visual-content') as HTMLElement;
         if (innerContent) {
-            innerContent.style.transform = `scale(${SCALE_FACTOR})`;
+          innerContent.style.transform = `scale(${SCALE_FACTOR})`;
         }
       }
     }
@@ -186,14 +186,14 @@ const HoverMarker: React.FC<HoverMarkerProps> = ({
     const marker = markerRef.current;
     if (marker) {
       marker.closePopup();
-      
+
       const element = marker.getElement();
       if (element) {
         element.style.zIndex = "";
-        
+
         const innerContent = element.querySelector('.marker-visual-content') as HTMLElement;
         if (innerContent) {
-            innerContent.style.transform = "scale(1)";
+          innerContent.style.transform = "scale(1)";
         }
       }
     }
@@ -225,7 +225,7 @@ const RouteRenderer: React.FC<RouteRendererProps> = ({ route, color, t }) => {
     <>
       <HoverMarker
         position={[route.startLat, route.startLng]}
-        icon={startDivIcon} 
+        icon={startDivIcon}
         popupContent={`${t("popupStart")}: ${route.startAddress}`}
       />
 
@@ -243,7 +243,7 @@ const RouteRenderer: React.FC<RouteRendererProps> = ({ route, color, t }) => {
 
       <HoverMarker
         position={[route.endLat, route.endLng]}
-        icon={endDivIcon} 
+        icon={endDivIcon}
         popupContent={`${t("popupEnd")}: ${route.endAddress}`}
       />
 
@@ -445,8 +445,8 @@ const OpenStreetMap = forwardRef(
               : [25, 41];
 
             const iconAnchor: [number, number] = marker.icon?.scaledSize
-                ? [marker.icon.scaledSize / 2, marker.icon.scaledSize]
-                : [12, 41];
+              ? [marker.icon.scaledSize / 2, marker.icon.scaledSize]
+              : [12, 41];
 
             const divIcon = marker.icon?.url
               ? createGenericDivIcon(marker.icon.url, iconSize, iconAnchor)
@@ -483,11 +483,16 @@ const OpenStreetMap = forwardRef(
         {foundRoute && (
           <div style={TotalTimeStyle}>
             🕒 {t("footerTotalTime")}:{" "}
-            {foundRoute.total_time >= 60
-              ? `${Math.floor(foundRoute.total_time / 60)}h ${
-                  foundRoute.total_time % 60
-                }m`
-              : `${foundRoute.total_time}m`}
+            {
+              (foundRoute.totalTime ?? 0) > 0 ? (
+                foundRoute.totalTime >= 60
+                  ? `${Math.floor(foundRoute.totalTime / 60)}h ${foundRoute.totalTime % 60
+                  }m`
+                  : `${foundRoute.totalTime}m`
+              ) : (
+                t("timeNotAvailable")
+              )
+            }
           </div>
         )}
       </div>

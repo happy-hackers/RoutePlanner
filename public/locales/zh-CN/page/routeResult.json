@@ -13,5 +13,6 @@
     "text_waypoints": "途经点",
     "text_no_route_found": "未找到路线",
     "message_success_all_routes_saved": "所有路线已成功保存并激活。",
-    "message_error_save_route_failed": "保存路线失败：{{error}}"
+    "message_error_save_route_failed": "保存路线失败：{{error}}",
+    "message_route_cleared_for": "路线已清除为"
   }

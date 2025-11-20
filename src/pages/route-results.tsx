@@ -412,18 +412,22 @@ export default function RouteResults() {
           <List
             size="small"
             dataSource={route.addressMeterSequence.map((o) => o.address)}
-            renderItem={(address, index) => (
-              <List.Item style={{ paddingLeft: 8, paddingRight: 8 }}>
-                <div style={{ flex: 1, marginRight: 4 }}>
-                  <Text strong>#{index + 1}</Text> — {address}
-                </div>
-                <Text
-                  style={{ color: getTimeColor(route.segmentTimes[index]) }}
-                >
-                  {route.segmentTimes[index]} {t("unit_mins")}
-                </Text>
-              </List.Item>
-            )}
+            renderItem={(address, index) => {
+              const travelTime = route.segmentTimes?.[index] ?? 0;
+
+              return (
+                <List.Item style={{ paddingLeft: 8, paddingRight: 8 }}>
+                  <div style={{ flex: 1, marginRight: 4 }}>
+                    <Text strong>#{index + 1}</Text> — {address}
+                  </div>
+                  <Text
+                    style={{ color: getTimeColor(travelTime) }}
+                  >
+                    {travelTime > 0 ? `${travelTime} ${t("unit_mins")}` : t("text_no_time")}
+                  </Text>
+                </List.Item>
+              );
+            }}
           />
         ) : (
           <Table
@@ -603,7 +607,7 @@ export default function RouteResults() {
                     (o, index) => ({
                       order: index + 1,
                       address: o.address,
-                      travelTime: foundRoute.segmentTimes[index],
+                      travelTime: foundRoute.segmentTimes?.[index] ?? 0,
                     })
                   )}
                   pagination={false}

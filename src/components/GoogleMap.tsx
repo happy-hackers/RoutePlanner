@@ -551,11 +551,11 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
             }}
           >
             🕒 {t("footerTotalTime")}:{" "}
-            {foundRoute.total_time >= 60
-              ? `${Math.floor(foundRoute.total_time / 60)}h ${
-                  foundRoute.total_time % 60
+            {foundRoute.totalTime >= 60
+              ? `${Math.floor(foundRoute.totalTime / 60)}h ${
+                  foundRoute.totalTime % 60
                 }m`
-              : `${foundRoute.total_time}m`}
+              : `${foundRoute.totalTime}m`}
           </div>
         )}
       </div>

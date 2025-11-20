@@ -82,7 +82,14 @@ def build_time_and_distance_matrices(elements, n):
 def time_to_seconds(t: str) -> int:
     if not t:
         return 0
-    dt = datetime.strptime(t, "%H:%M:%S")
+    try:
+        dt = datetime.strptime(t, "%H:%M:%S")
+    except ValueError:
+        try:
+            dt = datetime.strptime(t, "%H:%M")
+        except ValueError:
+            print(f"Warning: Could not parse time string '{t}'. Assuming 0 seconds.")
+            return 0     
     return dt.hour * 3600 + dt.minute * 60 + dt.second
 
 def get_current_time_in_seconds():
@@ -184,7 +191,12 @@ async def time_consider_route(data: RouteInput):
     index = [x - 1 for x in route]
     total_time = round(total_time / 60)
     # Return the order of waypoints, the estimated time between each waypoints and the total time of the route
-    return { "order": index, "segment_times": segment_times, "total_time": total_time, "total_distance": total_distance }
+    return { 
+        "order": index, 
+        "segmentTimes": segment_times, 
+        "totalTime": total_time,       
+        "totalDistance": total_distance 
+    }
 
 @app.get("/")
 async def root():
