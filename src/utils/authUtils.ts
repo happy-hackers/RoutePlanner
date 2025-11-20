@@ -207,3 +207,18 @@ export const generateRandomPassword = () => {
   }
   return pwd;
 };
+
+export const loginWithEmailLink = async (email: string) => {
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: `${window.location.origin}/driver-route`,
+    },
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+  return { success: true, message: "Check your email for the login link!" };
+};
