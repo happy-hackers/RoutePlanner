@@ -44,8 +44,8 @@ const dropdownStyleContent = `
 
 export default function RouteResults() {
   const { t } = useTranslation("routeResult");
-
   const { Title, Text } = Typography;
+  const [isCalculating, setIsCalculating] = useState(false);
 
   const columns = [
     {
@@ -123,9 +123,12 @@ export default function RouteResults() {
     (state: RootState) => state.order.selectedOrders
   );
 
-  const mapRef = useRef<{ triggerCalculate: (dispatcherId?: number) => void }>(
+ const mapRef = useRef<{
+    triggerCalculate: (dispatcherId?: number) => void;
+    setIsCalculating: React.Dispatch<React.SetStateAction<boolean>>; 
+}>(
     null
-  );
+);
 
   console.log("markers", markers);
 
@@ -396,8 +399,10 @@ export default function RouteResults() {
                   <Button
                     size="small"
                     type="primary"
+                    loading={isCalculating}
                     onClick={(e) => {
                       e.stopPropagation();
+                      mapRef.current?.setIsCalculating(true);
                       mapRef.current?.triggerCalculate(dispatcher.id);
                     }}
                   >
@@ -650,6 +655,8 @@ export default function RouteResults() {
           setNewRoutes={setNewRoutes}
           isAllRoutes={isAllRoutes}
           selectedDispatcher={selectedDispatcher}
+          isCalculating={isCalculating}
+          setIsCalculating={setIsCalculating}
           ref={mapRef}
         />
       </Col>

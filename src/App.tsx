@@ -47,10 +47,10 @@ function AppContent({ isGoogleMapSelected, isMapReady }: AppContentProps) {
   const location = useLocation();
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [hoveredOrderId, setHoveredOrderId] = useState<number | null>(null);
-
+  const [isCalculating, setIsCalculating] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const emptyArray: any[] = [];
-  const emptySetter = () => {};
+  const emptySetter = () => { };
 
   const [isInitialRenderComplete, setIsInitialRenderComplete] = useState(false);
 
@@ -106,7 +106,7 @@ function AppContent({ isGoogleMapSelected, isMapReady }: AppContentProps) {
               />
               <Route
                 path="/view-orders"
-                element={<ViewOrders setMarkers={setMarkers} />} 
+                element={<ViewOrders setMarkers={setMarkers} />}
               />
               <Route
                 path="/assign-dispatcher"
@@ -128,15 +128,17 @@ function AppContent({ isGoogleMapSelected, isMapReady }: AppContentProps) {
                   <div>Loading Map...</div>
                 )
               ) : (
-                <DynamicMap 
-                  orderMarkers={markers} 
-                  setOrderMarkers={setMarkers} 
-                  setSelectedRowId={() => {}} 
+                <DynamicMap
+                  orderMarkers={markers}
+                  setOrderMarkers={setMarkers}
+                  setSelectedRowId={() => { }}
                   isRouteResultsPage={false}
                   newRoutes={emptyArray}
                   setNewRoutes={emptySetter}
                   isAllRoutes={false}
                   selectedDispatcher={null}
+                  isCalculating={isCalculating}
+                  setIsCalculating={setIsCalculating}
                 />
               )}
             </Col>
@@ -157,7 +159,7 @@ function App() {
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: apiKey || "",
-    libraries: GOOGLE_MAPS_LIBRARIES, 
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   const isMapReady = !isGoogleMapSelected || isLoaded;
@@ -183,7 +185,7 @@ function App() {
       <ConfigProvider locale={currentLocale}>
         <AntApp>
           <AppContent
-            key={mapProvider} 
+            key={mapProvider}
             isGoogleMapSelected={isGoogleMapSelected}
             isMapReady={isMapReady}
           />

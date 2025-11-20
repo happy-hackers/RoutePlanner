@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import type { MarkerData } from "../types/markers";
@@ -20,6 +20,8 @@ interface RoutingHookProps {
   isAllRoutes?: boolean;
   message: MessageInstance;
   t: TFunction;
+  isCalculating: boolean;
+  setIsCalculating: Dispatch<SetStateAction<boolean>>;
 }
 
 type Coords = {
@@ -60,6 +62,7 @@ export const useRoutingAndGeocoding = ({
   isAllRoutes,
   message,
   t,
+  setIsCalculating,
 }: RoutingHookProps) => {
   const [startAddress, setStartAddress] = useState("");
   const [endAddress, setEndAddress] = useState("");
@@ -254,7 +257,7 @@ export const useRoutingAndGeocoding = ({
       preCalculatedEndCoord ||
       (await geocodeAddress(endAddress));
     if (!startCoord || !endCoord) {
-        throw new Error("Start or End coordinates are missing.");
+      throw new Error("Start or End coordinates are missing.");
     }
     const sortedAddressWithMeters: AddressMetersElement[] = routeOrder.map(
       (i: number) => ({
@@ -333,6 +336,7 @@ export const useRoutingAndGeocoding = ({
       message.error(t("errorStartEndRequired"));
       return;
     }
+    setIsCalculating(true);
     try {
       let oMarkers: MarkerData[];
       if (dispatcherId)
@@ -381,6 +385,8 @@ export const useRoutingAndGeocoding = ({
     } catch (error) {
       console.error("Routing error:", error);
       message.error(t("errorRouteCalculationFailed"));
+    } finally {
+      setIsCalculating(false);
     }
   };
 
@@ -389,6 +395,7 @@ export const useRoutingAndGeocoding = ({
       message.error(t("errorStartEndRequired"));
       return;
     }
+    setIsCalculating(true);
     try {
       let oMarkers: MarkerData[];
       if (dispatcherId)
@@ -407,6 +414,8 @@ export const useRoutingAndGeocoding = ({
     } catch (error) {
       console.error("Routing error:", error);
       message.error(t("errorRouteCalculationFailed"));
+    } finally {
+      setIsCalculating(false);
     }
   };
 
@@ -445,5 +454,6 @@ export const useRoutingAndGeocoding = ({
     calculateRoutebyTime,
     geocodeAddress,
     foundRoute,
+    setIsCalculating,
   };
 };

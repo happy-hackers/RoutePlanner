@@ -5,6 +5,7 @@ import {
   useRef,
   useMemo,
   type SetStateAction,
+  type Dispatch,
 } from "react";
 import { Input, Space, Button, Select, App, TimePicker } from "antd";
 import {
@@ -119,6 +120,8 @@ interface NavigationMapProp {
   setNewRoutes?: React.Dispatch<SetStateAction<Omit<Route, "id">[]>>;
   isAllRoutes?: boolean;
   selectedDispatcher?: Dispatcher | null;
+  isCalculating: boolean;
+  setIsCalculating: Dispatch<SetStateAction<boolean>>;
 }
 
 interface MapCenteringProps {
@@ -293,6 +296,8 @@ const OpenStreetMap = forwardRef(
       setNewRoutes,
       isAllRoutes,
       selectedDispatcher,
+      isCalculating,
+      setIsCalculating,
     }: NavigationMapProp,
     ref
   ) => {
@@ -322,6 +327,8 @@ const OpenStreetMap = forwardRef(
       isAllRoutes,
       message,
       t,
+      isCalculating,
+      setIsCalculating,
     });
 
     const dispatchers = useSelector(
@@ -356,6 +363,7 @@ const OpenStreetMap = forwardRef(
           calculateRoutebyTime(dispatcherId);
         }
       },
+      setIsCalculating: setIsCalculating,
     }));
 
     return (
@@ -413,6 +421,7 @@ const OpenStreetMap = forwardRef(
                     !!foundRoute || isAllRoutes ? "#E6E6E6" : "#1677ff",
                   border: "none",
                 }}
+                loading={isCalculating}
                 onClick={handleCalculate}
               >
                 {t("calculateButton")}

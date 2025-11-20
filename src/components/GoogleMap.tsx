@@ -4,6 +4,8 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  type Dispatch,
+  type SetStateAction,
 } from "react";
 import { Input, Space, Button, Select, App, TimePicker } from "antd";
 import { useSelector } from "react-redux";
@@ -29,10 +31,13 @@ interface NavigationMapProp {
   setNewRoutes?: React.Dispatch<React.SetStateAction<Omit<Route, "id">[]>>;
   isAllRoutes?: boolean;
   selectedDispatcher?: Dispatcher | null;
+  isCalculating: boolean;
+  setIsCalculating: Dispatch<SetStateAction<boolean>>;
 }
 
 export interface MapRef {
   triggerCalculate: (dispatcherId: number) => void;
+  setIsCalculating: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 interface SettingConfig {
@@ -163,6 +168,8 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
       setNewRoutes,
       isAllRoutes,
       selectedDispatcher,
+      isCalculating,
+      setIsCalculating,
     }: NavigationMapProp,
     ref
   ) => {
@@ -204,8 +211,10 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
       isAllRoutes,
       message,
       t,
+      isCalculating,
+      setIsCalculating,
     });
-    
+
     useEffect(() => {
       const settingInfo: SettingConfig = getSettingInfo();
       if (settingInfo && settingInfo.useDefaultAddress) {
@@ -222,6 +231,7 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
           calculateRoute(dispatcherId);
         }
       },
+      setIsCalculating: setIsCalculating,
     }));
 
     const clearMap = useCallback(() => {
@@ -299,8 +309,8 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
       const routesToRender = isAllRoutes
         ? newRoutes || []
         : foundRoute
-        ? [foundRoute]
-        : [];
+          ? [foundRoute]
+          : [];
 
       const allCoords: google.maps.LatLngLiteral[] = [];
       const assignedPositions = new Set<string>();
@@ -344,8 +354,7 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
         addMarkerListener(
           startMarker,
           `
-          <div style="font-weight: bold;">${t("popupStart")}: ${
-            route.startAddress
+          <div style="font-weight: bold;">${t("popupStart")}: ${route.startAddress
           }</div>
           <div>${t("dispatcher")}: ${dispatcherName}</div>
           `
@@ -373,8 +382,7 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
           addMarkerListener(
             marker,
             `
-            <div style="font-weight: bold;">${t("popupStop")} ${i + 1}: ${
-              waypoint.address
+            <div style="font-weight: bold;">${t("popupStop")} ${i + 1}: ${waypoint.address
             }</div>
             <div>${t("dispatcher")}: ${dispatcherName}</div>
             `
@@ -400,8 +408,7 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
         addMarkerListener(
           endMarker,
           `
-          <div style="font-weight: bold;">${t("popupEnd")}: ${
-            route.endAddress
+          <div style="font-weight: bold;">${t("popupEnd")}: ${route.endAddress
           }</div>
           <div>${t("dispatcher")}: ${dispatcherName}</div>
           `
@@ -518,6 +525,7 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
                     !!foundRoute || isAllRoutes ? "#E6E6E6" : "#1677ff",
                   border: "none",
                 }}
+                loading={isCalculating}
                 onClick={handleCalculate}
               >
                 {t("calculateButton")}
@@ -552,9 +560,8 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
           >
             🕒 {t("footerTotalTime")}:{" "}
             {foundRoute.totalTime >= 60
-              ? `${Math.floor(foundRoute.totalTime / 60)}h ${
-                  foundRoute.totalTime % 60
-                }m`
+              ? `${Math.floor(foundRoute.totalTime / 60)}h ${foundRoute.totalTime % 60
+              }m`
               : `${foundRoute.totalTime}m`}
           </div>
         )}
