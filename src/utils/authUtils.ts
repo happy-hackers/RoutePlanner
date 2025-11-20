@@ -128,6 +128,23 @@ export const createDriverAuth = async (
   }
 };
 
+export const UpdateDriverAuth = async (
+  authData: Omit<DriverAuthData, "password">,
+  authUserId: string
+): Promise<{ success: boolean; error?: string }> => {
+  const { error } = await supabase.auth.admin.updateUserById(authUserId, {
+    email: authData.email,
+    user_metadata: {
+      dispatcher_id: authData.dispatcherId,
+      name: authData.name,
+    },
+  });
+  if (error) {
+    return { success: false, error: error.message };
+  }
+  return { success: true };
+};
+
 // Update driver password (called by admin)
 // ⚠️ Uses admin client with service role key
 export const updateDriverPassword = async (
