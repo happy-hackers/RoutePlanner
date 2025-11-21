@@ -1,13 +1,21 @@
 {
-    "select_all_dispatchers": "All Dispatchers",
-    "popconfirm_title": "Do you want to re-assign orders?",
-    "popconfirm_ok": "Yes",
-    "popconfirm_cancel": "No",
-    "button_auto_assign": "Auto Assign",
-    "button_assigning": "Assigning...",
-    "message_error_fetch": "Error fetching dispatchers:",
-    "message_error_load": "Failed to load dispatchers.",
-    "message_warning_not_found": "No dispatcher found for order {{orderId}}", 
-    "message_success": "Order {{orderId}} assigned to {{dispatcherName}}",
-    "message_error_update": "Failed to update order {{orderId}}: {{error}}"
-  }
+  "select_all_dispatchers": "All Dispatchers",
+  "button_auto_assign": "Auto Assign",
+  "button_assigning": "Assigning...",
+  "popconfirm_title": "Are you sure to re-assign all orders?",
+  "popconfirm_ok": "Yes",
+  "popconfirm_cancel": "No",
+  "message_success": "Assigned order {{orderId}} to {{dispatcherName}}",
+  "message_success_bulk": "Assigned {{count}} orders to {{name}}",
+  "message_error_update": "Failed to update order {{orderId}}: {{error}}",
+  "message_error_fetch": "Error fetching dispatchers",
+  "message_error_load": "Failed to load dispatchers",
+  "message_warning_not_found": "No suitable dispatcher found for order {{orderId}}",
+  "table_address": "Address",
+  "table_dispatcher": "Dispatcher",
+  "table_id": "Order ID",
+  "table_time": "Delivery Time",
+  "placeholder_assign_dispatcher": "Assign Dispatcher",
+  "status_unassigned": "Unassigned",
+  "pagination_total": "{{start}}-{{end}} of {{total}}"
+}

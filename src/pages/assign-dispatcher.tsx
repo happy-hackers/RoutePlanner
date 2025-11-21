@@ -1,6 +1,20 @@
-import { Select, Button, Row, Col, Space, App, Popconfirm } from "antd";
-import { useState, useEffect } from "react";
-import Dispatcherform from "../components/Dispatcherform";
+import {
+  Select,
+  Button,
+  Row,
+  Col,
+  Space,
+  App,
+  Popconfirm,
+  Table,
+  Typography,
+} from "antd";
+import type {
+  TablePaginationConfig,
+  FilterValue,
+  SorterResult,
+} from "antd/es/table/interface";
+import { useState, useEffect, useMemo } from "react";
 import type { Dispatcher } from "../types/dispatchers";
 import { getAllDispatchers, updateOrder } from "../utils/dbUtils";
 import type { MarkerData } from "../types/markers";
@@ -9,22 +23,32 @@ import { getGroupedMarkers } from "../utils/markersUtils";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../store";
 import { setSelectedOrders } from "../store/orderSlice";
-import type { Customer } from "../types/customer";
 import { useTranslation } from "react-i18next";
+import dayjs from "dayjs";
+
+const { Text } = Typography;
 
 const WIDE_DROPDOWN_CLASS = "local-wide-select-dropdown";
 
-const dropdownStyleContent = `
+const customStyles = `
   .ant-select-dropdown.${WIDE_DROPDOWN_CLASS} {
     width: 250px !important; 
     min-width: 250px !important;
   }
 `;
 
+interface GroupRowData {
+  groupKey: string;
+  address: string;
+  orders: Order[];
+  dispatcherId: number | null | "mixed";
+  dispatcherName: string;
+}
+
+type SortOrder = "ascend" | "descend" | null;
+
 export default function AssignDispatchers({
   setMarkers,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  hoveredOrderId: _hoveredOrderId,
   setHoveredOrderId,
 }: {
   setMarkers: (markers: MarkerData[]) => void;
@@ -43,6 +67,10 @@ export default function AssignDispatchers({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
+  const [groupPage, setGroupPage] = useState(1);
+  const [groupsPerPage, setGroupsPerPage] = useState(20);
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(null);
 
   useEffect(() => {
     const fetchDispatchers = async () => {
@@ -64,7 +92,7 @@ export default function AssignDispatchers({
     return a.name.localeCompare(b.name);
   });
 
-  const dispatchersOption = [
+  const filterOptions = [
     { value: null, label: t("select_all_dispatchers") },
     ...sortedDispatchers.map((dispatcher) => ({
       value: dispatcher.id,
@@ -72,36 +100,54 @@ export default function AssignDispatchers({
     })),
   ];
 
-  const handleUpdateOrders = async (
-    order: Order | (Order & { matchedDispatchers: Dispatcher[] }),
-    dispatcher: Dispatcher,
-    updatedOrders: Order[]
-  ): Promise<Order[]> => {
-    let customer: Customer | undefined;
-    let rest: Omit<Order, "customer">;
-    let matchedDispatchers: Dispatcher[] = [];
-    if ("matchedDispatchers" in order) {
-      ({ customer, matchedDispatchers, ...rest } = order);
-    } else {
-      ({ customer, ...rest } = order);
-    }
-    void matchedDispatchers;
-    const updatedOrder: Order = {
-      ...rest,
-      dispatcherId: dispatcher.id,
+  const assignmentOptions = sortedDispatchers.map((dispatcher) => ({
+    value: dispatcher.id,
+    label: dispatcher.name,
+  }));
+
+  type OrderPayload = Omit<Order, "customer" | "matchedDispatchers">;
+
+  const updateOrderInDb = async (order: Order, dispatcherId: number) => {
+    const { customer, ...restProps } = order;
+    const propsWithPossibleMatch = restProps as typeof restProps & {
+      matchedDispatchers?: unknown;
+    };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { matchedDispatchers, ...cleanRest } = propsWithPossibleMatch;
+    const payload: OrderPayload = {
+      ...(cleanRest as OrderPayload),
+      dispatcherId: dispatcherId,
       status: "In Progress",
     };
-    const result = await updateOrder(updatedOrder);
+
+    const result = await updateOrder(payload as Order);
+
+    return {
+      result,
+      updatedOrder: payload as Order,
+      originalCustomer: customer || order.customer,
+    };
+  };
+
+  const handleSingleAssign = async (order: Order, dispatcherId: number) => {
+    const dispatcher = dispatchers.find((d) => d.id === dispatcherId);
+    if (!dispatcher) return;
+
+    const { result, updatedOrder, originalCustomer } = await updateOrderInDb(
+      order,
+      dispatcherId
+    );
 
     if (result.success) {
-      updatedOrders = updatedOrders.map((order) =>
-        order.id === updatedOrder.id
-          ? { ...updatedOrder, customer: customer ?? undefined }
-          : order
+      const newOrders = selectedOrders.map((o) =>
+        o.id === order.id ? { ...updatedOrder, customer: originalCustomer } : o
       );
-      const markers = getGroupedMarkers(updatedOrders, dispatchers);
 
+      dispatch(setSelectedOrders(newOrders));
+
+      const markers = getGroupedMarkers(newOrders, dispatchers);
       setMarkers(markers);
+
       message.success(
         t("message_success", {
           orderId: order.id,
@@ -110,158 +156,155 @@ export default function AssignDispatchers({
       );
     } else {
       message.error(
-        t("message_error_update", {
-          orderId: order.id,
-          error: result.error,
-        })
+        t("message_error_update", { orderId: order.id, error: result.error })
       );
     }
-    return updatedOrders;
   };
 
-  const getDispatcherWithLeastAssigned = (
-    dispatchers: Dispatcher[],
-    tempOrders: Order[]
-  ): Dispatcher | null => {
-    let minDispatcher: Dispatcher | null = null;
-    let minCount = Infinity;
+  const handleGroupAssign = async (
+    ordersToAssign: Order[],
+    dispatcherId: number
+  ) => {
+    const dispatcher = dispatchers.find((d) => d.id === dispatcherId);
+    if (!dispatcher) return;
 
-    for (const dispatcher of dispatchers) {
-      const assignedCount = tempOrders.filter(
-        (order) => order.dispatcherId === dispatcher.id
-      ).length;
+    const newOrders = [...selectedOrders];
+    let successCount = 0;
+    let hasUpdate = false;
 
-      if (assignedCount < minCount) {
-        minCount = assignedCount;
-        minDispatcher = dispatcher;
+    for (const order of ordersToAssign) {
+      if (order.dispatcherId === dispatcherId) continue;
+
+      const { result, updatedOrder, originalCustomer } = await updateOrderInDb(
+        order,
+        dispatcherId
+      );
+
+      if (result.success) {
+        const index = newOrders.findIndex((o) => o.id === order.id);
+        if (index > -1) {
+          newOrders[index] = { ...updatedOrder, customer: originalCustomer };
+          successCount++;
+          hasUpdate = true;
+        }
       }
     }
 
-    return minDispatcher;
+    if (hasUpdate) {
+      dispatch(setSelectedOrders(newOrders));
+      const markers = getGroupedMarkers(newOrders, dispatchers);
+      setMarkers(markers);
+
+      if (successCount > 0) {
+        message.success(
+          t("message_success_bulk", {
+            count: successCount,
+            name: dispatcher.name,
+          })
+        );
+      }
+    } else {
+      message.info(
+        t("message_warning_no_change", {
+          defaultValue:
+            "All orders in this group are already assigned to this dispatcher.",
+        })
+      );
+    }
   };
 
   const assignOrders = async (selectedOrders: Order[]) => {
     setIsAssigning(true);
     if (dispatchers.length === 0) return;
-
     let updatedOrders = [...selectedOrders];
-    // 1. First assign those orders whose area or district only matches to one dispatcher
-    // 2. Then assign those orders whose area or district matches more than one dispatcher
-    // 3. Lastly assign those orders whose area or district doesn't match any dispatcher
-    const unassignedOrderswithDispatchers: (Order & {
-      matchedDispatchers: Dispatcher[];
-    })[] = [];
-    const unassignedOrderswithNoDispatchers: Order[] = [];
-    for (const order of selectedOrders) {
-      // Skip already assigned orders
-      if (order.dispatcherId) {
-        continue;
-      }
-      const customer = order.customer;
-      if (!customer) {
-        console.warn(`No customer attached to order ${order.id}`);
-        setIsAssigning(false);
-        continue;
-      }
 
-      let matchedDispatcher;
-      // Try to find a dispatcher by district first
-      let matchedDispatchers = dispatchers.filter((d) =>
-        d.responsibleArea.some(
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          ([_area, district]) =>
-            district.toLowerCase() === customer.district.toLowerCase()
-        )
+    const handleAutoUpdate = async (order: Order, dispatcher: Dispatcher) => {
+      const { result, updatedOrder, originalCustomer } = await updateOrderInDb(
+        order,
+        dispatcher.id
       );
-      // If there is no district matched, try to find a area
-      if (matchedDispatchers.length === 0) {
-        matchedDispatchers = dispatchers.filter((d) =>
-          d.responsibleArea.some(
-            ([area]) => area.toLowerCase() === customer.area.toLowerCase()
-          )
+      if (result.success) {
+        updatedOrders = updatedOrders.map((o) =>
+          o.id === order.id
+            ? { ...updatedOrder, customer: originalCustomer }
+            : o
         );
-        // If there is only one dispatcher matched, assign the order to the person
-        if (matchedDispatchers.length === 0) {
-          unassignedOrderswithNoDispatchers.push(order);
-          continue;
-        } else if (matchedDispatchers.length === 1) {
-          matchedDispatcher = matchedDispatchers[0];
-        } else if (matchedDispatchers.length > 1) {
-          unassignedOrderswithDispatchers.push({
-            ...order,
-            matchedDispatchers,
-          });
-          continue;
-        }
-      } else if (matchedDispatchers.length === 1) {
-        matchedDispatcher = matchedDispatchers[0];
-      } else if (matchedDispatchers.length > 1) {
-        unassignedOrderswithDispatchers.push({ ...order, matchedDispatchers });
-        console.log(
-          "unassignedOrderswithDispatchers",
-          unassignedOrderswithDispatchers
-        );
-        continue;
-      }
-      if (matchedDispatcher) {
-        updatedOrders = await handleUpdateOrders(
-          order,
-          matchedDispatcher,
-          updatedOrders
-        );
-      } else {
-        message.warning(
-          t("message_warning_not_found", {
+        message.success(
+          t("message_success", {
             orderId: order.id,
+            dispatcherName: dispatcher.name,
           })
         );
-      }
-    }
-    if (unassignedOrderswithDispatchers.length > 0) {
-      for (const order of unassignedOrderswithDispatchers) {
-        const dispatcher = getDispatcherWithLeastAssigned(
-          order.matchedDispatchers,
-          updatedOrders
+      } else {
+        message.error(
+          t("message_error_update", { orderId: order.id, error: result.error })
         );
-        if (dispatcher) {
-          updatedOrders = await handleUpdateOrders(
-            order,
-            dispatcher,
-            updatedOrders
-          );
-        } else {
-          message.warning(
-            t("message_warning_not_found", {
-              orderId: order.id,
-            })
-          );
+      }
+    };
+
+    const getLeastAssigned = (ds: Dispatcher[], currentOrders: Order[]) => {
+      let minD: Dispatcher | null = null;
+      let minC = Infinity;
+      for (const d of ds) {
+        const count = currentOrders.filter(
+          (o) => o.dispatcherId === d.id
+        ).length;
+        if (count < minC) {
+          minC = count;
+          minD = d;
         }
       }
-    }
-    if (unassignedOrderswithNoDispatchers.length > 0) {
-      for (const order of unassignedOrderswithNoDispatchers) {
-        const dispatcher = getDispatcherWithLeastAssigned(
-          dispatchers,
-          updatedOrders
+      return minD;
+    };
+
+    const unassignedWithMatches: { order: Order; matches: Dispatcher[] }[] = [];
+    const unassignedNoMatches: Order[] = [];
+
+    for (const order of selectedOrders) {
+      if (order.dispatcherId) continue;
+      if (!order.customer) continue;
+
+      let matches = dispatchers.filter((d) =>
+        d.responsibleArea.some(
+          ([, dist]) =>
+            dist?.toLowerCase() === order.customer?.district.toLowerCase()
+        )
+      );
+
+      if (matches.length === 0) {
+        matches = dispatchers.filter((d) =>
+          d.responsibleArea.some(
+            ([area]) =>
+              area?.toLowerCase() === order.customer?.area.toLowerCase()
+          )
         );
-        if (dispatcher) {
-          updatedOrders = await handleUpdateOrders(
-            order,
-            dispatcher,
-            updatedOrders
-          );
-        } else {
-          message.warning(
-            t("message_warning_not_found", {
-              orderId: order.id,
-            })
-          );
-        }
+      }
+
+      if (matches.length === 1) {
+        await handleAutoUpdate(order, matches[0]);
+      } else if (matches.length > 1) {
+        unassignedWithMatches.push({ order, matches });
+      } else {
+        unassignedNoMatches.push(order);
       }
     }
+
+    for (const item of unassignedWithMatches) {
+      const bestD = getLeastAssigned(item.matches, updatedOrders);
+      if (bestD) await handleAutoUpdate(item.order, bestD);
+    }
+
+    for (const order of unassignedNoMatches) {
+      const bestD = getLeastAssigned(dispatchers, updatedOrders);
+      if (bestD) await handleAutoUpdate(order, bestD);
+    }
+
     dispatch(setSelectedOrders(updatedOrders));
+    const markers = getGroupedMarkers(updatedOrders, dispatchers);
+    setMarkers(markers);
     setIsAssigning(false);
   };
+
   const reAssignOrders = () => {
     const newSelectedOrders = selectedOrders.map((order) => ({
       ...order,
@@ -270,23 +313,139 @@ export default function AssignDispatchers({
     assignOrders(newSelectedOrders);
   };
 
+  const groupedData = useMemo(() => {
+    const groups: Record<string, Order[]> = {};
+    const filteredOrders = selectedId
+      ? selectedOrders.filter((o) => o.dispatcherId === selectedId)
+      : selectedOrders;
+
+    filteredOrders.forEach((order) => {
+      const buildingKey = order.detailedAddress || "Unknown Address";
+      if (!groups[buildingKey]) groups[buildingKey] = [];
+      groups[buildingKey].push(order);
+    });
+
+    return Object.entries(groups).map(([address, orders]): GroupRowData => {
+      const firstDispId = orders[0].dispatcherId;
+      const allSame = orders.every((o) => o.dispatcherId === firstDispId);
+      const dispatcherId = allSame ? firstDispId || null : "mixed";
+
+      let dispatcherName = "";
+      if (dispatcherId === "mixed") {
+        dispatcherName = "Mixed";
+      } else if (dispatcherId) {
+        const d = dispatchers.find((disp) => disp.id === dispatcherId);
+        dispatcherName = d ? d.name : "";
+      }
+
+      return {
+        groupKey: address,
+        address,
+        orders,
+        dispatcherId,
+        dispatcherName,
+      };
+    });
+  }, [selectedOrders, selectedId, dispatchers]);
+
+  const sortedGroupedData = useMemo(() => {
+    if (!sortOrder || !sortField) return groupedData;
+
+    return [...groupedData].sort((a, b) => {
+      let compareResult = 0;
+      if (sortField === "address") {
+        compareResult = a.address.localeCompare(b.address);
+      } else if (sortField === "dispatcher") {
+        const nameA = a.dispatcherName || "zzzz";
+        const nameB = b.dispatcherName || "zzzz";
+        compareResult = nameA.localeCompare(nameB);
+      }
+      return sortOrder === "ascend" ? compareResult : -compareResult;
+    });
+  }, [groupedData, sortOrder, sortField]);
+
+  const paginatedGroups = useMemo(() => {
+    const startIndex = (groupPage - 1) * groupsPerPage;
+    const endIndex = startIndex + groupsPerPage;
+    return sortedGroupedData.slice(startIndex, endIndex);
+  }, [groupPage, groupsPerPage, sortedGroupedData]);
+
+  const handleTableChange = (
+    _pagination: TablePaginationConfig,
+    _filters: Record<string, FilterValue | null>,
+    sorter: SorterResult<GroupRowData> | SorterResult<GroupRowData>[]
+  ) => {
+    if (!Array.isArray(sorter)) {
+      setSortOrder(sorter.order as SortOrder);
+      setSortField(sorter.field as string);
+    }
+  };
+
+  const columns = [
+    {
+      title: t("table_address"),
+      dataIndex: "address",
+      key: "address",
+      render: (text: string) => <Text strong>{text}</Text>,
+      sorter: true,
+      sortOrder: sortField === "address" ? sortOrder : null,
+      width: "75%",
+    },
+    {
+      title: t("table_dispatcher"),
+      dataIndex: "dispatcher",
+      key: "dispatcher",
+      sorter: true,
+      sortOrder: sortField === "dispatcher" ? sortOrder : null,
+      width: "25%",
+      render: (_: unknown, record: GroupRowData) => (
+        <Select
+          rootClassName={WIDE_DROPDOWN_CLASS}
+          style={{ width: "100%", maxWidth: 250 }}
+          placeholder={t("placeholder_assign_dispatcher")}
+          value={record.dispatcherId === "mixed" ? null : record.dispatcherId}
+          allowClear
+          onChange={(value) => {
+            if (value) handleGroupAssign(record.orders, value);
+          }}
+          options={assignmentOptions}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+    },
+  ];
+
   return (
     <Row style={{ height: "100%" }}>
-      <Col>
-        <Space direction="vertical" size={0} style={{ width: "100%" }}>
-          <style>{dropdownStyleContent}</style>
-          <Space direction="horizontal" size="middle">
+      <Col
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <Space
+          direction="vertical"
+          size={0}
+          style={{ width: "100%", flexShrink: 0 }}
+        >
+          <style>{customStyles}</style>
+          <Space
+            direction="horizontal"
+            size="middle"
+            style={{ marginBottom: 10 }}
+          >
             <Select
               rootClassName={WIDE_DROPDOWN_CLASS}
               virtual={true}
               listHeight={300}
               defaultValue={null}
-              onChange={(id: number) => {
+              onChange={(id: number | null) => {
                 setSelectedId(id);
-                // Only update markers when selecting, don't auto assign
                 if (id) {
                   const selectedDispatcher = dispatchers.find(
-                    (dispatcher) => dispatcher.id === id
+                    (d) => d.id === id
                   );
                   if (selectedDispatcher) {
                     const filteredOrders = selectedOrders.filter(
@@ -299,7 +458,6 @@ export default function AssignDispatchers({
                     setMarkers(filteredMarkers);
                   }
                 } else {
-                  // Show all orders when "All Dispatchers" is selected
                   const allMarkers = getGroupedMarkers(
                     selectedOrders,
                     dispatchers
@@ -307,7 +465,7 @@ export default function AssignDispatchers({
                   setMarkers(allMarkers);
                 }
               }}
-              options={dispatchersOption}
+              options={filterOptions}
             />
             {isEveryOrderAssigned ? (
               <Popconfirm
@@ -338,18 +496,86 @@ export default function AssignDispatchers({
               </Button>
             )}
           </Space>
-          <Dispatcherform
-            selectedDispatcher={
-              selectedId
-                ? dispatchers.find((d) => d.id === selectedId) || null
-                : null
-            }
-            orders={selectedOrders}
-            dispatchers={dispatchers}
-            setMarkers={setMarkers}
-            setHoveredOrderId={setHoveredOrderId}
-          />
         </Space>
+
+        <div style={{ flex: 1, overflow: "hidden" }}>
+          <Table
+            rowKey="groupKey"
+            columns={columns}
+            dataSource={paginatedGroups}
+            onChange={handleTableChange}
+            expandable={{
+              expandedRowRender: (record) => (
+                <Table
+                  rowKey="id"
+                  dataSource={record.orders}
+                  pagination={false}
+                  size="small"
+                  showHeader={true}
+                  columns={[
+                    {
+                      title: t("table_id"),
+                      dataIndex: "id",
+                      width: "35%",
+                    },
+                    {
+                      title: t("table_time"),
+                      dataIndex: "time",
+                      width: "40%",
+                      render: (time, order) =>
+                        `${dayjs(order.date).format("MM-DD")} ${time}`,
+                    },
+                    {
+                      title: t("table_dispatcher"),
+                      width: "25%",
+                      render: (_, order) => (
+                        <Select
+                          rootClassName={WIDE_DROPDOWN_CLASS}
+                          style={{ width: "100%", minWidth: 120 }}
+                          placeholder={t("status_unassigned")}
+                          value={order.dispatcherId || null}
+                          allowClear={false}
+                          onChange={(value) => handleSingleAssign(order, value)}
+                          options={assignmentOptions}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ),
+                    },
+                  ]}
+                  onRow={(record) => ({
+                    onMouseEnter: () => setHoveredOrderId(record.id),
+                    onMouseLeave: () => setHoveredOrderId(null),
+                  })}
+                />
+              ),
+              rowExpandable: (record) => record.orders.length > 0,
+            }}
+            pagination={{
+              current: groupPage,
+              pageSize: groupsPerPage,
+              total: sortedGroupedData.length,
+              showSizeChanger: true,
+              pageSizeOptions: ["20", "50", "100"],
+              showQuickJumper: true,
+              onChange: (page) => setGroupPage(page),
+              onShowSizeChange: (_, size) => {
+                setGroupsPerPage(size);
+                setGroupPage(1);
+              },
+              showTotal: (total, range) =>
+                t("pagination_total", {
+                  start: range[0],
+                  end: range[1],
+                  total,
+                }),
+              position: ["bottomCenter"],
+              size: "small",
+            }}
+            scroll={{ y: "calc(100vh - 200px)" }}
+            size="middle"
+            bordered
+          />
+        </div>
       </Col>
     </Row>
   );
