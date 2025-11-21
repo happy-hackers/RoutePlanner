@@ -12,11 +12,9 @@ import {
   Radio,
   Input,
   Switch,
-  Collapse,
-  Pagination,
 } from "antd";
 import dayjs from "dayjs";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   getAllCustomers,
   getAllDispatchers,
@@ -42,7 +40,17 @@ import { useTranslation } from "react-i18next";
 type TimePeriod = "Morning" | "Afternoon" | "Evening";
 
 const { Text } = Typography;
-const { Panel } = Collapse;
+
+interface GroupRowData {
+  groupKey: string;
+  address: string;
+  completeCount: number;
+  incompleteCount: number;
+  orders: Order[];
+  rowType: "green" | "red" | "yellow";
+  allSelected: boolean;
+  anySelected: boolean;
+}
 
 export default function ViewOrders({
   setMarkers,
@@ -61,12 +69,85 @@ export default function ViewOrders({
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isSelectedOrderModal, setIsSelectedOrderModal] = useState(false);
-  const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
   const [searchText, setSearchText] = useState("");
   const [groupView, setGroupView] = useState(false);
   const [groupPage, setGroupPage] = useState(1);
   const [tablePageSize, setTablePageSize] = useState(20);
   const [groupsPerPage, setGroupsPerPage] = useState(20);
+
+  const selectedRowIds = useMemo(
+    () => selectedOrders.map((o) => o.id),
+    [selectedOrders]
+  );
+
+  const customStyles = `
+    .ant-table-tbody > tr.grouped-order-row > td.ant-table-cell {
+      background-color: transparent !important;
+    }
+    .ant-table-tbody > tr.grouped-order-row.row-status-green {
+      background-color: #d9f7be !important;
+    }
+    .ant-table-tbody > tr.grouped-order-row.row-status-green:hover > td {
+      background-color: #c7e8aa !important;
+    }
+    .ant-table-tbody > tr.grouped-order-row.row-status-red {
+      background-color: #ffccc7 !important;
+    }
+    .ant-table-tbody > tr.grouped-order-row.row-status-red:hover > td {
+      background-color: #e8baba !important;
+    }
+    .ant-table-tbody > tr.grouped-order-row.row-status-yellow {
+      background-color: #fffbe6 !important;
+    }
+    .ant-table-tbody > tr.grouped-order-row.row-status-yellow:hover > td {
+      background-color: #e8e5d3 !important;
+    }
+    .ant-table-tbody > tr.grouped-order-row.ant-table-row-selected > td {
+      background-color: transparent !important;
+    }
+    .ant-table-tbody > tr.grouped-order-row:hover > td {
+       background-color: transparent !important; 
+    }
+  `;
+
+  const getGroupRowData = useCallback(
+    (address: string, ordersInGroup: Order[]): GroupRowData => {
+      const completeCount = ordersInGroup.filter(
+        (o) => o.status === "Delivered"
+      ).length;
+      const incompleteCount = ordersInGroup.length - completeCount;
+      const totalCount = ordersInGroup.length;
+
+      let rowType: "green" | "red" | "yellow";
+      if (completeCount === totalCount) {
+        rowType = "green";
+      } else if (incompleteCount === totalCount) {
+        rowType = "red";
+      } else {
+        rowType = "yellow";
+      }
+
+      const allSelected = ordersInGroup.every((order) =>
+        selectedRowIds.includes(order.id)
+      );
+
+      const anySelected = ordersInGroup.some((order) =>
+        selectedRowIds.includes(order.id)
+      );
+
+      return {
+        groupKey: address,
+        address,
+        completeCount,
+        incompleteCount,
+        orders: ordersInGroup,
+        rowType,
+        allSelected,
+        anySelected,
+      };
+    },
+    [selectedRowIds]
+  );
 
   const columns = [
     {
@@ -109,11 +190,9 @@ export default function ViewOrders({
 
   const handleRowSelect = (record: Order, selected: boolean) => {
     if (selected) {
-      setSelectedRowIds((prev) => [...prev, record.id]);
       const sortedOrders = sortOrders([...selectedOrders, record]);
       dispatch(setSelectedOrders(sortedOrders));
     } else {
-      setSelectedRowIds(selectedRowIds.filter((id) => id !== record.id));
       dispatch(
         setSelectedOrders(
           selectedOrders.filter((order) => order.id !== record.id)
@@ -129,14 +208,9 @@ export default function ViewOrders({
   ) => {
     const changedId = changeRows.map((row) => row.id);
     if (selected) {
-      /*changeRows.forEach((record) => {
-               setSelectedRowIds((prev) => [...prev, record.id]);
-             });*/
-      setSelectedRowIds((prev) => [...prev, ...changedId]);
       const sortedOrders = sortOrders([...selectedOrders, ...changeRows]);
       dispatch(setSelectedOrders(sortedOrders));
     } else {
-      setSelectedRowIds((prev) => prev.filter((id) => !changedId.includes(id)));
       dispatch(
         setSelectedOrders(
           selectedOrders.filter((order) => !changedId.includes(order.id))
@@ -167,42 +241,35 @@ export default function ViewOrders({
   const timeOptions: TimePeriod[] = ["Morning", "Afternoon", "Evening"];
   const statusOptions = ["All", "Complete", "Incomplete"];
 
-  const translatedTimeOptions = timeOptions.map(time => ({
+  const translatedTimeOptions = timeOptions.map((time) => ({
     label: t(`time_period_${time.toLowerCase()}`),
     value: time,
   }));
 
-  const translatedStatusOptions = statusOptions.map(status => ({
+  const translatedStatusOptions = statusOptions.map((status) => ({
     label: t(`status_${status.toLowerCase()}`),
     value: status,
   }));
 
-  // Fetch orders and customers from Supabase
   useEffect(() => {
     fetchOrders();
     fetchCustomers();
   }, [isUploadModalOpen]);
 
   useEffect(() => {
-    setSelectedRowIds(selectedOrders.map((order) => order.id));
-  }, [selectedOrders]);
-
-  useEffect(() => {
     setGroupPage(1);
   }, [status, searchText, date, timePeriod]);
 
-  // Use useMemo to cache filtered orders and prevent infinite re-renders
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
-      const orderDate = dayjs(order.date);
-
-      const matchesDate = date ? orderDate.isSame(date, "day") : true; // If there is a date selected, filter by the selected date. OtherWise, show the orders in all date
+      const matchesDate = date
+        ? order.date === date.format("YYYY-MM-DD")
+        : true;
       const matchesTimePeriod =
         timePeriod && timePeriod.length > 0
           ? timePeriod.includes(order.time)
-          : true; // If there is/are time period ticked, filter by the ticked one. OtherWise, show the orders in all time period
+          : true;
 
-      // Regard "Delivered" orders as completed orders and others as incompleted orders
       const isComplete = order.status === "Delivered";
       const isIncomplete = order.status !== "Delivered";
 
@@ -212,16 +279,14 @@ export default function ViewOrders({
       } else if (status === "Incomplete") {
         matchesStatus = isIncomplete;
       } else {
-        // If selected "All"
         matchesStatus = true;
       }
 
-      // Search filtering
       const normalizedSearch = searchText.toLowerCase();
       const matchesSearch =
         !searchText ||
-        String(order.id).toLowerCase().includes(normalizedSearch) || // Meter ID
-        (order.detailedAddress || "").toLowerCase().includes(normalizedSearch); // Address
+        String(order.id).toLowerCase().includes(normalizedSearch) ||
+        (order.detailedAddress || "").toLowerCase().includes(normalizedSearch);
 
       return matchesDate && matchesTimePeriod && matchesStatus && matchesSearch;
     });
@@ -250,25 +315,129 @@ export default function ViewOrders({
     return groupedEntries.slice(startIndex, endIndex);
   }, [groupPage, groupsPerPage, groupedEntries]);
 
+  const handleGroupSelect = (record: GroupRowData, checked: boolean) => {
+    const orderIdsInGroup = record.orders.map((order) => order.id);
+
+    if (checked) {
+      const newSelectedOrders = [...selectedOrders];
+      record.orders.forEach((order) => {
+        if (!selectedOrders.some((so) => so.id === order.id)) {
+          newSelectedOrders.push(order);
+        }
+      });
+      dispatch(setSelectedOrders(sortOrders(newSelectedOrders)));
+    } else {
+      dispatch(
+        setSelectedOrders(
+          selectedOrders.filter((order) => !orderIdsInGroup.includes(order.id))
+        )
+      );
+    }
+  };
+
+  const groupedDataSource = useMemo(() => {
+    return paginatedGroups.map(([address, ordersInGroup]) =>
+      getGroupRowData(address, ordersInGroup)
+    );
+  }, [paginatedGroups, getGroupRowData]);
+
+  const handleGroupSelectAll = (checked: boolean) => {
+    const currentPageOrders = groupedDataSource.flatMap(
+      (group) => group.orders
+    );
+    const currentPageOrderIds = currentPageOrders.map((order) => order.id);
+
+    if (checked) {
+      const ordersToAdd = currentPageOrders.filter(
+        (order) => !selectedOrders.some((so) => so.id === order.id)
+      );
+      dispatch(
+        setSelectedOrders(sortOrders([...selectedOrders, ...ordersToAdd]))
+      );
+    } else {
+      dispatch(
+        setSelectedOrders(
+          selectedOrders.filter(
+            (order) => !currentPageOrderIds.includes(order.id)
+          )
+        )
+      );
+    }
+  };
+
+  const isPageAllSelected =
+    groupedDataSource.length > 0 &&
+    groupedDataSource.every((r) => r.allSelected);
+  const isPageAnySelected = groupedDataSource.some((r) => r.anySelected);
+  const isPageIndeterminate = isPageAnySelected && !isPageAllSelected;
+
   const totalOrders = filteredOrders.length;
-  const pageSizeOptions = ['20', '50', '100', String(totalOrders)];
+  const totalGroups = groupedEntries.length;
+
+  const tablePageSizeOptions = ["20", "50", "100", String(totalOrders)];
+  const groupPageSizeOptions = ["20", "50", "100", String(totalGroups)];
 
   const sortedOrders = sortOrders(filteredOrders);
 
   useEffect(() => {
-  const fetchAndSetMarkers = async () => {
-    const dispatchersData = await getAllDispatchers();
-    if (!dispatchersData) return;
+    const fetchAndSetMarkers = async () => {
+      const dispatchersData = await getAllDispatchers();
+      if (!dispatchersData) return;
 
-    const markers = getGroupedMarkers(selectedOrders, dispatchersData)
-    setMarkers(markers);
-  };
+      const markers = getGroupedMarkers(selectedOrders, dispatchersData);
+      setMarkers(markers);
+    };
 
-  fetchAndSetMarkers();
-}, [selectedOrders, setMarkers]);
+    fetchAndSetMarkers();
+  }, [selectedOrders, setMarkers]);
+
+  const groupColumns = [
+    {
+      title: (
+        <Checkbox
+          indeterminate={isPageIndeterminate}
+          checked={isPageAllSelected}
+          onChange={(e) => handleGroupSelectAll(e.target.checked)}
+        />
+      ),
+      dataIndex: "groupSelector",
+      key: "groupSelector",
+      width: "5%",
+      align: "center" as const,
+      render: (_: unknown, record: GroupRowData) => (
+        <Checkbox
+          indeterminate={record.anySelected && !record.allSelected}
+          checked={record.allSelected}
+          onChange={(e) => handleGroupSelect(record, e.target.checked)}
+        />
+      ),
+    },
+    {
+      title: t("table_address"),
+      dataIndex: "address",
+      key: "address",
+      render: (text: string) => <Text strong>{text}</Text>,
+    },
+    {
+      title: t("status_complete"),
+      dataIndex: "completeCount",
+      align: "center" as const,
+      width: "10%",
+      render: (count: number) => <span>✔️ {count}</span>,
+    },
+    {
+      title: t("status_incomplete"),
+      dataIndex: "incompleteCount",
+      align: "center" as const,
+      width: "10%",
+      render: (count: number) => <span>❌ {count}</span>,
+    },
+  ];
 
   return (
     <Row style={{ height: "100vh" }}>
+      <style>{customStyles}</style>
+
       <Col
         style={{
           height: "100vh",
@@ -297,11 +466,17 @@ export default function ViewOrders({
             <BatchUploadModal
               isOpen={isUploadModalOpen}
               setOpen={setIsUploadModalOpen}
-              onUploadComplete={fetchOrders} isMapReady={false} isGoogleMapSelected={false}            />
+              onUploadComplete={fetchOrders}
+              isMapReady={false}
+              isGoogleMapSelected={false}
+            />
           </Space>
           <DatePicker
-            defaultValue={date}
-            onChange={(value) => dispatch(setDate(value))}
+            value={date}
+            onChange={(value) =>
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              dispatch(setDate((value ? value.startOf("day") : null) as any))
+            }
             style={{ width: "300px" }}
             format="YYYY-MM-DD"
           />
@@ -330,7 +505,7 @@ export default function ViewOrders({
           </Row>
           <Row>
             <Text strong style={{ marginRight: 20 }}>
-              {t("label_search")}: {/* 翻译 "Search:" */}
+              {t("label_search")}:
             </Text>
             <Input.Search
               placeholder={t("placeholder_search")}
@@ -357,8 +532,8 @@ export default function ViewOrders({
               <Switch
                 checked={groupView}
                 onChange={() => setGroupView(!groupView)}
-                checkedChildren="Grouped View" // keep
-                unCheckedChildren="Table View" // keep
+                checkedChildren="Grouped View"
+                unCheckedChildren="Table View"
                 style={{
                   backgroundColor: groupView ? "#31694E" : "#B87C4C",
                 }}
@@ -388,86 +563,85 @@ export default function ViewOrders({
             orders={selectedOrders}
             isVisible={isSelectedOrderModal}
             setVisibility={setIsSelectedOrderModal}
-            setSelectedRowIds={setSelectedRowIds}
+            setSelectedRowIds={() => { }}
           />
           {groupView ? (
             <>
-              <div
-                style={{
-                  flex: 1,
-                  maxHeight: "calc(100vh - 320px)",
-                  minHeight: 0,
-                  overflowY: "auto",
-                  paddingTop: 8,
+              <Table
+                rowKey="groupKey"
+                rowClassName={(record) =>
+                  `grouped-order-row row-status-${record.rowType}`
+                }
+                columns={groupColumns}
+                dataSource={groupedDataSource}
+                expandable={{
+                  expandedRowRender: (record) => (
+                    <Table
+                      rowKey="id"
+                      dataSource={record.orders}
+                      pagination={false}
+                      size="small"
+                      columns={[
+                        {
+                          title: t("table_id"),
+                          dataIndex: "id",
+                          key: "id",
+                          width: 100,
+                        },
+                        {
+                          title: t("table_delivery_time"),
+                          dataIndex: "time",
+                          key: "time",
+                          render: (time: string, order: Order) => {
+                            const date = dayjs(order.date).format("YYYY-MM-DD");
+                            const translatedTime = t(
+                              `time_period_${time.toLowerCase()}`
+                            );
+                            return `${date} ${translatedTime}`;
+                          },
+                        },
+                        {
+                          title: t("table_status"),
+                          dataIndex: "status",
+                          key: "status",
+                          render: (s: string) =>
+                            s === "Delivered"
+                              ? `✔️ ${t("status_complete")}`
+                              : `❌ ${t("status_incomplete")}`,
+                        },
+                      ]}
+                    />
+                  ),
+                  rowExpandable: (record) =>
+                    Array.isArray(record.orders) && record.orders.length > 0,
                 }}
-              >
-                <Collapse accordion>
-                  {paginatedGroups.map(([address, ordersInGroup]) => {
-                    const completedCount = ordersInGroup.filter(
-                      (o) => o.status === "Delivered"
-                    ).length;
-                    const incompleteCount =
-                      ordersInGroup.length - completedCount;
-
-                    return (
-                      <Panel
-                        key={address}
-                        header={
-                          <Row
-                            justify="space-between"
-                            style={{ width: "100%" }}
-                          >
-                            <Text strong>{address}</Text>
-                            <Text>
-                              ✔️ {completedCount} | ❌ {incompleteCount}
-                            </Text>
-                          </Row>
-                        }
-                        style={{
-                          background:
-                            incompleteCount > 0 ? "#fff2f0" : "#f6ffed",
-                          borderRadius: 6,
-                          marginBottom: 8,
-                        }}
-                      >
-                        <Table
-                          rowKey="id"
-                          dataSource={ordersInGroup}
-                          size="small"
-                          pagination={false}
-                          columns={[
-                            { title: t("table_id"), dataIndex: "id" },
-                            {
-                              title: t("table_address"),
-                              dataIndex: "detailedAddress",
-                            },
-                            {
-                              title: t("table_status"),
-                              dataIndex: "status",
-                              render: (s: string) =>
-                                s === "Delivered"
-                                  ? `✔️ ${t("status_complete")}`
-                                  : `❌ ${t("status_incomplete")}`,
-                            },
-                          ]}
-                        />
-                      </Panel>
-                    );
-                  })}
-                </Collapse>
-              </div>
-              <Pagination
-                current={groupPage}
-                pageSize={groupsPerPage}
-                total={groupedEntries.length}
-                onChange={(page) => setGroupPage(page)}
-                showSizeChanger={true}
-                pageSizeOptions={pageSizeOptions}
-                onShowSizeChange={(_, size) => {
-                  setGroupsPerPage(size);
-                  setGroupPage(1);
+                pagination={{
+                  current: groupPage,
+                  pageSize: groupsPerPage,
+                  total: groupedEntries.length,
+                  showSizeChanger: true,
+                  pageSizeOptions: groupPageSizeOptions,
+                  showQuickJumper: true,
+                  onChange: (page) => setGroupPage(page),
+                  onShowSizeChange: (_, size) => {
+                    setGroupsPerPage(size);
+                    setGroupPage(1);
+                  },
+                  showTotal: (total, range) =>
+                    t("pagination_total", {
+                      start: range[0],
+                      end: range[1],
+                      total: total,
+                    }),
+                  position: ["bottomCenter"],
+                  showLessItems: true,
+                  size: "small",
+                  style: { marginTop: 16, textAlign: "center" },
                 }}
-                style={{ marginTop: 16, textAlign: "center" }}
+                scroll={{ y: "calc(100vh - 390px)" }}
+                size="middle"
+                bordered
+                style={{ maxWidth: 650, height: "100%" }}
               />
             </>
           ) : (
@@ -480,15 +654,15 @@ export default function ViewOrders({
                 scroll={{ y: "calc(100vh - 390px)" }}
                 pagination={{
                   pageSize: tablePageSize,
-                  onShowSizeChange: (_, size) => setTablePageSize(size), 
+                  onShowSizeChange: (_, size) => setTablePageSize(size),
                   showSizeChanger: true,
-                  pageSizeOptions: pageSizeOptions,
+                  pageSizeOptions: tablePageSizeOptions,
                   showQuickJumper: true,
                   showTotal: (total, range) =>
-                    t('pagination_total', {
+                    t("pagination_total", {
                       start: range[0],
                       end: range[1],
-                      total: total
+                      total: total,
                     }),
                   position: ["bottomCenter"],
                   showLessItems: true,
