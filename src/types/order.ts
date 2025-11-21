@@ -4,7 +4,7 @@ export interface Order {
   id: number;
   date: string;
   time: "Morning" | "Afternoon" | "Evening";
-  status: OrderStatus
+  status: OrderStatus;
   detailedAddress: string;
   area: string;
   district: string;
@@ -14,6 +14,13 @@ export interface Order {
   dispatcherId?: number;
   customerId: number; // Foreign key
   customer?: Customer;
+  note?: string;
+  lastNoteTime?: string;
 }
 
-export type OrderStatus = "Pending" | "Assigned" | "In Progress" | "Delivered" | "Cancelled";
+export type OrderStatus =
+  | "Pending"
+  | "Assigned"
+  | "In Progress"
+  | "Delivered"
+  | "Cancelled";
