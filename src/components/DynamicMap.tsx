@@ -1,4 +1,4 @@
-import React, { forwardRef, useMemo } from 'react';
+import React, { forwardRef, useMemo, type Dispatch, type SetStateAction } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store';
 import OpenStreetMap from './OpenStreetMap';
@@ -16,14 +16,19 @@ interface MapProps {
   setNewRoutes: React.Dispatch<React.SetStateAction<Omit<Route, "id">[]>>;
   isAllRoutes: boolean;
   selectedDispatcher: Dispatcher | null;
+  isCalculating: boolean;
+  setIsCalculating: Dispatch<SetStateAction<boolean>>;
 }
 
-type MapRef = { triggerCalculate: (dispatcherId?: number) => void };
+type MapRef = {
+  triggerCalculate: (dispatcherId?: number) => void;
+  setIsCalculating: Dispatch<SetStateAction<boolean>>;
+};
 
 const DynamicMap = forwardRef<MapRef, MapProps>(
   (props, ref) => {
     const mapType = useSelector((state: RootState) => state.config.mapProvider);
-    
+
     const MapComponent = useMemo(() => {
       if (mapType === 'GoogleMap') {
         return GoogleMap;

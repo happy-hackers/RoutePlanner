@@ -13,5 +13,6 @@
     "text_waypoints": "途經點",
     "text_no_route_found": "未找到路線",
     "message_success_all_routes_saved": "所有路線已成功儲存並啟用。",
-    "message_error_save_route_failed": "儲存路線失敗：{{error}}"
+    "message_error_save_route_failed": "儲存路線失敗：{{error}}",
+    "message_route_cleared_for": "路線已清除為"
   }

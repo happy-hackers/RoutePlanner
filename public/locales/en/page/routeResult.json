@@ -13,5 +13,6 @@
     "text_waypoints": "Waypoints",
     "text_no_route_found": "No route found",
     "message_success_all_routes_saved": "All routes have been saved successfully and are active now.",
-    "message_error_save_route_failed": "Failed to save routes: {{error}}"
+    "message_error_save_route_failed": "Failed to save routes: {{error}}",
+    "message_route_cleared_for": "Route cleared for "
   }

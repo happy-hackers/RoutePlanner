@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import type { MarkerData } from "../types/markers";
@@ -20,6 +20,8 @@ interface RoutingHookProps {
   isAllRoutes?: boolean;
   message: MessageInstance;
   t: TFunction;
+  isCalculating: boolean;
+  setIsCalculating: Dispatch<SetStateAction<boolean>>;
 }
 
 type Coords = {
@@ -36,6 +38,16 @@ interface BaseOptimizedRouteResult {
   totalDistance: number;
 }
 
+interface TimeOptimizedRouteResultSnake {
+  order: number[];
+  startCoord: Coords;
+  endCoord: Coords;
+  segment_times: number[];
+  total_time: number;
+  totalDistance: number;
+  error?: string;
+}
+
 type TimeOptimizedRouteResult = BaseOptimizedRouteResult & {
   error?: string;
 };
@@ -50,6 +62,7 @@ export const useRoutingAndGeocoding = ({
   isAllRoutes,
   message,
   t,
+  setIsCalculating,
 }: RoutingHookProps) => {
   const [startAddress, setStartAddress] = useState("");
   const [endAddress, setEndAddress] = useState("");
@@ -70,13 +83,15 @@ export const useRoutingAndGeocoding = ({
 
   useEffect(() => {
     setOptions({ key: GOOGLE_API_KEY });
-    (async () => {
+    const initMapServices = async () => {
       if (typeof google === "undefined" || !google.maps.DirectionsService) {
         await importLibrary("routes");
       }
       directionsServiceRef.current = new google.maps.DirectionsService();
       geocoderRef.current = new google.maps.Geocoder();
-    })();
+    };
+
+    initMapServices();
   }, [GOOGLE_API_KEY]);
 
   async function geocodeAddress(address: string): Promise<Coords> {
@@ -142,6 +157,7 @@ export const useRoutingAndGeocoding = ({
               totalTime += leg.duration?.value ?? 0;
             }
             totalTime = Math.round(totalTime / 60);
+
             resolve({
               order,
               startCoord,
@@ -181,7 +197,21 @@ export const useRoutingAndGeocoding = ({
       body: JSON.stringify(payload),
     });
     const result: TimeOptimizedRouteResult = await response.json();
-    if (result.error) message.error(result.error, 4);
+
+    if (result.error) {
+      message.error(result.error, 4);
+
+      return {
+        order: [],
+        startCoord: startPoint,
+        endCoord: endPoint,
+        segmentTimes: [],
+        totalTime: 0,
+        totalDistance: 0,
+        error: result.error,
+      } as TimeOptimizedRouteResult;
+    }
+
     return result;
   }
 
@@ -218,7 +248,6 @@ export const useRoutingAndGeocoding = ({
     const totalTime = optimizedRouteResult.totalTime;
     const totalDistance = optimizedRouteResult.totalDistance;
     const segmentTimes = optimizedRouteResult.segmentTimes;
-
     const startCoord =
       optimizedRouteResult.startCoord ||
       preCalculatedStartCoord ||
@@ -227,7 +256,9 @@ export const useRoutingAndGeocoding = ({
       optimizedRouteResult.endCoord ||
       preCalculatedEndCoord ||
       (await geocodeAddress(endAddress));
-
+    if (!startCoord || !endCoord) {
+      throw new Error("Start or End coordinates are missing.");
+    }
     const sortedAddressWithMeters: AddressMetersElement[] = routeOrder.map(
       (i: number) => ({
         address: oMarkers[i].address,
@@ -278,8 +309,8 @@ export const useRoutingAndGeocoding = ({
       endLng: endCoord.lng,
       addressMeterSequence: sortedAddressWithMeters,
       segmentTimes: segmentTimes,
-      total_time: totalTime,
-      total_distance: totalDistance,
+      totalTime: totalTime,
+      totalDistance: totalDistance,
       polylineCoordinates: coordinates,
       createdBy: "Admin",
       version: 1,
@@ -305,6 +336,7 @@ export const useRoutingAndGeocoding = ({
       message.error(t("errorStartEndRequired"));
       return;
     }
+    setIsCalculating(true);
     try {
       let oMarkers: MarkerData[];
       if (dispatcherId)
@@ -331,8 +363,19 @@ export const useRoutingAndGeocoding = ({
       );
 
       if (!optimizedRouteResult.error) {
+        const {
+          segment_times,
+          total_time,
+          ...rest
+        } = optimizedRouteResult as unknown as TimeOptimizedRouteResultSnake;;
+        const finalResult: TimeOptimizedRouteResult = {
+          ...rest,
+          segmentTimes: segment_times,
+          totalTime: total_time,
+        };
+
         await processRouteResult(
-          optimizedRouteResult,
+          finalResult,
           dispatcherId,
           oMarkers,
           startCoord,
@@ -342,6 +385,8 @@ export const useRoutingAndGeocoding = ({
     } catch (error) {
       console.error("Routing error:", error);
       message.error(t("errorRouteCalculationFailed"));
+    } finally {
+      setIsCalculating(false);
     }
   };
 
@@ -350,6 +395,7 @@ export const useRoutingAndGeocoding = ({
       message.error(t("errorStartEndRequired"));
       return;
     }
+    setIsCalculating(true);
     try {
       let oMarkers: MarkerData[];
       if (dispatcherId)
@@ -368,6 +414,8 @@ export const useRoutingAndGeocoding = ({
     } catch (error) {
       console.error("Routing error:", error);
       message.error(t("errorRouteCalculationFailed"));
+    } finally {
+      setIsCalculating(false);
     }
   };
 
@@ -406,5 +454,6 @@ export const useRoutingAndGeocoding = ({
     calculateRoutebyTime,
     geocodeAddress,
     foundRoute,
+    setIsCalculating,
   };
 };

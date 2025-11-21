@@ -33,10 +33,19 @@ import {
 import { setSelectedOrders } from "../store/orderSlice.ts";
 import { useTranslation } from "react-i18next";
 
+const WIDE_DROPDOWN_CLASS = "local-wide-select-dropdown";
+
+const dropdownStyleContent = `
+  .ant-select-dropdown.${WIDE_DROPDOWN_CLASS} {
+    width: 250px !important; 
+    min-width: 250px !important;
+  }
+`;
+
 export default function RouteResults() {
   const { t } = useTranslation("routeResult");
-
   const { Title, Text } = Typography;
+  const [isCalculating, setIsCalculating] = useState(false);
 
   const columns = [
     {
@@ -114,9 +123,12 @@ export default function RouteResults() {
     (state: RootState) => state.order.selectedOrders
   );
 
-  const mapRef = useRef<{ triggerCalculate: (dispatcherId?: number) => void }>(
+ const mapRef = useRef<{
+    triggerCalculate: (dispatcherId?: number) => void;
+    setIsCalculating: React.Dispatch<React.SetStateAction<boolean>>; 
+}>(
     null
-  );
+);
 
   console.log("markers", markers);
 
@@ -124,10 +136,14 @@ export default function RouteResults() {
 
   const DISPATCHER_COLORS_MAP = generateDispatcherColorsMap(dispatchers);
 
+  const sortedDispatchers = [...dispatchers].sort((a, b) => {
+    return a.name.localeCompare(b.name);
+  });
+
   const dispatchersOption = [
     { value: null, label: t("select_placeholder") },
     { value: -1, label: t("option_all_routes") },
-    ...dispatchers.map((dispatcher) => ({
+    ...sortedDispatchers.map((dispatcher) => ({
       value: dispatcher.id,
       label: dispatcher.name,
     })),
@@ -383,8 +399,10 @@ export default function RouteResults() {
                   <Button
                     size="small"
                     type="primary"
+                    loading={isCalculating}
                     onClick={(e) => {
                       e.stopPropagation();
+                      mapRef.current?.setIsCalculating(true);
                       mapRef.current?.triggerCalculate(dispatcher.id);
                     }}
                   >
@@ -399,18 +417,22 @@ export default function RouteResults() {
           <List
             size="small"
             dataSource={route.addressMeterSequence.map((o) => o.address)}
-            renderItem={(address, index) => (
-              <List.Item style={{ paddingLeft: 8, paddingRight: 8 }}>
-                <div style={{ flex: 1, marginRight: 4 }}>
-                  <Text strong>#{index + 1}</Text> — {address}
-                </div>
-                <Text
-                  style={{ color: getTimeColor(route.segmentTimes[index]) }}
-                >
-                  {route.segmentTimes[index]} {t("unit_mins")}
-                </Text>
-              </List.Item>
-            )}
+            renderItem={(address, index) => {
+              const travelTime = route.segmentTimes?.[index] ?? 0;
+
+              return (
+                <List.Item style={{ paddingLeft: 8, paddingRight: 8 }}>
+                  <div style={{ flex: 1, marginRight: 4 }}>
+                    <Text strong>#{index + 1}</Text> — {address}
+                  </div>
+                  <Text
+                    style={{ color: getTimeColor(travelTime) }}
+                  >
+                    {travelTime > 0 ? `${travelTime} ${t("unit_mins")}` : t("text_no_time")}
+                  </Text>
+                </List.Item>
+              );
+            }}
           />
         ) : (
           <Table
@@ -534,15 +556,19 @@ export default function RouteResults() {
 
   return (
     <Row gutter={[16, 16]} style={{ height: "100%" }}>
+      <style>{dropdownStyleContent}</style>
       <Col xs={24} sm={24} md={24} lg={8}>
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
           <Select
+            rootClassName={WIDE_DROPDOWN_CLASS}
+            virtual={true}
+            listHeight={300}
             value={
               isAllRoutes
                 ? -1
                 : selectedDispatcher
-                ? selectedDispatcher.id
-                : null
+                  ? selectedDispatcher.id
+                  : null
             }
             onChange={(id) => {
               if (id === -1) {
@@ -586,7 +612,7 @@ export default function RouteResults() {
                     (o, index) => ({
                       order: index + 1,
                       address: o.address,
-                      travelTime: foundRoute.segmentTimes[index],
+                      travelTime: foundRoute.segmentTimes?.[index] ?? 0,
                     })
                   )}
                   pagination={false}
@@ -629,6 +655,8 @@ export default function RouteResults() {
           setNewRoutes={setNewRoutes}
           isAllRoutes={isAllRoutes}
           selectedDispatcher={selectedDispatcher}
+          isCalculating={isCalculating}
+          setIsCalculating={setIsCalculating}
           ref={mapRef}
         />
       </Col>

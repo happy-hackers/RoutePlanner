@@ -13,14 +13,12 @@ interface ServerListModalProps {
   orders: Order[];
   isVisible: boolean;
   setVisibility: (value: boolean) => void;
-  setSelectedRowIds: React.Dispatch<React.SetStateAction<number[]>>;
 }
 
 const SelectedOrderModal: React.FC<ServerListModalProps> = ({
   orders,
   isVisible,
   setVisibility,
-  setSelectedRowIds,
 }) => {
   const [isActionConfirm, setIsActionConfirm] = useState(false);
   const dispatch = useDispatch();
@@ -69,12 +67,10 @@ const SelectedOrderModal: React.FC<ServerListModalProps> = ({
 
   const handleDelete = (id: number) => {
     dispatch(setSelectedOrders(selectedOrders.filter((order) => order.id !== id)));
-    setSelectedRowIds((prev) => prev.filter((rowId) => rowId !== id))
   };
 
   const handleDeleteAll = () => {
     dispatch(setSelectedOrders([]));
-    setSelectedRowIds([]);
   };
 
   return (

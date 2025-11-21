@@ -4,6 +4,8 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  type Dispatch,
+  type SetStateAction,
 } from "react";
 import { Input, Space, Button, Select, App, TimePicker } from "antd";
 import { useSelector } from "react-redux";
@@ -14,6 +16,7 @@ import type { Dispatcher } from "../types/dispatchers";
 import { generateDispatcherColorsMap } from "../utils/markersUtils";
 import { useTranslation } from "react-i18next";
 import { useRoutingAndGeocoding } from "./useRoutingAndGeocoding";
+import { getSettingInfo } from "../utils/configuration";
 
 import orderedMarkerImg from "../assets/icons/orderedMarker.png";
 import startMarkerImg from "../assets/icons/startMarker.png";
@@ -28,10 +31,20 @@ interface NavigationMapProp {
   setNewRoutes?: React.Dispatch<React.SetStateAction<Omit<Route, "id">[]>>;
   isAllRoutes?: boolean;
   selectedDispatcher?: Dispatcher | null;
+  isCalculating: boolean;
+  setIsCalculating: Dispatch<SetStateAction<boolean>>;
 }
 
 export interface MapRef {
   triggerCalculate: (dispatcherId: number) => void;
+  setIsCalculating: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+interface SettingConfig {
+  useDefaultAddress: boolean;
+  startAddress: string;
+  endAddress: string;
+  mapProvider: string;
 }
 
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
@@ -155,6 +168,8 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
       setNewRoutes,
       isAllRoutes,
       selectedDispatcher,
+      isCalculating,
+      setIsCalculating,
     }: NavigationMapProp,
     ref
   ) => {
@@ -196,7 +211,17 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
       isAllRoutes,
       message,
       t,
+      isCalculating,
+      setIsCalculating,
     });
+
+    useEffect(() => {
+      const settingInfo: SettingConfig = getSettingInfo();
+      if (settingInfo && settingInfo.useDefaultAddress) {
+        setStartAddress(settingInfo.startAddress);
+        setEndAddress(settingInfo.endAddress);
+      }
+    }, [setStartAddress, setEndAddress]);
 
     useImperativeHandle(ref, () => ({
       triggerCalculate(dispatcherId: number) {
@@ -206,6 +231,7 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
           calculateRoute(dispatcherId);
         }
       },
+      setIsCalculating: setIsCalculating,
     }));
 
     const clearMap = useCallback(() => {
@@ -502,6 +528,7 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
                     !!foundRoute || isAllRoutes ? "#E6E6E6" : "#1677ff",
                   border: "none",
                 }}
+                loading={isCalculating}
                 onClick={handleCalculate}
               >
                 {t("calculateButton")}
@@ -535,11 +562,11 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
             }}
           >
             🕒 {t("footerTotalTime")}:{" "}
-            {foundRoute.total_time >= 60
-              ? `${Math.floor(foundRoute.total_time / 60)}h ${
-                  foundRoute.total_time % 60
+            {foundRoute.totalTime >= 60
+              ? `${Math.floor(foundRoute.totalTime / 60)}h ${
+                  foundRoute.totalTime % 60
                 }m`
-              : `${foundRoute.total_time}m`}
+              : `${foundRoute.totalTime}m`}
           </div>
         )}
       </div>
