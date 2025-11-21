@@ -15,6 +15,7 @@ export interface Order {
   customerId: number; // Foreign key
   customer?: Customer;
   note?: string;
+  lastNoteTime?: string;
 }
 
 export type OrderStatus =

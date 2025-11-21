@@ -746,7 +746,7 @@ export const updateMeterNote = async (
 ): Promise<void> => {
   const { error } = await supabase
     .from("orders")
-    .update({ note: newNote })
+    .update({ note: newNote, last_note_time: new Date().toISOString() })
     .eq("id", orderId);
 
   if (error) throw error;

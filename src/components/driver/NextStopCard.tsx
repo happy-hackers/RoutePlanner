@@ -10,6 +10,7 @@ import type { AddressMetersElement } from "../../types/route";
 import { useState } from "react";
 import { UpOutlined, DownOutlined } from "@ant-design/icons";
 import type { Order } from "../../types/order";
+import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 
@@ -138,7 +139,9 @@ export default function NextStopCard({
                       {order.customer?.name ||
                         t(`${keyPath}.placeholder_customer`)}
                     </Text>
-                    <Text type="secondary">{t(`${keyPath}.text_meter_id`)} {order.id}</Text>
+                    <Text type="secondary">
+                      {t(`${keyPath}.text_meter_id`)} {order.id}
+                    </Text>
                   </Space>
                   <Space>
                     <Tag
@@ -173,12 +176,23 @@ export default function NextStopCard({
                           activeNoteOrder.note?.trim() ? "Update" : "Save"
                         }
                       >
-                        <Input.TextArea
-                          rows={4}
-                          value={note}
-                          placeholder="Enter your note here..."
-                          onChange={(e) => setNote(e.target.value)}
-                        />
+                        <Space direction="vertical" style={{ width: "100%" }}>
+                          <Input.TextArea
+                            rows={4}
+                            value={note}
+                            placeholder="Enter your note here..."
+                            onChange={(e) => setNote(e.target.value)}
+                          />
+
+                          {activeNoteOrder.lastNoteTime && (
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              Last edited:{" "}
+                              {dayjs(activeNoteOrder.lastNoteTime).format(
+                                "YYYY-MM-DD, HH:mm:ss"
+                              )}
+                            </Text>
+                          )}
+                        </Space>
                       </Modal>
                     )}
 
