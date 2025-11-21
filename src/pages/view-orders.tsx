@@ -563,7 +563,6 @@ export default function ViewOrders({
             orders={selectedOrders}
             isVisible={isSelectedOrderModal}
             setVisibility={setIsSelectedOrderModal}
-            setSelectedRowIds={() => { }}
           />
           {groupView ? (
             <>

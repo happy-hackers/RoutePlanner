@@ -309,8 +309,8 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
       const routesToRender = isAllRoutes
         ? newRoutes || []
         : foundRoute
-          ? [foundRoute]
-          : [];
+        ? [foundRoute]
+        : [];
 
       const allCoords: google.maps.LatLngLiteral[] = [];
       const assignedPositions = new Set<string>();
@@ -354,7 +354,8 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
         addMarkerListener(
           startMarker,
           `
-          <div style="font-weight: bold;">${t("popupStart")}: ${route.startAddress
+          <div style="font-weight: bold;">${t("popupStart")}: ${
+            route.startAddress
           }</div>
           <div>${t("dispatcher")}: ${dispatcherName}</div>
           `
@@ -382,7 +383,8 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
           addMarkerListener(
             marker,
             `
-            <div style="font-weight: bold;">${t("popupStop")} ${i + 1}: ${waypoint.address
+            <div style="font-weight: bold;">${t("popupStop")} ${i + 1}: ${
+              waypoint.address
             }</div>
             <div>${t("dispatcher")}: ${dispatcherName}</div>
             `
@@ -408,7 +410,8 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
         addMarkerListener(
           endMarker,
           `
-          <div style="font-weight: bold;">${t("popupEnd")}: ${route.endAddress
+          <div style="font-weight: bold;">${t("popupEnd")}: ${
+            route.endAddress
           }</div>
           <div>${t("dispatcher")}: ${dispatcherName}</div>
           `
@@ -560,8 +563,9 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
           >
             🕒 {t("footerTotalTime")}:{" "}
             {foundRoute.totalTime >= 60
-              ? `${Math.floor(foundRoute.totalTime / 60)}h ${foundRoute.totalTime % 60
-              }m`
+              ? `${Math.floor(foundRoute.totalTime / 60)}h ${
+                  foundRoute.totalTime % 60
+                }m`
               : `${foundRoute.totalTime}m`}
           </div>
         )}
