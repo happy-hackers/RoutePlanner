@@ -50,6 +50,8 @@
   "msg_edit_pwd_success": "Password reset! Password is copied to clipboard.",
   "msg_edit_pwd_fail": "Dispatcher updated but password reset failed: {{error}}",
   "msg_edit_success": "Dispatcher updated successfully!",
+  "msg_edit_auth_fail": "Dispatcher update but auth information update failed",
   "msg_edit_fail": "Failed to update dispatcher: {{error}}",
+  "msg_invalid_phone_number": "Invalid phone number format",
   "msg_network_error": "Network error occurred"
 }

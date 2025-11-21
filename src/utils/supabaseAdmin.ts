@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 /**
  * ⚠️ SECURITY WARNING ⚠️
@@ -17,13 +17,15 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase admin credentials in environment variables');
+  throw new Error(
+    "Missing Supabase admin credentials in environment variables"
+  );
 }
 
 // Create admin client with service role key (full database access)
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
+    autoRefreshToken: true,
+    persistSession: true,
+  },
 });

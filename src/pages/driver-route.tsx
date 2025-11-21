@@ -9,6 +9,8 @@ import {
   DatePicker,
   Typography,
   App,
+  Row,
+  Col,
 } from "antd";
 import { EnvironmentOutlined, LogoutOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -251,19 +253,33 @@ export default function DriverRoute() {
   // No route found
   if (!deliveryRoute) {
     return (
-      <Result
-        status="info"
-        title={t("result_no_route_title")}
-        subTitle={t("result_no_route_subtitle", {
-          date: selectedDate.format("YYYY-MM-DD"),
-        })}
-        extra={
-          <DatePicker
-            value={selectedDate}
-            onChange={(date) => date && setSelectedDate(date)}
+      <Layout style={{ minHeight: "100vh" }}>
+        <Header style={{ background: "#fff", padding: "0 16px" }}>
+          <Row justify="end">
+            <Col>
+              <Button icon={<LogoutOutlined />} onClick={handleLogout}>
+                {t("button_logout")}
+              </Button>
+            </Col>
+          </Row>
+        </Header>
+
+        <Content style={{ margin: "24px" }}>
+          <Result
+            status="info"
+            title={t("result_no_route_title")}
+            subTitle={t("result_no_route_subtitle", {
+              date: selectedDate.format("YYYY-MM-DD"),
+            })}
+            extra={
+              <DatePicker
+                value={selectedDate}
+                onChange={(date) => date && setSelectedDate(date)}
+              />
+            }
           />
-        }
-      />
+        </Content>
+      </Layout>
     );
   }
 
