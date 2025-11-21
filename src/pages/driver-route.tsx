@@ -103,7 +103,7 @@ export default function DriverRoute() {
     if (distance <= 80) {
       setHasWarned(false);
     }
-  }, [driverLocation, currentStop, hasWarned]);
+  }, [driverLocation, currentStop, hasWarned, modal]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -121,7 +121,7 @@ export default function DriverRoute() {
     try {
       setLoading(true);
 
-      // Get active route (orderSequence already contains full Order objects)
+      // Get active route
       const routeData = await getDriverActiveRoute(dispatcher.id, date);
 
       if (!routeData) {
@@ -132,8 +132,6 @@ export default function DriverRoute() {
 
       setDeliveryRoute(routeData);
 
-      // Orders are already in the route's orderSequence
-      //setOrders(routeData.orderSequence);
       setStops(routeData.addressMeterSequence);
 
       // Set current stop to first incomplete
@@ -141,6 +139,7 @@ export default function DriverRoute() {
         stop.meters.some((order) => order.status !== "Delivered")
       );
       setCurrentStopIndex(firstIncomplete !== -1 ? firstIncomplete : 0);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       message.error(t("message_fail_load_route"));
     } finally {
@@ -153,6 +152,7 @@ export default function DriverRoute() {
     if (dispatcher) {
       fetchRouteData(selectedDate.format("YYYY-MM-DD"));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatcher, selectedDate]);
 
   // Handle mark as done
@@ -172,6 +172,7 @@ export default function DriverRoute() {
       );
 
       message.success(t("message_done_success"), 1);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       message.error(t("message_fail_update_status"));
     }
@@ -194,6 +195,7 @@ export default function DriverRoute() {
       );
 
       message.success(t("message_undo_success"), 1);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       message.error(t("message_fail_revert_status"));
     }

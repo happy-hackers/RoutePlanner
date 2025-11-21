@@ -1,29 +1,25 @@
 import type { MarkerData } from "../types/markers";
 import type { Order } from "../types/order";
-import redIconImage from "../assets/icons/marker-icon-2x-red.png"
-import blueIconImage from "../assets/icons/marker-icon-2x-blue.png"
-import orangeIconImage from "../assets/icons/marker-icon-2x-orange.png"
-import greyIconImage from "../assets/icons/marker-icon-2x-grey.png"
-import blackIconImage from "../assets/icons/marker-icon-2x-black.png"
-import goldIconImage from "../assets/icons/marker-icon-2x-gold.png"
-import violetIconImage from "../assets/icons/marker-icon-2x-violet.png"
-import greenIconImage from "../assets/icons/marker-icon-2x-green.png"
+import redIconImage from "../assets/icons/marker-icon-2x-red.png";
+import blueIconImage from "../assets/icons/marker-icon-2x-blue.png";
+import orangeIconImage from "../assets/icons/marker-icon-2x-orange.png";
+import greyIconImage from "../assets/icons/marker-icon-2x-grey.png";
+import blackIconImage from "../assets/icons/marker-icon-2x-black.png";
+import goldIconImage from "../assets/icons/marker-icon-2x-gold.png";
+import violetIconImage from "../assets/icons/marker-icon-2x-violet.png";
+import greenIconImage from "../assets/icons/marker-icon-2x-green.png";
 import type { Dispatcher } from "../types/dispatchers";
 
-const generateDispatcherColorsMap = (dispatchers: Dispatcher[]) => {
-  const map: Record<number, { url: string; color: string }> = {};
-  
-  dispatchers.forEach((dispatcher, index) => {
-    map[dispatcher.id] = ICONS[index];
-  });
-
-  return map;
-};
+export interface DispatcherColorMap {
+  url: string;
+  color: string;
+  name: string;
+}
 
 const greyIcon = {
   url: greyIconImage,
   color: "grey",
-}
+};
 
 const redIcon = {
   url: redIconImage,
@@ -60,15 +56,26 @@ const greenIcon = {
   color: "green",
 };
 
-const ICONS = [redIcon, blueIcon, orangeIcon, blackIcon, goldIcon, violetIcon, greenIcon];
+const ICONS = [
+  redIcon,
+  blueIcon,
+  orangeIcon,
+  blackIcon,
+  goldIcon,
+  violetIcon,
+  greenIcon,
+];
 
 /**
- * 
+ *
  * @param orders Orders that have the same lat, lng and dispatcherId (regard null and undefined as the same)
- * @param dispatchers 
+ * @param dispatchers
  * @returns A marker that has orders with same lat, lng and dispatcherId
  */
-const getMarkerWithMultiMeters = (orders: Order[], dispatchers: Dispatcher[]): MarkerData => {
+const getMarkerWithMultiMeters = (
+  orders: Order[],
+  dispatchers: Dispatcher[]
+): MarkerData => {
   const DISPATCHER_COLORS_MAP = generateDispatcherColorsMap(dispatchers);
   const orderSample = orders[0];
   return {
@@ -77,27 +84,49 @@ const getMarkerWithMultiMeters = (orders: Order[], dispatchers: Dispatcher[]): M
     area: orderSample.area,
     district: orderSample.district,
     meters: orders,
-    icon: orderSample.dispatcherId? DISPATCHER_COLORS_MAP[orderSample.dispatcherId] : greyIcon,
+    icon: orderSample.dispatcherId
+      ? DISPATCHER_COLORS_MAP[orderSample.dispatcherId]
+      : greyIcon,
     customer: orderSample.customer,
     dispatcherId: orderSample.dispatcherId,
   };
 };
+const generateDispatcherColorsMap = (
+  dispatchers: Dispatcher[]
+): Record<number, DispatcherColorMap> => {
+  const map: Record<number, DispatcherColorMap> = {};
+
+  dispatchers.forEach((dispatcher, index) => {
+    const iconData = ICONS[index % ICONS.length];
+    map[dispatcher.id] = {
+      ...iconData,
+      name: dispatcher.name,
+    };
+  });
+
+  return map;
+};
 
 /**
- * 
+ *
  * @param orders Orders that may contain different lat, lng and dispatcherId
- * @param dispatchers 
+ * @param dispatchers
  * @returns Markers that have orders with same lat, lng and dispatcherId
  */
 
-const getGroupedMarkers = (orders: Order[], dispatchers: Dispatcher[]): MarkerData[] => {
+const getGroupedMarkers = (
+  orders: Order[],
+  dispatchers: Dispatcher[]
+): MarkerData[] => {
   const normalizeDispatcherId = (id: number | null | undefined) =>
     id == null ? "null" : id.toString(); // null and undefined are treated as the same group "null"
 
   // Group orders by lat, lng and dispatcherId
   const grouped = orders.reduce((acc, order) => {
     // Treat null and undefined as equal
-    const key = `${order.lat},${order.lng},${normalizeDispatcherId(order.dispatcherId)}`;
+    const key = `${order.lat},${order.lng},${normalizeDispatcherId(
+      order.dispatcherId
+    )}`;
     if (!acc[key]) acc[key] = [];
     acc[key].push(order);
     return acc;
@@ -110,9 +139,10 @@ const getGroupedMarkers = (orders: Order[], dispatchers: Dispatcher[]): MarkerDa
   return markers;
 };
 
-
-
-const addMarkerwithColor = (order: Order, dispatchers: Dispatcher[]): MarkerData => {
+const addMarkerwithColor = (
+  order: Order,
+  dispatchers: Dispatcher[]
+): MarkerData => {
   const DISPATCHER_COLORS_MAP = generateDispatcherColorsMap(dispatchers);
   return {
     position: { lat: order.lat, lng: order.lng },
@@ -120,10 +150,17 @@ const addMarkerwithColor = (order: Order, dispatchers: Dispatcher[]): MarkerData
     area: order.area,
     district: order.district,
     meters: [order],
-    icon: order.dispatcherId? DISPATCHER_COLORS_MAP[order.dispatcherId] : greyIcon,
+    icon: order.dispatcherId
+      ? DISPATCHER_COLORS_MAP[order.dispatcherId]
+      : greyIcon,
     customer: order.customer,
     dispatcherId: order.dispatcherId,
   };
 };
 
-export { generateDispatcherColorsMap, addMarkerwithColor, getMarkerWithMultiMeters, getGroupedMarkers };
+export {
+  generateDispatcherColorsMap,
+  addMarkerwithColor,
+  getMarkerWithMultiMeters,
+  getGroupedMarkers,
+};

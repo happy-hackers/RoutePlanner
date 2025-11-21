@@ -2,10 +2,7 @@ import { Select, Button, Row, Col, Space, App, Popconfirm } from "antd";
 import { useState, useEffect } from "react";
 import Dispatcherform from "../components/Dispatcherform";
 import type { Dispatcher } from "../types/dispatchers";
-import {
-  getAllDispatchers,
-  updateOrder,
-} from "../utils/dbUtils";
+import { getAllDispatchers, updateOrder } from "../utils/dbUtils";
 import type { MarkerData } from "../types/markers";
 import type { Order } from "../types/order";
 import { getGroupedMarkers } from "../utils/markersUtils";
@@ -17,6 +14,7 @@ import { useTranslation } from "react-i18next";
 
 export default function AssignDispatchers({
   setMarkers,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   hoveredOrderId: _hoveredOrderId,
   setHoveredOrderId,
 }: {
@@ -27,8 +25,12 @@ export default function AssignDispatchers({
   const { t } = useTranslation("assignDispatcher");
   const { message } = App.useApp();
   const dispatch = useDispatch();
-  const selectedOrders = useSelector((state: RootState) => state.order.selectedOrders);
-  const isEveryOrderAssigned = selectedOrders.every(order => order.dispatcherId !== null && order.dispatcherId !== undefined);
+  const selectedOrders = useSelector(
+    (state: RootState) => state.order.selectedOrders
+  );
+  const isEveryOrderAssigned = selectedOrders.every(
+    (order) => order.dispatcherId !== null && order.dispatcherId !== undefined
+  );
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
@@ -47,7 +49,7 @@ export default function AssignDispatchers({
     };
 
     fetchDispatchers();
-  }, []);
+  }, [message, t]);
 
   const dispatchersOption = [
     { value: null, label: t("select_all_dispatchers") },
@@ -58,8 +60,10 @@ export default function AssignDispatchers({
   ];
 
   const handleUpdateOrders = async (
-    order: Order | (Order & { matchedDispatchers: Dispatcher[] }), dispatcher: Dispatcher, updatedOrders: Order[]
-  ) : Promise<Order[]> => {
+    order: Order | (Order & { matchedDispatchers: Dispatcher[] }),
+    dispatcher: Dispatcher,
+    updatedOrders: Order[]
+  ): Promise<Order[]> => {
     let customer: Customer | undefined;
     let rest: Omit<Order, "customer">;
     let matchedDispatchers: Dispatcher[] = [];
@@ -78,22 +82,28 @@ export default function AssignDispatchers({
 
     if (result.success) {
       updatedOrders = updatedOrders.map((order) =>
-        order.id === updatedOrder.id ? { ...updatedOrder, customer: customer ?? undefined } : order
+        order.id === updatedOrder.id
+          ? { ...updatedOrder, customer: customer ?? undefined }
+          : order
       );
       const markers = getGroupedMarkers(updatedOrders, dispatchers);
-  
+
       setMarkers(markers);
-      message.success(t("message_success", {
-        orderId: order.id,
-        dispatcherName: dispatcher.name
-      }));
+      message.success(
+        t("message_success", {
+          orderId: order.id,
+          dispatcherName: dispatcher.name,
+        })
+      );
     } else {
-      message.error(t("message_error_update", {
-        orderId: order.id,
-        error: result.error
-      }));
+      message.error(
+        t("message_error_update", {
+          orderId: order.id,
+          error: result.error,
+        })
+      );
     }
-    return updatedOrders
+    return updatedOrders;
   };
 
   const getDispatcherWithLeastAssigned = (
@@ -125,10 +135,10 @@ export default function AssignDispatchers({
     // 1. First assign those orders whose area or district only matches to one dispatcher
     // 2. Then assign those orders whose area or district matches more than one dispatcher
     // 3. Lastly assign those orders whose area or district doesn't match any dispatcher
-    let unassignedOrderswithDispatchers: (Order & {
+    const unassignedOrderswithDispatchers: (Order & {
       matchedDispatchers: Dispatcher[];
     })[] = [];
-    let unassignedOrderswithNoDispatchers: Order[] = [];
+    const unassignedOrderswithNoDispatchers: Order[] = [];
     for (const order of selectedOrders) {
       // Skip already assigned orders
       if (order.dispatcherId) {
@@ -145,6 +155,7 @@ export default function AssignDispatchers({
       // Try to find a dispatcher by district first
       let matchedDispatchers = dispatchers.filter((d) =>
         d.responsibleArea.some(
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           ([_area, district]) =>
             district.toLowerCase() === customer.district.toLowerCase()
         )
@@ -186,9 +197,11 @@ export default function AssignDispatchers({
           updatedOrders
         );
       } else {
-        message.warning(t("message_warning_not_found", {
-          orderId: order.id
-        }));
+        message.warning(
+          t("message_warning_not_found", {
+            orderId: order.id,
+          })
+        );
       }
     }
     if (unassignedOrderswithDispatchers.length > 0) {
@@ -204,9 +217,11 @@ export default function AssignDispatchers({
             updatedOrders
           );
         } else {
-          message.warning(t("message_warning_not_found", {
-            orderId: order.id
-          }));
+          message.warning(
+            t("message_warning_not_found", {
+              orderId: order.id,
+            })
+          );
         }
       }
     }
@@ -223,22 +238,24 @@ export default function AssignDispatchers({
             updatedOrders
           );
         } else {
-          message.warning(t("message_warning_not_found", {
-            orderId: order.id
-          }));
+          message.warning(
+            t("message_warning_not_found", {
+              orderId: order.id,
+            })
+          );
         }
       }
     }
     dispatch(setSelectedOrders(updatedOrders));
     setIsAssigning(false);
   };
-    const reAssignOrders = () => {
-      const newSelectedOrders = selectedOrders.map(order => ({
-        ...order,
-        dispatcherId: undefined,
-      }));
-      assignOrders(newSelectedOrders);
-    };
+  const reAssignOrders = () => {
+    const newSelectedOrders = selectedOrders.map((order) => ({
+      ...order,
+      dispatcherId: undefined,
+    }));
+    assignOrders(newSelectedOrders);
+  };
 
   return (
     <Row style={{ height: "100%" }}>
@@ -255,13 +272,21 @@ export default function AssignDispatchers({
                     (dispatcher) => dispatcher.id === id
                   );
                   if (selectedDispatcher) {
-                    const filteredOrders = selectedOrders.filter(order => order.dispatcherId === id);
-                    const filteredMarkers = getGroupedMarkers(filteredOrders, dispatchers);
+                    const filteredOrders = selectedOrders.filter(
+                      (order) => order.dispatcherId === id
+                    );
+                    const filteredMarkers = getGroupedMarkers(
+                      filteredOrders,
+                      dispatchers
+                    );
                     setMarkers(filteredMarkers);
                   }
                 } else {
                   // Show all orders when "All Dispatchers" is selected
-                  const allMarkers = getGroupedMarkers(selectedOrders, dispatchers);
+                  const allMarkers = getGroupedMarkers(
+                    selectedOrders,
+                    dispatchers
+                  );
                   setMarkers(allMarkers);
                 }
               }}
@@ -275,8 +300,14 @@ export default function AssignDispatchers({
                 cancelText={t("popconfirm_cancel")}
                 onConfirm={reAssignOrders}
               >
-                <Button type="primary" loading={isAssigning} disabled={selectedId !== null}>
-                  {isAssigning ? t("button_assigning") : t("button_auto_assign")}
+                <Button
+                  type="primary"
+                  loading={isAssigning}
+                  disabled={selectedId !== null}
+                >
+                  {isAssigning
+                    ? t("button_assigning")
+                    : t("button_auto_assign")}
                 </Button>
               </Popconfirm>
             ) : (
