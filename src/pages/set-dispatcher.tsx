@@ -10,8 +10,7 @@ import { useTranslation } from "react-i18next";
 const { Text } = Typography;
 
 export default function SetDispatcher() {
-
-  const { t } = useTranslation(['setDispatcher', 'hongkong']);
+  const { t } = useTranslation(["setDispatcher", "hongkong"]);
   const { modal, message } = App.useApp();
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -59,9 +58,7 @@ export default function SetDispatcher() {
       icon: <DeleteOutlined style={{ color: "red" }} />,
       content: (
         <div>
-          <p>
-            {t("modal_delete_content_main", { name: dispatcher.name })}
-          </p>
+          <p>{t("modal_delete_content_main", { name: dispatcher.name })}</p>
           <p style={{ color: "red", marginTop: 8 }}>
             <strong>{t("modal_delete_warning_label")}:</strong>{" "}
             {t("modal_delete_warning_text")}
@@ -80,18 +77,22 @@ export default function SetDispatcher() {
               : "message_success_deleted_no_orders";
 
           message.success(
-            t(messageKey, { count: result.orderCount || 0, name: dispatcher.name })
+            t(messageKey, {
+              count: result.orderCount || 0,
+              name: dispatcher.name,
+            })
           );
           fetchDispatchers();
         } else {
-          message.error(t("message_error_delete_failed", { error: result.error }));
+          message.error(
+            t("message_error_delete_failed", { error: result.error })
+          );
         }
       },
     });
   };
 
   return (
-    
     <Card title={t("card_title")} style={{ maxWidth: "70%", margin: "0 auto" }}>
       <Row gutter={12} style={{ marginBottom: 12 }}>
         <Col span={4}>
@@ -123,15 +124,34 @@ export default function SetDispatcher() {
             <Text>{dispatcher.name}</Text>
           </Col>
           <Col span={10}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 8px", fontSize: "12px" }}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "4px 8px",
+                fontSize: "12px",
+              }}
+            >
               {(() => {
                 const activeDay = dispatcher.activeDay || {};
 
                 if (Object.keys(activeDay).length === 0) {
-                  return <Text type="secondary" style={{ fontSize: "12px" }}>{t("text_no_active_days")}</Text>;
+                  return (
+                    <Text type="secondary" style={{ fontSize: "12px" }}>
+                      {t("text_no_active_days")}
+                    </Text>
+                  );
                 }
 
-                const dayOrder = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+                const dayOrder = [
+                  "Mon",
+                  "Tue",
+                  "Wed",
+                  "Thu",
+                  "Fri",
+                  "Sat",
+                  "Sun",
+                ];
 
                 const fullPeriodDays: [string, string[]][] = [];
                 const partialPeriodDays: [string, string[]][] = [];
@@ -145,8 +165,14 @@ export default function SetDispatcher() {
                   }
                 });
 
-                fullPeriodDays.sort(([dayA], [dayB]) => dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB));
-                partialPeriodDays.sort(([dayA], [dayB]) => dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB));
+                fullPeriodDays.sort(
+                  ([dayA], [dayB]) =>
+                    dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB)
+                );
+                partialPeriodDays.sort(
+                  ([dayA], [dayB]) =>
+                    dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB)
+                );
 
                 const sortedDays = [...fullPeriodDays, ...partialPeriodDays];
 
@@ -155,11 +181,15 @@ export default function SetDispatcher() {
                   const isAllPeriods = periodList.length === 3;
 
                   const translatedDay = t(`day_${day}`, { defaultValue: day });
-                  const translatedPeriods = periodList.map(p => t(`period_${p}`, { defaultValue: p }));
+                  const translatedPeriods = periodList.map((p) =>
+                    t(`period_${p}`, { defaultValue: p })
+                  );
 
                   const displayText = isAllPeriods
                     ? translatedDay
-                    : `${translatedDay}: ${translatedPeriods.join(t("period_separator", { defaultValue: " / " }))}`;
+                    : `${translatedDay}: ${translatedPeriods.join(
+                        t("period_separator", { defaultValue: " / " })
+                      )}`;
 
                   return (
                     <div
@@ -181,9 +211,12 @@ export default function SetDispatcher() {
           <Col span={7}>
             <div style={{ maxHeight: "60px", overflow: "hidden" }}>
               {dispatcher.responsibleArea?.map((area) => {
-                const areaKey = area[1].replace(/ /g, '_');
+                const areaKey = area[1].replace(/ /g, "_");
                 return (
-                  <div key={area[1]} style={{ fontSize: "12px", color: "#666" }}>
+                  <div
+                    key={area[1]}
+                    style={{ fontSize: "12px", color: "#666" }}
+                  >
                     {t(`hongkong:area_${areaKey}`, { defaultValue: area[1] })}
                   </div>
                 );
