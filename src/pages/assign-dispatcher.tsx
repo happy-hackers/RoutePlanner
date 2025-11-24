@@ -237,7 +237,10 @@ export default function AssignDispatchers({
         );
       } else {
         message.error(
-          t("message_error_update", { orderId: order.id, error: result.error })
+          t("message_error_update", {
+            orderId: order.id,
+            error: result.error,
+          })
         );
       }
     };
@@ -263,34 +266,57 @@ export default function AssignDispatchers({
     for (const order of selectedOrders) {
       if (order.dispatcherId) continue;
       if (!order.customer) continue;
-
-      let matches = dispatchers.filter((d) =>
-        d.responsibleArea.some(
+      //get order time
+      const orderDayKey = dayjs(order.date).format("ddd").toLowerCase();
+      const orderPeriod = order.time;
+      const matches = dispatchers.filter((d) => {
+        //check if district and area are matched
+        const isDistrictMatch = d.responsibleArea.some(
           ([, dist]) =>
             dist?.toLowerCase() === order.customer?.district.toLowerCase()
-        )
-      );
-
-      if (matches.length === 0) {
-        matches = dispatchers.filter((d) =>
-          d.responsibleArea.some(
-            ([area]) =>
-              area?.toLowerCase() === order.customer?.area.toLowerCase()
-          )
         );
-      }
+        const isAreaMatch = d.responsibleArea.some(
+          ([area]) => area?.toLowerCase() === order.customer?.area.toLowerCase()
+        );
+        const isLocationMatch = isDistrictMatch || isAreaMatch;
+        if (!isLocationMatch) return false;
+        //check if time is matched
+        const activeDays = d.activeDay || {};
+        const activePeriods = activeDays[orderDayKey] || [];
+        //validate
+        const isTimeMatch = activePeriods.some(
+          (p) => p.toLowerCase() === orderPeriod.toLowerCase()
+        );
+        return isTimeMatch;
+      });
 
       if (matches.length === 1) {
+        //only one match, auto assign
         await handleAutoUpdate(order, matches[0]);
       } else if (matches.length > 1) {
+        //more than one match, add to list for later
         unassignedWithMatches.push({ order, matches });
       } else {
+        //No match
         unassignedNoMatches.push(order);
       }
     }
 
     for (const item of unassignedWithMatches) {
-      const bestD = getLeastAssigned(item.matches, updatedOrders);
+      const currentAddress = item.order.detailedAddress;
+      //find dispatchers with same location
+      const dispatchersWithSameLocation = item.matches.filter((d) =>
+        updatedOrders.some(
+          (o) => o.dispatcherId === d.id && o.detailedAddress === currentAddress
+        )
+      );
+      //if there are dispatchers with same location, use them
+      const candidatePool =
+        dispatchersWithSameLocation.length > 0
+          ? dispatchersWithSameLocation
+          : item.matches;
+
+      const bestD = getLeastAssigned(candidatePool, updatedOrders);
       if (bestD) await handleAutoUpdate(item.order, bestD);
     }
 

@@ -193,6 +193,10 @@ export default function DispatcherModal({
 
   useEffect(() => {
     if (visible) {
+      form.resetFields(); 
+      setPassword("");
+      setShowPasswordReset(false);
+
       if (mode === "edit" && dispatcher) {
         form.setFieldsValue({
           name: dispatcher.name,
@@ -201,12 +205,8 @@ export default function DispatcherModal({
           activeDay: dispatcher.activeDay || {},
           responsibleArea: dispatcher.responsibleArea,
         });
-        setPassword("");
-        setShowPasswordReset(false);
       } else {
-        form.resetFields();
         setPassword(generateRandomPassword());
-        setShowPasswordReset(false);
       }
     }
   }, [visible, mode, dispatcher, form]);
@@ -321,15 +321,12 @@ export default function DispatcherModal({
       onCancel={handleCancel}
       footer={null}
       width={500}
+      destroyOnHidden={true} 
     >
       <Form
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
-        initialValues={{
-          activeDay: {},
-          responsibleArea: [],
-        }}
       >
         <Form.Item
           name="name"
