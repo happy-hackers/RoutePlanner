@@ -16,11 +16,13 @@ import { addDispatcher, updateDispatchers } from "../utils/dbUtils";
 import {
   createDriverAuth,
   generateRandomPassword,
+  UpdateDriverAuth,
   updateDriverPassword,
 } from "../utils/authUtils";
 import type { Dispatcher } from "../types/dispatchers";
 import areaData from "../hong_kong_areas.json";
 import { useTranslation } from "react-i18next";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 const { Option } = Select;
 const { SHOW_CHILD } = Cascader;
@@ -108,13 +110,25 @@ export default function DispatcherModal({
 
   const handleSubmit = async (values: {
     name: string;
-    email?: string;
+    email: string;
     phone?: string;
     activeDay: Record<string, string[]>;
     responsibleArea: string[][];
   }) => {
     try {
       setLoading(true);
+      // Normalize phone number if provided
+      let normalizedPhone: string | undefined = values.phone;
+      if (values.phone) {
+        const phoneNumber = parsePhoneNumberFromString(values.phone);
+        if (phoneNumber && phoneNumber.isValid()) {
+          normalizedPhone = phoneNumber.number; // E.164 format
+        } else {
+          message.error(t("msg_invalid_phone_number"));
+          setLoading(false);
+          return;
+        }
+      }
 
       if (mode === "add") {
         let authUserId: string | undefined;
@@ -139,7 +153,7 @@ export default function DispatcherModal({
         const result = await addDispatcher({
           name: values.name,
           email: values.email,
-          phone: values.phone,
+          phone: normalizedPhone,
           authUserId: authUserId,
           activeDay: values.activeDay || {},
           responsibleArea: values.responsibleArea || [],
@@ -164,7 +178,7 @@ export default function DispatcherModal({
           ...dispatcher,
           name: values.name,
           email: values.email,
-          phone: values.phone,
+          phone: normalizedPhone,
           activeDay: values.activeDay || {},
           responsibleArea: values.responsibleArea || [],
         };
@@ -173,6 +187,20 @@ export default function DispatcherModal({
 
         if (result.success) {
           resetPassword();
+          if (dispatcher?.authUserId) {
+            const result = await UpdateDriverAuth(
+              {
+                email: values.email,
+                name: values.name,
+                dispatcherId: dispatcher.id,
+              },
+              dispatcher.authUserId
+            );
+            if (!result.success) {
+              message.error(t("msg_edit_auth_fail", { error: result.error }));
+              return;
+            }
+          }
           message.success(t("msg_edit_success"));
           onSuccess();
           onCancel();
@@ -237,7 +265,13 @@ export default function DispatcherModal({
         <Form.Item
           name="email"
           label={t("label_email")}
-          rules={[{ type: "email", message: t("validation_email_invalid") }]}
+          rules={[
+            {
+              required: true,
+              type: "email",
+              message: t("validation_email_invalid"),
+            },
+          ]}
         >
           <Input placeholder={t("placeholder_email")} type="email" />
         </Form.Item>
