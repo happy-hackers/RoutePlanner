@@ -94,17 +94,17 @@ export default function SetDispatcher() {
 
   return (
     <Card title={t("card_title")} style={{ maxWidth: "70%", margin: "0 auto" }}>
-      <Row gutter={12} style={{ marginBottom: 12 }}>
-        <Col span={4}>
+      <Row gutter={24} style={{ marginBottom: 12 }}>
+        <Col span={3}>
           <Text strong>{t("header_dispatcher_name")}</Text>
         </Col>
-        <Col span={10}>
+        <Col span={8}>
           <Text strong>{t("header_active_day")}</Text>
         </Col>
-        <Col span={7}>
+        <Col span={8}>
           <Text strong>{t("header_responsible_area")}</Text>
         </Col>
-        <Col span={3}>
+        <Col span={5}>
           <Text strong>{t("header_actions")}</Text>
         </Col>
       </Row>
@@ -113,17 +113,17 @@ export default function SetDispatcher() {
         <Row
           key={dispatcher.id}
           align="middle"
-          gutter={12}
+          gutter={24}
           style={{
             marginBottom: 12,
             padding: "8px 0",
             borderBottom: "1px solid #f0f0f0",
           }}
         >
-          <Col span={4}>
+          <Col span={3}>
             <Text>{dispatcher.name}</Text>
           </Col>
-          <Col span={10}>
+          <Col span={8}>
             <div
               style={{
                 display: "flex",
@@ -208,22 +208,61 @@ export default function SetDispatcher() {
               })()}
             </div>
           </Col>
-          <Col span={7}>
-            <div style={{ maxHeight: "60px", overflow: "hidden" }}>
-              {dispatcher.responsibleArea?.map((area) => {
-                const areaKey = area[1].replace(/ /g, "_");
-                return (
-                  <div
-                    key={area[1]}
-                    style={{ fontSize: "12px", color: "#666" }}
-                  >
-                    {t(`hongkong:area_${areaKey}`, { defaultValue: area[1] })}
-                  </div>
-                );
-              })}
-            </div>
+
+          <Col span={8}>
+            {(() => {
+              const areas = dispatcher.responsibleArea || [];
+              const isOverflow = areas.length > 9;
+              const displayAreas = isOverflow
+                ? areas.slice(0, 8)
+                : areas.slice(0, 9);
+
+              return (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gap: "4px 8px",
+                    fontSize: "12px",
+                    color: "#666",
+                  }}
+                >
+                  {displayAreas.map((area) => {
+                    const areaKey = area[1].replace(/ /g, "_");
+                    const areaName = t(`hongkong:area_${areaKey}`, {
+                      defaultValue: area[1],
+                    });
+                    return (
+                      <div
+                        key={area[1]}
+                        title={areaName}
+                        style={{
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {areaName}
+                      </div>
+                    );
+                  })}
+                  {isOverflow && (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        color: "#999",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      ...
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </Col>
-          <Col span={3}>
+
+          <Col span={5}>
             <Button
               type="link"
               size="small"
