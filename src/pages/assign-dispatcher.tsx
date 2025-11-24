@@ -14,7 +14,7 @@ import type {
   FilterValue,
   SorterResult,
 } from "antd/es/table/interface";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, memo } from "react";
 import type { Dispatcher } from "../types/dispatchers";
 import { getAllDispatchers, updateOrder } from "../utils/dbUtils";
 import type { MarkerData } from "../types/markers";
@@ -51,7 +51,7 @@ const checkMatch = (d: Dispatcher, order: Order) => {
   const orderDayKey = dayjs(order.date).format("ddd").toLowerCase();
   const orderPeriod = order.time;
 
-  //check location
+  // check location
   const isDistrictMatch = d.responsibleArea.some(
     ([, dist]) => dist?.toLowerCase() === order.customer?.district.toLowerCase()
   );
@@ -60,7 +60,7 @@ const checkMatch = (d: Dispatcher, order: Order) => {
   );
   const isLocationMatch = isDistrictMatch || isAreaMatch;
 
-  //check time
+  // check time
   const activeDays = d.activeDay || {};
   const activePeriods = activeDays[orderDayKey] || [];
   const isTimeMatch = activePeriods.some(
@@ -92,6 +92,69 @@ const updateOrderInDb = async (order: Order, dispatcherId: number) => {
     originalCustomer: customer || order.customer,
   };
 };
+
+const OrdersSubTable = memo(
+  ({
+    orders,
+    assignmentOptions,
+    onAssign,
+    setHoveredOrderId,
+    t,
+  }: {
+    orders: Order[];
+    assignmentOptions: { value: number; label: string }[];
+    onAssign: (order: Order, val: number) => void;
+    setHoveredOrderId: (id: number | null) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    t: (key: string, options?: any) => string;
+  }) => {
+    const columns = [
+      {
+        title: t("table_id"),
+        dataIndex: "id",
+        width: "35%",
+      },
+      {
+        title: t("table_time"),
+        dataIndex: "time",
+        width: "40%",
+        render: (time: string, order: Order) =>
+          `${dayjs(order.date).format("MM-DD")} ${time}`,
+      },
+      {
+        title: t("table_dispatcher"),
+        width: "25%",
+        render: (_: unknown, order: Order) => (
+          <Select
+            rootClassName={WIDE_DROPDOWN_CLASS}
+            style={{ width: "100%", minWidth: 120 }}
+            placeholder={t("status_unassigned")}
+            value={order.dispatcherId || null}
+            allowClear={false}
+            onChange={(value) => onAssign(order, value)}
+            options={assignmentOptions}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ),
+      },
+    ];
+
+    return (
+      <Table
+        rowKey="id"
+        dataSource={orders}
+        pagination={false}
+        size="small"
+        showHeader={true}
+        columns={columns}
+        onRow={(record) => ({
+          onMouseEnter: () => setHoveredOrderId(record.id),
+          onMouseLeave: () => setHoveredOrderId(null),
+        })}
+      />
+    );
+  }
+);
 
 export default function AssignDispatchers({
   setMarkers,
@@ -210,190 +273,237 @@ export default function AssignDispatchers({
     const dispatcher = dispatcherMap[dispatcherId];
     if (!dispatcher) return;
 
-    const newOrders = [...selectedOrders];
-    let successCount = 0;
-    let hasUpdate = false;
+    const ordersNeedingUpdate = ordersToAssign.filter(
+      (o) => o.dispatcherId !== dispatcherId
+    );
 
-    for (const order of ordersToAssign) {
-      if (order.dispatcherId === dispatcherId) continue;
-
-      const { result, updatedOrder, originalCustomer } = await updateOrderInDb(
-        order,
-        dispatcherId
-      );
-
-      if (result.success) {
-        const index = newOrders.findIndex((o) => o.id === order.id);
-        if (index > -1) {
-          newOrders[index] = { ...updatedOrder, customer: originalCustomer };
-          successCount++;
-          hasUpdate = true;
-        }
-      }
-    }
-
-    if (hasUpdate) {
-      dispatch(setSelectedOrders(newOrders));
-      const markers = getGroupedMarkers(newOrders, dispatchers);
-      setMarkers(markers);
-
-      if (successCount > 0) {
-        message.success(
-          t("message_success_bulk", {
-            count: successCount,
-            name: dispatcher.name,
-          })
-        );
-      }
-    } else {
+    if (ordersNeedingUpdate.length === 0) {
       message.info(
         t("message_warning_no_change", {
           defaultValue:
             "All orders in this group are already assigned to this dispatcher.",
         })
       );
+      return;
+    }
+
+    const promises = ordersNeedingUpdate.map((order) =>
+      updateOrderInDb(order, dispatcherId).then((res) => ({
+        ...res,
+        orderId: order.id,
+      }))
+    );
+
+    const results = await Promise.all(promises);
+
+    let successCount = 0;
+    const newOrders = [...selectedOrders];
+    let hasUpdate = false;
+
+    results.forEach(({ result, updatedOrder, originalCustomer, orderId }) => {
+      if (result.success) {
+        const index = newOrders.findIndex((o) => o.id === orderId);
+        if (index > -1) {
+          newOrders[index] = { ...updatedOrder, customer: originalCustomer };
+          successCount++;
+          hasUpdate = true;
+        }
+      }
+    });
+
+    if (hasUpdate) {
+      dispatch(setSelectedOrders(newOrders));
+      const markers = getGroupedMarkers(newOrders, dispatchers);
+      setMarkers(markers);
+    }
+
+    if (successCount > 0) {
+      message.success(
+        t("message_success_bulk", {
+          count: successCount,
+          name: dispatcher.name,
+        })
+      );
     }
   };
 
-  const assignOrders = async (selectedOrders: Order[]) => {
+  const assignOrders = async (ordersToProcess: Order[]) => {
     setIsAssigning(true);
-    if (dispatchers.length === 0) return;
-    let updatedOrders = [...selectedOrders];
-    const forcedAssignmentWarnings: string[] = [];
-    const initialUnassignedCount = selectedOrders.filter(
-      (o) => !o.dispatcherId
-    ).length;
-    let successfullyAssignedCount = 0;
+    if (dispatchers.length === 0) {
+      setIsAssigning(false);
+      return;
+    }
 
-    const handleAutoUpdate = async (order: Order, dispatcher: Dispatcher) => {
-      const { result, updatedOrder, originalCustomer } = await updateOrderInDb(
-        order,
-        dispatcher.id
+    const unassignedOrders = ordersToProcess.filter(
+      (o) => !o.dispatcherId && o.customer
+    );
+
+    if (unassignedOrders.length === 0 && ordersToProcess.length > 0) {
+      message.info(
+        t("message_all_assigned_before_click", {
+          defaultValue: "All selected orders were already assigned.",
+        })
       );
-      if (result.success) {
-        updatedOrders = updatedOrders.map((o) =>
-          o.id === order.id
-            ? { ...updatedOrder, customer: originalCustomer }
-            : o
-        );
-        successfullyAssignedCount++;
-      } else {
-        message.error(
-          t("message_error_update", {
-            orderId: order.id,
-            error: result.error,
-          })
-        );
+      setIsAssigning(false);
+      return;
+    }
+
+    const dispatcherLoadMap = new Map<number, Set<string>>();
+
+    ordersToProcess.forEach((o) => {
+      if (o.dispatcherId) {
+        const set = dispatcherLoadMap.get(o.dispatcherId) || new Set();
+        set.add(o.detailedAddress || String(o.id));
+        dispatcherLoadMap.set(o.dispatcherId, set);
       }
+    });
+
+    const getLoadCount = (dId: number) => dispatcherLoadMap.get(dId)?.size || 0;
+
+    const incrementLoad = (dId: number, address: string) => {
+      const set = dispatcherLoadMap.get(dId) || new Set();
+      set.add(address);
+      dispatcherLoadMap.set(dId, set);
     };
 
-    const getLeastAssigned = (ds: Dispatcher[], currentOrders: Order[]) => {
-      let minD: Dispatcher | null = null;
-      let minC = Infinity;
-      for (const d of ds) {
-        const myOrders = currentOrders.filter((o) => o.dispatcherId === d.id);
-        const uniqueLocations = new Set(
-          myOrders.map((o) => o.detailedAddress || String(o.id))
-        );
-        const count = uniqueLocations.size;
-        if (count < minC) {
-          minC = count;
-          minD = d;
-        }
-      }
-      return minD;
+    const getLeastAssignedFromCandidates = (candidates: Dispatcher[]) => {
+      if (candidates.length === 0) return null;
+      return candidates.reduce((prev, curr) =>
+        getLoadCount(curr.id) < getLoadCount(prev.id) ? curr : prev
+      );
     };
 
-    const unassignedWithMatches: { order: Order; matches: Dispatcher[] }[] = [];
-    const unassignedNoMatches: Order[] = [];
+    const assignmentsQueue: {
+      order: Order;
+      dispatcher: Dispatcher;
+      warningReason?: string;
+    }[] = [];
 
-    for (const order of selectedOrders) {
-      if (order.dispatcherId) continue;
-      if (!order.customer) continue;
+    const forcedAssignmentWarnings: string[] = [];
+
+    for (const order of unassignedOrders) {
+      const addressKey = order.detailedAddress || String(order.id);
 
       const matches = dispatchers.filter((d) => {
         const { isLocationMatch, isTimeMatch } = checkMatch(d, order);
         return isLocationMatch && isTimeMatch;
       });
 
-      if (matches.length === 1) {
-        await handleAutoUpdate(order, matches[0]);
-      } else if (matches.length > 1) {
-        unassignedWithMatches.push({ order, matches });
-      } else {
-        unassignedNoMatches.push(order);
-      }
-    }
-
-    for (const item of unassignedWithMatches) {
-      const currentAddress = item.order.detailedAddress;
-      const dispatchersWithSameLocation = item.matches.filter((d) =>
-        updatedOrders.some(
-          (o) => o.dispatcherId === d.id && o.detailedAddress === currentAddress
-        )
-      );
-      const candidatePool =
-        dispatchersWithSameLocation.length > 0
-          ? dispatchersWithSameLocation
-          : item.matches;
-
-      const bestD = getLeastAssigned(candidatePool, updatedOrders);
-      if (bestD) {
-        await handleAutoUpdate(item.order, bestD);
-      }
-    }
-
-    for (const order of unassignedNoMatches) {
-      let candidates: Dispatcher[] = [];
+      let selectedDispatcher: Dispatcher | null = null;
       let warningReason = "";
 
-      //location match, time not match
-      candidates = dispatchers.filter(
-        (d) => checkMatch(d, order).isLocationMatch
-      );
-
-      if (candidates.length > 0) {
-        warningReason = t("warning_time_mismatch", {
-          defaultValue: "Area match only (Time ignored)",
-        });
-      } else {
-        //time match, location not match
-        candidates = dispatchers.filter(
-          (d) => checkMatch(d, order).isTimeMatch
+      if (matches.length === 1) {
+        selectedDispatcher = matches[0];
+      } else if (matches.length > 1) {
+        const dispatchersAtLocation = matches.filter((d) =>
+          dispatcherLoadMap.get(d.id)?.has(addressKey)
         );
 
+        const candidatePool =
+          dispatchersAtLocation.length > 0 ? dispatchersAtLocation : matches;
+
+        selectedDispatcher = getLeastAssignedFromCandidates(candidatePool);
+      } else {
+        // No perfect match
+        let candidates: Dispatcher[] = [];
+
+        // Try Area match only
+        candidates = dispatchers.filter(
+          (d) => checkMatch(d, order).isLocationMatch
+        );
         if (candidates.length > 0) {
-          warningReason = t("warning_area_mismatch", {
-            defaultValue: "Time match only (Area ignored)",
+          warningReason = t("warning_time_mismatch", {
+            defaultValue: "Area match only (Time ignored)",
           });
         } else {
-          //no match
-          candidates = dispatchers;
-          warningReason = t("warning_all_mismatch", {
-            defaultValue: "No match (Forced assignment)",
-          });
+          // Try Time match only
+          candidates = dispatchers.filter(
+            (d) => checkMatch(d, order).isTimeMatch
+          );
+          if (candidates.length > 0) {
+            warningReason = t("warning_area_mismatch", {
+              defaultValue: "Time match only (Area ignored)",
+            });
+          } else {
+            // Force assign
+            candidates = dispatchers;
+            warningReason = t("warning_all_mismatch", {
+              defaultValue: "No match (Forced assignment)",
+            });
+          }
         }
+        selectedDispatcher = getLeastAssignedFromCandidates(candidates);
       }
 
-      const bestD = getLeastAssigned(candidates, updatedOrders);
-
-      if (bestD) {
-        await handleAutoUpdate(order, bestD);
-        forcedAssignmentWarnings.push(
-          `${t("order_id", { defaultValue: "Order" })}: ${order.id} -> ${
-            bestD.name
-          } [${warningReason}]`
-        );
+      if (selectedDispatcher) {
+        incrementLoad(selectedDispatcher.id, addressKey);
+        assignmentsQueue.push({
+          order,
+          dispatcher: selectedDispatcher,
+          warningReason,
+        });
       }
     }
 
-    // update
+    const updatePromises = assignmentsQueue.map(
+      ({ order, dispatcher, warningReason }) =>
+        updateOrderInDb(order, dispatcher.id).then((res) => ({
+          ...res,
+          orderId: order.id,
+          dispatcherName: dispatcher.name,
+          warningReason,
+        }))
+    );
+
+    const results = await Promise.all(updatePromises);
+
+    let successfullyAssignedCount = 0;
+    const updatedOrders = [...ordersToProcess];
+
+    results.forEach(
+      ({
+        result,
+        updatedOrder,
+        originalCustomer,
+        orderId,
+        dispatcherName,
+        warningReason,
+      }) => {
+        if (result.success) {
+          const index = updatedOrders.findIndex((o) => o.id === orderId);
+          if (index > -1) {
+            updatedOrders[index] = {
+              ...updatedOrder,
+              customer: originalCustomer,
+            };
+            successfullyAssignedCount++;
+
+            if (warningReason) {
+              forcedAssignmentWarnings.push(
+                `${t("order_id", {
+                  defaultValue: "Order",
+                })}: ${orderId} -> ${dispatcherName} [${warningReason}]`
+              );
+            }
+          }
+        } else {
+          message.error(
+            t("message_error_update", {
+              orderId: orderId,
+              error: result.error,
+            })
+          );
+        }
+      }
+    );
+
+    // Update State
     dispatch(setSelectedOrders(updatedOrders));
     const markers = getGroupedMarkers(updatedOrders, dispatchers);
     setMarkers(markers);
     setIsAssigning(false);
 
-    // warning
+    // Notifications
     if (forcedAssignmentWarnings.length > 0) {
       modal.warning({
         title: t("warning_forced_assignments_title", {
@@ -420,7 +530,7 @@ export default function AssignDispatchers({
           </div>
         ),
       });
-    } else if (successfullyAssignedCount > 0 && initialUnassignedCount > 0) {
+    } else if (successfullyAssignedCount > 0) {
       notification.success({
         message: t("notification_perfect_title", {
           defaultValue: "Automatic Assignment Complete",
@@ -432,12 +542,6 @@ export default function AssignDispatchers({
         placement: "topRight",
         duration: 4.5,
       });
-    } else if (initialUnassignedCount === 0 && selectedOrders.length > 0) {
-      message.info(
-        t("message_all_assigned_before_click", {
-          defaultValue: "All selected orders were already assigned.",
-        })
-      );
     }
   };
 
@@ -517,7 +621,7 @@ export default function AssignDispatchers({
     }
   };
 
-  const columns = [
+  const mainColumns = [
     {
       title: t("table_address"),
       dataIndex: "address",
@@ -579,25 +683,10 @@ export default function AssignDispatchers({
               defaultValue={null}
               onChange={(id: number | null) => {
                 setSelectedId(id);
-                if (id) {
-                  const selectedDispatcher = dispatcherMap[id];
-                  if (selectedDispatcher) {
-                    const filteredOrders = selectedOrders.filter(
-                      (order) => order.dispatcherId === id
-                    );
-                    const filteredMarkers = getGroupedMarkers(
-                      filteredOrders,
-                      dispatchers
-                    );
-                    setMarkers(filteredMarkers);
-                  }
-                } else {
-                  const allMarkers = getGroupedMarkers(
-                    selectedOrders,
-                    dispatchers
-                  );
-                  setMarkers(allMarkers);
-                }
+                const targetOrders = id
+                  ? selectedOrders.filter((o) => o.dispatcherId === id)
+                  : selectedOrders;
+                setMarkers(getGroupedMarkers(targetOrders, dispatchers));
               }}
               options={filterOptions}
             />
@@ -635,51 +724,17 @@ export default function AssignDispatchers({
         <div style={{ flex: 1, overflow: "hidden" }}>
           <Table
             rowKey="groupKey"
-            columns={columns}
+            columns={mainColumns}
             dataSource={paginatedGroups}
             onChange={handleTableChange}
             expandable={{
               expandedRowRender: (record) => (
-                <Table
-                  rowKey="id"
-                  dataSource={record.orders}
-                  pagination={false}
-                  size="small"
-                  showHeader={true}
-                  columns={[
-                    {
-                      title: t("table_id"),
-                      dataIndex: "id",
-                      width: "35%",
-                    },
-                    {
-                      title: t("table_time"),
-                      dataIndex: "time",
-                      width: "40%",
-                      render: (time, order) =>
-                        `${dayjs(order.date).format("MM-DD")} ${time}`,
-                    },
-                    {
-                      title: t("table_dispatcher"),
-                      width: "25%",
-                      render: (_, order) => (
-                        <Select
-                          rootClassName={WIDE_DROPDOWN_CLASS}
-                          style={{ width: "100%", minWidth: 120 }}
-                          placeholder={t("status_unassigned")}
-                          value={order.dispatcherId || null}
-                          allowClear={false}
-                          onChange={(value) => handleSingleAssign(order, value)}
-                          options={assignmentOptions}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      ),
-                    },
-                  ]}
-                  onRow={(record) => ({
-                    onMouseEnter: () => setHoveredOrderId(record.id),
-                    onMouseLeave: () => setHoveredOrderId(null),
-                  })}
+                <OrdersSubTable
+                  orders={record.orders}
+                  assignmentOptions={assignmentOptions}
+                  onAssign={handleSingleAssign}
+                  setHoveredOrderId={setHoveredOrderId}
+                  t={t}
                 />
               ),
               rowExpandable: (record) => record.orders.length > 0,
