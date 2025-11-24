@@ -1,9 +1,16 @@
-import { Card, Button, Space, Typography, Tag } from 'antd';
-import { UnorderedListOutlined, UndoOutlined } from '@ant-design/icons';
-import { useTranslation } from 'react-i18next';
-import type { AddressMetersElement } from '../../types/route';
-import { useState } from 'react';
+import { Card, Button, Space, Typography, Tag, Modal, Input } from "antd";
+import {
+  UnorderedListOutlined,
+  UndoOutlined,
+  EditOutlined,
+  CheckOutlined,
+} from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
+import type { AddressMetersElement } from "../../types/route";
+import { useState } from "react";
 import { UpOutlined, DownOutlined } from "@ant-design/icons";
+import type { Order } from "../../types/order";
+import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 
@@ -15,6 +22,7 @@ interface NextStopCardProps {
   onViewAll: () => void;
   onMeterDone: (orderId: number) => void;
   onMeterUndo: (orderId: number) => void;
+  onNoteSave: (orderId: number, note: string) => void;
 }
 
 export default function NextStopCard({
@@ -25,11 +33,16 @@ export default function NextStopCard({
   onViewAll,
   onMeterDone,
   onMeterUndo,
+  onNoteSave,
 }: NextStopCardProps) {
-  const { t } = useTranslation('viewDriverRoute');
+  const { t } = useTranslation("viewDriverRoute");
   const keyPath = "nextStopCard";
-  const isCompleted = stop.meters.every(order => order.status === 'Delivered');
+  const isCompleted = stop.meters.every(
+    (order) => order.status === "Delivered"
+  );
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [activeNoteOrder, setActiveNoteOrder] = useState<Order | null>(null);
+  const [note, setNote] = useState("");
 
   return (
     <Card
@@ -42,7 +55,9 @@ export default function NextStopCard({
         right: 0,
         height: "100vh",
         overflowY: isFullScreen ? "auto" : "hidden",
-        transform: isFullScreen ? "translateY(0)" : "translateY(calc(100% - 300px))",
+        transform: isFullScreen
+          ? "translateY(0)"
+          : "translateY(calc(100% - 300px))",
         transition: "transform 0.5s ease-in-out",
         borderRadius: isFullScreen ? 0 : "16px 16px 0 0",
         boxShadow: isFullScreen ? "none" : "0 -4px 12px rgba(0,0,0,0.15)",
@@ -124,7 +139,9 @@ export default function NextStopCard({
                       {order.customer?.name ||
                         t(`${keyPath}.placeholder_customer`)}
                     </Text>
-                    <Text type="secondary">{t(`${keyPath}.text_meter_id`)} {order.id}</Text>
+                    <Text type="secondary">
+                      {t(`${keyPath}.text_meter_id`)} {order.id}
+                    </Text>
                   </Space>
                   <Space>
                     <Tag
@@ -136,17 +153,59 @@ export default function NextStopCard({
                         ? t(`${keyPath}.tag_done`)
                         : t(`${keyPath}.tag_in_progress`)}
                     </Tag>
+                    <Button
+                      size="middle"
+                      type="default"
+                      icon={<EditOutlined />}
+                      onClick={() => {
+                        setActiveNoteOrder(order);
+                        setNote(order.note || "");
+                      }}
+                    />
+                    {activeNoteOrder && (
+                      <Modal
+                        title={`Add Note for Meter #${order.id}`}
+                        open={!!activeNoteOrder}
+                        onCancel={() => setActiveNoteOrder(null)}
+                        onOk={() => {
+                          onNoteSave(activeNoteOrder.id, note);
+                          setActiveNoteOrder(null);
+                        }}
+                        zIndex={1003}
+                        okText={
+                          activeNoteOrder.note?.trim() ? "Update" : "Save"
+                        }
+                      >
+                        <Space direction="vertical" style={{ width: "100%" }}>
+                          <Input.TextArea
+                            rows={4}
+                            value={note}
+                            placeholder="Enter your note here..."
+                            onChange={(e) => setNote(e.target.value)}
+                          />
+
+                          {activeNoteOrder.lastNoteTime && (
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              Last edited:{" "}
+                              {dayjs(activeNoteOrder.lastNoteTime).format(
+                                "YYYY-MM-DD, HH:mm:ss"
+                              )}
+                            </Text>
+                          )}
+                        </Space>
+                      </Modal>
+                    )}
+
                     {order.status !== "Delivered" ? (
                       <Button
-                        size="small"
+                        size="middle"
                         type="primary"
+                        icon={<CheckOutlined />}
                         onClick={() => onMeterDone(order.id)}
-                      >
-                        {t(`${keyPath}.button_mark_done`)}
-                      </Button>
+                      />
                     ) : (
                       <Button
-                        size="small"
+                        size="middle"
                         icon={<UndoOutlined />}
                         onClick={() => onMeterUndo(order.id)}
                       >
