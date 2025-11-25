@@ -14,7 +14,7 @@ import type {
   FilterValue,
   SorterResult,
 } from "antd/es/table/interface";
-import { useState, useEffect, useMemo, memo } from "react";
+import { useState, useEffect, useMemo, memo, useCallback } from "react";
 import type { Dispatcher } from "../types/dispatchers";
 import { getAllDispatchers, updateOrder } from "../utils/dbUtils";
 import type { MarkerData } from "../types/markers";
@@ -37,6 +37,10 @@ const customStyles = `
   }
 `;
 
+// Weight for spatial optimization.
+// 1km distance is roughly equivalent to adding 0.5 to the load count.
+const DISTANCE_WEIGHT = 0.5;
+
 interface GroupRowData {
   groupKey: string;
   address: string;
@@ -47,11 +51,30 @@ interface GroupRowData {
 
 type SortOrder = "ascend" | "descend" | null;
 
+const getDistanceFromLatLonInKm = (
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+) => {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) *
+      Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
 const checkMatch = (d: Dispatcher, order: Order) => {
   const orderDayKey = dayjs(order.date).format("ddd").toLowerCase();
   const orderPeriod = order.time;
 
-  // check location
+  // Check location match
   const isDistrictMatch = d.responsibleArea.some(
     ([, dist]) => dist?.toLowerCase() === order.customer?.district.toLowerCase()
   );
@@ -60,7 +83,7 @@ const checkMatch = (d: Dispatcher, order: Order) => {
   );
   const isLocationMatch = isDistrictMatch || isAreaMatch;
 
-  // check time
+  // Check time match
   const activeDays = d.activeDay || {};
   const activePeriods = activeDays[orderDayKey] || [];
   const isTimeMatch = activePeriods.some(
@@ -188,6 +211,7 @@ export default function AssignDispatchers({
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>(null);
 
+  // Fetch dispatchers on mount
   useEffect(() => {
     const fetchDispatchers = async () => {
       try {
@@ -204,6 +228,7 @@ export default function AssignDispatchers({
     fetchDispatchers();
   }, [message, t]);
 
+  // Memoized sorted dispatchers and lookups
   const sortedDispatchers = useMemo(() => {
     return [...dispatchers].sort((a, b) => a.name.localeCompare(b.name));
   }, [dispatchers]);
@@ -235,97 +260,117 @@ export default function AssignDispatchers({
     [sortedDispatchers]
   );
 
-  const handleSingleAssign = async (order: Order, dispatcherId: number) => {
-    const dispatcher = dispatcherMap[dispatcherId];
-    if (!dispatcher) return;
+  const handleSingleAssign = useCallback(
+    async (order: Order, dispatcherId: number) => {
+      const dispatcher = dispatcherMap[dispatcherId];
+      if (!dispatcher) return;
 
-    const { result, updatedOrder, originalCustomer } = await updateOrderInDb(
-      order,
-      dispatcherId
-    );
-
-    if (result.success) {
-      const newOrders = selectedOrders.map((o) =>
-        o.id === order.id ? { ...updatedOrder, customer: originalCustomer } : o
+      const { result, updatedOrder, originalCustomer } = await updateOrderInDb(
+        order,
+        dispatcherId
       );
 
-      dispatch(setSelectedOrders(newOrders));
-      const markers = getGroupedMarkers(newOrders, dispatchers);
-      setMarkers(markers);
-
-      message.success(
-        t("message_success", {
-          orderId: order.id,
-          dispatcherName: dispatcher.name,
-        })
-      );
-    } else {
-      message.error(
-        t("message_error_update", { orderId: order.id, error: result.error })
-      );
-    }
-  };
-
-  const handleGroupAssign = async (
-    ordersToAssign: Order[],
-    dispatcherId: number
-  ) => {
-    const dispatcher = dispatcherMap[dispatcherId];
-    if (!dispatcher) return;
-
-    const ordersNeedingUpdate = ordersToAssign.filter(
-      (o) => o.dispatcherId !== dispatcherId
-    );
-
-    if (ordersNeedingUpdate.length === 0) {
-      message.info(
-        t("message_warning_no_change", {
-          defaultValue:
-            "All orders in this group are already assigned to this dispatcher.",
-        })
-      );
-      return;
-    }
-
-    const promises = ordersNeedingUpdate.map((order) =>
-      updateOrderInDb(order, dispatcherId).then((res) => ({
-        ...res,
-        orderId: order.id,
-      }))
-    );
-
-    const results = await Promise.all(promises);
-
-    let successCount = 0;
-    const newOrders = [...selectedOrders];
-    let hasUpdate = false;
-
-    results.forEach(({ result, updatedOrder, originalCustomer, orderId }) => {
       if (result.success) {
-        const index = newOrders.findIndex((o) => o.id === orderId);
-        if (index > -1) {
-          newOrders[index] = { ...updatedOrder, customer: originalCustomer };
+        const newOrders = selectedOrders.map((o) =>
+          o.id === order.id
+            ? { ...updatedOrder, customer: originalCustomer }
+            : o
+        );
+
+        dispatch(setSelectedOrders(newOrders));
+        const markers = getGroupedMarkers(newOrders, dispatchers);
+        setMarkers(markers);
+
+        message.success(
+          t("message_success", {
+            orderId: order.id,
+            dispatcherName: dispatcher.name,
+          })
+        );
+      } else {
+        message.error(
+          t("message_error_update", {
+            orderId: order.id,
+            error: result.error,
+          })
+        );
+      }
+    },
+    [
+      dispatcherMap,
+      selectedOrders,
+      dispatchers,
+      dispatch,
+      setMarkers,
+      message,
+      t,
+    ]
+  );
+
+  const handleGroupAssign = useCallback(
+    async (ordersToAssign: Order[], dispatcherId: number) => {
+      const dispatcher = dispatcherMap[dispatcherId];
+      if (!dispatcher) return;
+
+      const ordersNeedingUpdate = ordersToAssign.filter(
+        (o) => o.dispatcherId !== dispatcherId
+      );
+
+      if (ordersNeedingUpdate.length === 0) {
+        message.info(t("message_warning_no_change"));
+        return;
+      }
+
+      const promises = ordersNeedingUpdate.map((order) =>
+        updateOrderInDb(order, dispatcherId).then((res) => ({
+          ...res,
+          orderId: order.id,
+        }))
+      );
+
+      const results = await Promise.all(promises);
+
+      let successCount = 0;
+      let newOrders = [...selectedOrders];
+      let hasUpdate = false;
+
+      results.forEach(({ result, updatedOrder, originalCustomer, orderId }) => {
+        if (result.success) {
+          newOrders = newOrders.map((o) =>
+            o.id === orderId
+              ? { ...updatedOrder, customer: originalCustomer }
+              : o
+          );
           successCount++;
           hasUpdate = true;
         }
+      });
+
+      if (hasUpdate) {
+        dispatch(setSelectedOrders(newOrders));
+        const markers = getGroupedMarkers(newOrders, dispatchers);
+        setMarkers(markers);
       }
-    });
 
-    if (hasUpdate) {
-      dispatch(setSelectedOrders(newOrders));
-      const markers = getGroupedMarkers(newOrders, dispatchers);
-      setMarkers(markers);
-    }
-
-    if (successCount > 0) {
-      message.success(
-        t("message_success_bulk", {
-          count: successCount,
-          name: dispatcher.name,
-        })
-      );
-    }
-  };
+      if (successCount > 0) {
+        message.success(
+          t("message_success_bulk", {
+            count: successCount,
+            name: dispatcher.name,
+          })
+        );
+      }
+    },
+    [
+      dispatcherMap,
+      selectedOrders,
+      dispatchers,
+      dispatch,
+      setMarkers,
+      message,
+      t,
+    ]
+  );
 
   const assignOrders = async (ordersToProcess: Order[]) => {
     setIsAssigning(true);
@@ -339,48 +384,129 @@ export default function AssignDispatchers({
     );
 
     if (unassignedOrders.length === 0 && ordersToProcess.length > 0) {
-      message.info(
-        t("message_all_assigned_before_click", {
-          defaultValue: "All selected orders were already assigned.",
-        })
-      );
+      message.info(t("message_all_assigned_before_click"));
       setIsAssigning(false);
       return;
     }
 
+    // 1. Initialize Load Map and Location Map
+    // dispatcherLoadMap: ID -> Set of address strings (for load balancing)
     const dispatcherLoadMap = new Map<number, Set<string>>();
+    // dispatcherLocationsMap: ID -> Array of {lat, lng} (for spatial clustering)
+    const dispatcherLocationsMap = new Map<
+      number,
+      { lat: number; lng: number }[]
+    >();
 
     ordersToProcess.forEach((o) => {
       if (o.dispatcherId) {
+        // Initialize Load
         const set = dispatcherLoadMap.get(o.dispatcherId) || new Set();
         set.add(o.detailedAddress || String(o.id));
         dispatcherLoadMap.set(o.dispatcherId, set);
+
+        // Initialize Locations
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const lat = (o as any).lat || (o as any).latitude;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const lng = (o as any).lng || (o as any).longitude;
+
+        if (lat && lng) {
+          const locs = dispatcherLocationsMap.get(o.dispatcherId) || [];
+          locs.push({ lat: Number(lat), lng: Number(lng) });
+          dispatcherLocationsMap.set(o.dispatcherId, locs);
+        }
       }
     });
 
-    const getLoadCount = (dId: number) => dispatcherLoadMap.get(dId)?.size || 0;
-
-    const incrementLoad = (dId: number, address: string) => {
+    // Helper to update maps in real-time during assignment loop
+    const incrementLoadAndLocation = (dId: number, order: Order) => {
+      // Update Load
+      const address = order.detailedAddress || String(order.id);
       const set = dispatcherLoadMap.get(dId) || new Set();
       set.add(address);
       dispatcherLoadMap.set(dId, set);
+
+      // Update Location
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const lat = (order as any).lat || (order as any).latitude;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const lng = (order as any).lng || (order as any).longitude;
+      if (lat && lng) {
+        const locs = dispatcherLocationsMap.get(dId) || [];
+        locs.push({ lat: Number(lat), lng: Number(lng) });
+        dispatcherLocationsMap.set(dId, locs);
+      }
     };
 
-    const getLeastAssignedFromCandidates = (candidates: Dispatcher[]) => {
+    // Score = Load + (MinDistance * Weight)
+    const getBestDispatcherWithSpatial = (
+      candidates: Dispatcher[],
+      targetOrder: Order
+    ) => {
       if (candidates.length === 0) return null;
-      return candidates.reduce((prev, curr) =>
-        getLoadCount(curr.id) < getLoadCount(prev.id) ? curr : prev
-      );
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tLat = (targetOrder as any).lat || (targetOrder as any).latitude;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tLng = (targetOrder as any).lng || (targetOrder as any).longitude;
+      const hasTargetLoc = tLat && tLng;
+
+      let bestCandidate = candidates[0];
+      let minScore = Infinity;
+
+      // For debugging: Verify if spatial logic is working
+      console.groupCollapsed(`Assigning Order ${targetOrder.id}`);
+
+      for (const d of candidates) {
+        // Factor 1: Current Load (Unique Addresses)
+        const load = dispatcherLoadMap.get(d.id)?.size || 0;
+
+        // Factor 2: Spatial Distance
+        let minDistanceKm = 0;
+        if (hasTargetLoc) {
+          const existingLocs = dispatcherLocationsMap.get(d.id) || [];
+          if (existingLocs.length > 0) {
+            // Find distance to the NEAREST existing order for this dispatcher
+            minDistanceKm = Math.min(
+              ...existingLocs.map((loc) =>
+                getDistanceFromLatLonInKm(tLat, tLng, loc.lat, loc.lng)
+              )
+            );
+          } else {
+            // Dispatcher has no spatial history yet.
+            // 0 distance encourages assigning to empty dispatchers if load is low.
+            minDistanceKm = 0;
+          }
+        }
+
+        // Weighted Score
+        const score = load + minDistanceKm * DISTANCE_WEIGHT;
+
+        console.debug(`Dispatcher: ${d.name}`, {
+          load,
+          minDistanceKm: minDistanceKm.toFixed(2),
+          score: score.toFixed(2),
+        });
+
+        if (score < minScore) {
+          minScore = score;
+          bestCandidate = d;
+        }
+      }
+      console.groupEnd();
+      return bestCandidate;
     };
 
+    // Queue for batch processing
     const assignmentsQueue: {
       order: Order;
       dispatcher: Dispatcher;
       warningReason?: string;
     }[] = [];
-
     const forcedAssignmentWarnings: string[] = [];
 
+    // 2. Process each unassigned order
     for (const order of unassignedOrders) {
       const addressKey = order.detailedAddress || String(order.id);
 
@@ -393,8 +519,11 @@ export default function AssignDispatchers({
       let warningReason = "";
 
       if (matches.length === 1) {
+        // Case A: Only one perfect match
         selectedDispatcher = matches[0];
       } else if (matches.length > 1) {
+        // Case B: Multiple perfect matches
+        // 1. Prioritize Exact Address Match (Distance = 0 essentially)
         const dispatchersAtLocation = matches.filter((d) =>
           dispatcherLoadMap.get(d.id)?.has(addressKey)
         );
@@ -402,12 +531,13 @@ export default function AssignDispatchers({
         const candidatePool =
           dispatchersAtLocation.length > 0 ? dispatchersAtLocation : matches;
 
-        selectedDispatcher = getLeastAssignedFromCandidates(candidatePool);
+        // 2. Use Spatial + Load scoring
+        selectedDispatcher = getBestDispatcherWithSpatial(candidatePool, order);
       } else {
-        // No perfect match
+        // Case C: No perfect match (Fallback Strategy)
         let candidates: Dispatcher[] = [];
 
-        // Try Area match only
+        // Try Area match (ignore time)
         candidates = dispatchers.filter(
           (d) => checkMatch(d, order).isLocationMatch
         );
@@ -416,7 +546,7 @@ export default function AssignDispatchers({
             defaultValue: "Area match only (Time ignored)",
           });
         } else {
-          // Try Time match only
+          // Try Time match (ignore area)
           candidates = dispatchers.filter(
             (d) => checkMatch(d, order).isTimeMatch
           );
@@ -425,18 +555,20 @@ export default function AssignDispatchers({
               defaultValue: "Time match only (Area ignored)",
             });
           } else {
-            // Force assign
+            // Force assign to anyone
             candidates = dispatchers;
             warningReason = t("warning_all_mismatch", {
               defaultValue: "No match (Forced assignment)",
             });
           }
         }
-        selectedDispatcher = getLeastAssignedFromCandidates(candidates);
+        // Pick best from fallback candidates using Spatial + Load
+        selectedDispatcher = getBestDispatcherWithSpatial(candidates, order);
       }
 
       if (selectedDispatcher) {
-        incrementLoad(selectedDispatcher.id, addressKey);
+        // Update maps immediately so next order in loop considers this assignment
+        incrementLoadAndLocation(selectedDispatcher.id, order);
         assignmentsQueue.push({
           order,
           dispatcher: selectedDispatcher,
@@ -445,6 +577,7 @@ export default function AssignDispatchers({
       }
     }
 
+    // 3. Execute DB Updates
     const updatePromises = assignmentsQueue.map(
       ({ order, dispatcher, warningReason }) =>
         updateOrderInDb(order, dispatcher.id).then((res) => ({
@@ -458,7 +591,7 @@ export default function AssignDispatchers({
     const results = await Promise.all(updatePromises);
 
     let successfullyAssignedCount = 0;
-    const updatedOrders = [...ordersToProcess];
+    const finalUpdatedOrders = [...ordersToProcess];
 
     results.forEach(
       ({
@@ -470,9 +603,9 @@ export default function AssignDispatchers({
         warningReason,
       }) => {
         if (result.success) {
-          const index = updatedOrders.findIndex((o) => o.id === orderId);
+          const index = finalUpdatedOrders.findIndex((o) => o.id === orderId);
           if (index > -1) {
-            updatedOrders[index] = {
+            finalUpdatedOrders[index] = {
               ...updatedOrder,
               customer: originalCustomer,
             };
@@ -497,28 +630,27 @@ export default function AssignDispatchers({
       }
     );
 
-    // Update State
-    dispatch(setSelectedOrders(updatedOrders));
-    const markers = getGroupedMarkers(updatedOrders, dispatchers);
+    // 4. Update UI
+    dispatch(setSelectedOrders(finalUpdatedOrders));
+    const markers = getGroupedMarkers(finalUpdatedOrders, dispatchers);
     setMarkers(markers);
     setIsAssigning(false);
 
-    // Notifications
+    // 5. Feedback
     if (forcedAssignmentWarnings.length > 0) {
       modal.warning({
-        title: t("warning_forced_assignments_title", {
-          defaultValue: "Assignments with Constraints Ignored",
-        }),
+        title: t("warning_forced_assignments_title"),
         width: 500,
         content: (
           <div
-            style={{ maxHeight: "300px", overflowY: "auto", marginTop: "10px" }}
+            style={{
+              maxHeight: "300px",
+              overflowY: "auto",
+              marginTop: "10px",
+            }}
           >
             <div style={{ marginBottom: "10px" }}>
-              {t("warning_forced_assignments_desc", {
-                defaultValue:
-                  "The following orders were assigned despite mismatching constraints:",
-              })}
+              {t("warning_forced_assignments_desc")}
             </div>
             <ul style={{ paddingLeft: "20px", margin: 0 }}>
               {forcedAssignmentWarnings.map((msg, idx) => (
@@ -530,14 +662,14 @@ export default function AssignDispatchers({
           </div>
         ),
       });
-    } else if (successfullyAssignedCount > 0) {
+    }
+
+    // Show success notification independently of warnings
+    if (successfullyAssignedCount > 0) {
       notification.success({
-        message: t("notification_perfect_title", {
-          defaultValue: "Automatic Assignment Complete",
-        }),
+        message: t("notification_perfect_title"),
         description: t("notification_perfect_desc", {
           count: successfullyAssignedCount,
-          defaultValue: `Successfully assigned ${successfullyAssignedCount} order(s) without violating any area or time constraints.`,
         }),
         placement: "topRight",
         duration: 4.5,
@@ -553,6 +685,7 @@ export default function AssignDispatchers({
     assignOrders(newSelectedOrders);
   };
 
+  // Memoized data grouping
   const groupedData = useMemo(() => {
     const groups: Record<string, Order[]> = {};
     const filteredOrders = selectedId
@@ -621,39 +754,43 @@ export default function AssignDispatchers({
     }
   };
 
-  const mainColumns = [
-    {
-      title: t("table_address"),
-      dataIndex: "address",
-      key: "address",
-      render: (text: string) => <Text strong>{text}</Text>,
-      sorter: true,
-      sortOrder: sortField === "address" ? sortOrder : null,
-      width: "75%",
-    },
-    {
-      title: t("table_dispatcher"),
-      dataIndex: "dispatcher",
-      key: "dispatcher",
-      sorter: true,
-      sortOrder: sortField === "dispatcher" ? sortOrder : null,
-      width: "25%",
-      render: (_: unknown, record: GroupRowData) => (
-        <Select
-          rootClassName={WIDE_DROPDOWN_CLASS}
-          style={{ width: "100%", maxWidth: 250 }}
-          placeholder={t("placeholder_assign_dispatcher")}
-          value={record.dispatcherId === "mixed" ? null : record.dispatcherId}
-          allowClear
-          onChange={(value) => {
-            if (value) handleGroupAssign(record.orders, value);
-          }}
-          options={assignmentOptions}
-          onClick={(e) => e.stopPropagation()}
-        />
-      ),
-    },
-  ];
+  // Memoize Main Columns
+  const mainColumns = useMemo(
+    () => [
+      {
+        title: t("table_address"),
+        dataIndex: "address",
+        key: "address",
+        render: (text: string) => <Text strong>{text}</Text>,
+        sorter: true,
+        sortOrder: sortField === "address" ? sortOrder : null,
+        width: "75%",
+      },
+      {
+        title: t("table_dispatcher"),
+        dataIndex: "dispatcher",
+        key: "dispatcher",
+        sorter: true,
+        sortOrder: sortField === "dispatcher" ? sortOrder : null,
+        width: "25%",
+        render: (_: unknown, record: GroupRowData) => (
+          <Select
+            rootClassName={WIDE_DROPDOWN_CLASS}
+            style={{ width: "100%", maxWidth: 250 }}
+            placeholder={t("placeholder_assign_dispatcher")}
+            value={record.dispatcherId === "mixed" ? null : record.dispatcherId}
+            allowClear
+            onChange={(value) => {
+              if (value) handleGroupAssign(record.orders, value);
+            }}
+            options={assignmentOptions}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ),
+      },
+    ],
+    [t, sortField, sortOrder, assignmentOptions, handleGroupAssign]
+  );
 
   return (
     <Row style={{ height: "100%" }}>
