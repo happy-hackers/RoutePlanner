@@ -25,6 +25,7 @@ import type { RootState } from "../store";
 import { setSelectedOrders } from "../store/orderSlice";
 import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
+import { getDistance } from "../utils/mapUtils";
 
 const { Text } = Typography;
 
@@ -50,25 +51,6 @@ interface GroupRowData {
 }
 
 type SortOrder = "ascend" | "descend" | null;
-
-const getDistanceFromLatLonInKm = (
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-) => {
-  const R = 6371; // Radius of the earth in km
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
 
 const checkMatch = (d: Dispatcher, order: Order) => {
   const orderDayKey = dayjs(order.date).format("ddd").toLowerCase();
@@ -468,14 +450,14 @@ export default function AssignDispatchers({
           const existingLocs = dispatcherLocationsMap.get(d.id) || [];
           if (existingLocs.length > 0) {
             // Find distance to the NEAREST existing order for this dispatcher
-            minDistanceKm = Math.min(
+            const minDistanceMeters = Math.min(
               ...existingLocs.map((loc) =>
-                getDistanceFromLatLonInKm(tLat, tLng, loc.lat, loc.lng)
+                getDistance(tLat, tLng, loc.lat, loc.lng)
               )
             );
+            minDistanceKm = minDistanceMeters / 1000;
           } else {
             // Dispatcher has no spatial history yet.
-            // 0 distance encourages assigning to empty dispatchers if load is low.
             minDistanceKm = 0;
           }
         }
@@ -498,7 +480,7 @@ export default function AssignDispatchers({
       return bestCandidate;
     };
 
-    // Queue for batch processing
+    // Queue and loop logic
     const assignmentsQueue: {
       order: Order;
       dispatcher: Dispatcher;
