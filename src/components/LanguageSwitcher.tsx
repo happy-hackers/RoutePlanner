@@ -1,19 +1,27 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { Select } from "antd";
+import React from "react";
+import { useTranslation } from "react-i18next";
 
 const LanguageSwitcher: React.FC = () => {
   const { i18n } = useTranslation();
 
-  const changeLanguage = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    i18n.changeLanguage(e.target.value);
+  const changeLanguage = (value: string) => {
+    i18n.changeLanguage(value);
   };
 
+  const options = [
+    { value: "en", label: "English" },
+    { value: "zh-CN", label: "简体中文" },
+    { value: "zh-HK", label: "繁體中文" },
+  ];
+
   return (
-    <select onChange={changeLanguage} value={i18n.language}>
-      <option value="en">English</option>
-      <option value="zh-CN">简体中文</option> 
-      <option value="zh-HK">繁體中文</option> 
-    </select>
+    <Select
+      value={i18n.language}
+      onChange={changeLanguage}
+      options={options}
+      style={{ width: 160 }}
+    />
   );
 };
 

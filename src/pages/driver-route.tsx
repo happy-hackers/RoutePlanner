@@ -27,7 +27,6 @@ import { logoutDriver } from "../utils/authUtils";
 import { useAuth } from "../contexts/AuthContext";
 import type { DeliveryRoute } from "../types/delivery-route";
 import { useTranslation } from "react-i18next";
-import LanguageSwitcher from "../components/LanguageSwitcher.tsx";
 import type { AddressMetersElement } from "../types/route.ts";
 
 const { Header, Content } = Layout;
@@ -323,12 +322,10 @@ export default function DriverRoute() {
           {t("header_title", { dispatcherName: dispatcher.name })}
         </Title>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <span style={{ whiteSpace: "nowrap" }}>{t("language_select")}</span>
-          <LanguageSwitcher />
           <DatePicker
             value={selectedDate}
             onChange={(date) => date && setSelectedDate(date)}
-            format="MMM DD"
+            format="YYYY-MM-DD"
           />
           <Button icon={<LogoutOutlined />} onClick={handleLogout}>
             {t("button_logout")}
