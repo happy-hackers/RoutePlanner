@@ -35,7 +35,11 @@ const ORDERED_ICON_ANCHOR: [number, number] = [38, 54];
 const START_END_ICON_SIZE: [number, number] = [56, 56];
 const START_END_ICON_ANCHOR: [number, number] = [28, 56];
 
-const createInnerHtml = (imgUrl: string, size: [number, number], number?: number) => {
+const createInnerHtml = (
+  imgUrl: string,
+  size: [number, number],
+  number?: number
+) => {
   return `
     <div class="marker-visual-content" style="
       position: relative; 
@@ -45,7 +49,9 @@ const createInnerHtml = (imgUrl: string, size: [number, number], number?: number
       transition: none;
     ">
       <img src="${imgUrl}" style="width: 100%; height: 100%; display: block;" />
-      ${number !== undefined ? `
+      ${
+        number !== undefined
+          ? `
         <div style="
           position: absolute;
           top: 10px;
@@ -59,7 +65,9 @@ const createInnerHtml = (imgUrl: string, size: [number, number], number?: number
         ">
           ${number}
         </div>
-      ` : ''}
+      `
+          : ""
+      }
     </div>
   `;
 };
@@ -94,7 +102,11 @@ const createEndIcon = (): L.DivIcon => {
   });
 };
 
-const createGenericDivIcon = (imgUrl: string, size: [number, number], anchor: [number, number]): L.DivIcon => {
+const createGenericDivIcon = (
+  imgUrl: string,
+  size: [number, number],
+  anchor: [number, number]
+): L.DivIcon => {
   return L.divIcon({
     className: "custom-div-icon",
     html: createInnerHtml(imgUrl, size),
@@ -107,9 +119,9 @@ const createGenericDivIcon = (imgUrl: string, size: [number, number], anchor: [n
 const startDivIcon = createStartIcon();
 const endDivIcon = createEndIcon();
 
-const defaultImgUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png";
+const defaultImgUrl =
+  "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png";
 const defaultDivIcon = createGenericDivIcon(defaultImgUrl, [25, 41], [12, 41]);
-
 
 interface NavigationMapProp {
   orderMarkers: MarkerData[];
@@ -122,6 +134,7 @@ interface NavigationMapProp {
   selectedDispatcher?: Dispatcher | null;
   isCalculating: boolean;
   setIsCalculating: Dispatch<SetStateAction<boolean>>;
+  hoveredOrderId?: number | null;
 }
 
 interface MapCenteringProps {
@@ -153,17 +166,18 @@ const MapCentering = ({ markers, routes }: MapCenteringProps) => {
   return null;
 };
 
-
 interface HoverMarkerProps {
   position: L.LatLngExpression;
   icon: L.DivIcon | L.Icon;
   popupContent: string;
+  isHovered?: boolean;
 }
 
 const HoverMarker: React.FC<HoverMarkerProps> = ({
   position,
   icon,
   popupContent,
+  isHovered = false,
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
   const SCALE_FACTOR = 1.8;
@@ -177,7 +191,9 @@ const HoverMarker: React.FC<HoverMarkerProps> = ({
       if (element) {
         element.style.zIndex = "1000";
 
-        const innerContent = element.querySelector('.marker-visual-content') as HTMLElement;
+        const innerContent = element.querySelector(
+          ".marker-visual-content"
+        ) as HTMLElement;
         if (innerContent) {
           innerContent.style.transform = `scale(${SCALE_FACTOR})`;
         }
@@ -194,13 +210,23 @@ const HoverMarker: React.FC<HoverMarkerProps> = ({
       if (element) {
         element.style.zIndex = "";
 
-        const innerContent = element.querySelector('.marker-visual-content') as HTMLElement;
+        const innerContent = element.querySelector(
+          ".marker-visual-content"
+        ) as HTMLElement;
         if (innerContent) {
           innerContent.style.transform = "scale(1)";
         }
       }
     }
   };
+
+  useEffect(() => {
+    if (isHovered) {
+      handleMouseOver();
+    } else {
+      handleMouseOut();
+    }
+  }, [isHovered]);
 
   return (
     <Marker
@@ -298,6 +324,7 @@ const OpenStreetMap = forwardRef(
       selectedDispatcher,
       isCalculating,
       setIsCalculating,
+      hoveredOrderId,
     }: NavigationMapProp,
     ref
   ) => {
@@ -460,6 +487,9 @@ const OpenStreetMap = forwardRef(
             const divIcon = marker.icon?.url
               ? createGenericDivIcon(marker.icon.url, iconSize, iconAnchor)
               : defaultDivIcon;
+            const orderIsHovered = marker.meters.some(
+              (meter) => meter.id === hoveredOrderId
+            );
 
             return (
               <HoverMarker
@@ -467,6 +497,7 @@ const OpenStreetMap = forwardRef(
                 position={[marker.position.lat, marker.position.lng]}
                 icon={divIcon}
                 popupContent={marker.address}
+                isHovered={orderIsHovered}
               />
             );
           })}
@@ -492,16 +523,13 @@ const OpenStreetMap = forwardRef(
         {foundRoute && (
           <div style={TotalTimeStyle}>
             🕒 {t("footerTotalTime")}:{" "}
-            {
-              (foundRoute.totalTime ?? 0) > 0 ? (
-                foundRoute.totalTime >= 60
-                  ? `${Math.floor(foundRoute.totalTime / 60)}h ${foundRoute.totalTime % 60
+            {(foundRoute.totalTime ?? 0) > 0
+              ? foundRoute.totalTime >= 60
+                ? `${Math.floor(foundRoute.totalTime / 60)}h ${
+                    foundRoute.totalTime % 60
                   }m`
-                  : `${foundRoute.totalTime}m`
-              ) : (
-                t("timeNotAvailable")
-              )
-            }
+                : `${foundRoute.totalTime}m`
+              : t("timeNotAvailable")}
           </div>
         )}
       </div>

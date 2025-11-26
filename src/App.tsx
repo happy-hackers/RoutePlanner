@@ -19,22 +19,25 @@ import { useDispatch, useSelector } from "react-redux";
 import { getAllDispatchers } from "./utils/dbUtils";
 import { setDispatchers } from "./store/dispatcherSlice";
 import type { RootState } from "./store";
-import { useTranslation } from 'react-i18next';
-import zhCN from 'antd/locale/zh_CN';
-import zhTW from 'antd/locale/zh_TW';
-import enUS from 'antd/locale/en_US';
-import type { Locale } from 'antd/es/locale';
-//import './app.css';
+import { useTranslation } from "react-i18next";
+import zhCN from "antd/locale/zh_CN";
+import zhTW from "antd/locale/zh_TW";
+import enUS from "antd/locale/en_US";
+import type { Locale } from "antd/es/locale";
 
 const { Content } = Layout;
 const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
-const GOOGLE_MAPS_LIBRARIES: ("maps" | "marker" | "routes")[] = ["maps", "marker", "routes"];
+const GOOGLE_MAPS_LIBRARIES: ("maps" | "marker" | "routes")[] = [
+  "maps",
+  "marker",
+  "routes",
+];
 
-type LocaleKey = 'zh-CN' | 'zh-HK' | 'en';
+type LocaleKey = "zh-CN" | "zh-HK" | "en";
 const antdLocales: Record<LocaleKey, Locale> = {
-  'zh-CN': zhCN,
-  'zh-HK': zhTW,
-  'en': enUS,
+  "zh-CN": zhCN,
+  "zh-HK": zhTW,
+  en: enUS,
 };
 
 interface AppContentProps {
@@ -50,7 +53,7 @@ function AppContent({ isGoogleMapSelected, isMapReady }: AppContentProps) {
   const [isCalculating, setIsCalculating] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const emptyArray: any[] = [];
-  const emptySetter = () => { };
+  const emptySetter = () => {};
 
   const [isInitialRenderComplete, setIsInitialRenderComplete] = useState(false);
 
@@ -58,8 +61,7 @@ function AppContent({ isGoogleMapSelected, isMapReady }: AppContentProps) {
     const fetchData = async () => {
       try {
         const dispatchersData = await getAllDispatchers();
-        if (dispatchersData)
-          dispatch(setDispatchers(dispatchersData));
+        if (dispatchersData) dispatch(setDispatchers(dispatchersData));
       } catch (err) {
         console.error("Failed to fetch dispatchers:", err);
       }
@@ -68,13 +70,15 @@ function AppContent({ isGoogleMapSelected, isMapReady }: AppContentProps) {
     setIsInitialRenderComplete(true);
   }, [dispatch]);
 
-
   const needMap = ["/view-orders", "/assign-dispatcher"].some((path) => {
     const pattern = new RegExp("^" + path.replace(/:[^/]+/g, "[^/]+") + "$");
     return pattern.test(location.pathname);
   });
 
-  const isDriverPage = location.pathname.startsWith("/driver-route") || location.pathname.startsWith("/driver-login");
+  // Driver pages are fullscreen without navigation
+  const isDriverPage =
+    location.pathname.startsWith("/driver-route") ||
+    location.pathname.startsWith("/driver-login");
 
   if (isDriverPage) {
     return (
@@ -87,7 +91,7 @@ function AppContent({ isGoogleMapSelected, isMapReady }: AppContentProps) {
 
   if (needMap && !isInitialRenderComplete) {
     return (
-      <div style={{ padding: '50px', textAlign: 'center' }}>
+      <div style={{ padding: "50px", textAlign: "center" }}>
         Loading Application Data...
       </div>
     );
@@ -98,7 +102,10 @@ function AppContent({ isGoogleMapSelected, isMapReady }: AppContentProps) {
       <Navigation />
       <Content style={{ flex: 1, padding: "10px" }}>
         <Row style={{ height: "100%", width: "100%" }}>
-          <Col flex={needMap ? "650px" : "auto"} style={{ marginRight: needMap ? 10 : 0 }}>
+          <Col
+            flex={needMap ? "650px" : "auto"}
+            style={{ marginRight: needMap ? 10 : 0 }}
+          >
             <Routes>
               <Route
                 path="/"
@@ -110,7 +117,13 @@ function AppContent({ isGoogleMapSelected, isMapReady }: AppContentProps) {
               />
               <Route
                 path="/assign-dispatcher"
-                element={<AssignDispatchers setMarkers={setMarkers} hoveredOrderId={hoveredOrderId} setHoveredOrderId={setHoveredOrderId} />}
+                element={
+                  <AssignDispatchers
+                    setMarkers={setMarkers}
+                    hoveredOrderId={hoveredOrderId}
+                    setHoveredOrderId={setHoveredOrderId}
+                  />
+                }
               />
               <Route path="/set-dispatcher" element={<SetDispatcher />} />
               <Route path="/route-results" element={<RouteResults />} />
@@ -131,7 +144,7 @@ function AppContent({ isGoogleMapSelected, isMapReady }: AppContentProps) {
                 <DynamicMap
                   orderMarkers={markers}
                   setOrderMarkers={setMarkers}
-                  setSelectedRowId={() => { }}
+                  setSelectedRowId={() => {}}
                   isRouteResultsPage={false}
                   newRoutes={emptyArray}
                   setNewRoutes={emptySetter}
@@ -139,6 +152,7 @@ function AppContent({ isGoogleMapSelected, isMapReady }: AppContentProps) {
                   selectedDispatcher={null}
                   isCalculating={isCalculating}
                   setIsCalculating={setIsCalculating}
+                  hoveredOrderId={hoveredOrderId}
                 />
               )}
             </Col>
@@ -153,10 +167,13 @@ function App() {
   const { i18n } = useTranslation();
   const language = i18n.language as LocaleKey;
 
-  const mapProvider = useSelector((state: RootState) => state.config.mapProvider);
+  const mapProvider = useSelector(
+    (state: RootState) => state.config.mapProvider
+  );
 
   const isGoogleMapSelected = mapProvider === "GoogleMap";
 
+  // useJsApiLoader() loads Google Maps API script with API key globally
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: apiKey || "",
     libraries: GOOGLE_MAPS_LIBRARIES,
@@ -164,17 +181,20 @@ function App() {
 
   const isMapReady = !isGoogleMapSelected || isLoaded;
 
-  const currentLocale = antdLocales[language] || antdLocales['en'];
+  //set default component language english
+  const currentLocale = antdLocales[language] || antdLocales["en"];
 
   if (isGoogleMapSelected && !isLoaded) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        fontSize: '18px'
-      }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          fontSize: "18px",
+        }}
+      >
         Loading Map Service...
       </div>
     );

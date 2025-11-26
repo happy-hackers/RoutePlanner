@@ -65,6 +65,8 @@ export default function NextStopCard({
         background: "#fff",
       }}
     >
+      {/* The div is for calculating the visual height of the card */}
+      <div id="card-visibility-monitor" style={{ height: 1 }}></div>
       <Space direction="vertical" size="middle" style={{ width: "100%" }}>
         <div
           style={{
@@ -162,39 +164,37 @@ export default function NextStopCard({
                         setNote(order.note || "");
                       }}
                     />
-                    {activeNoteOrder && (
-                      <Modal
-                        title={`Add Note for Meter #${order.id}`}
-                        open={!!activeNoteOrder}
-                        onCancel={() => setActiveNoteOrder(null)}
-                        onOk={() => {
+                    <Modal
+                      title={`Add Note for Meter #${order.id}`}
+                      open={!!activeNoteOrder}
+                      onCancel={() => setActiveNoteOrder(null)}
+                      onOk={() => {
+                        if (activeNoteOrder) {
                           onNoteSave(activeNoteOrder.id, note);
-                          setActiveNoteOrder(null);
-                        }}
-                        zIndex={1003}
-                        okText={
-                          activeNoteOrder.note?.trim() ? "Update" : "Save"
                         }
-                      >
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                          <Input.TextArea
-                            rows={4}
-                            value={note}
-                            placeholder="Enter your note here..."
-                            onChange={(e) => setNote(e.target.value)}
-                          />
+                        setActiveNoteOrder(null);
+                      }}
+                      zIndex={1003}
+                      okText={activeNoteOrder?.note?.trim() ? "Update" : "Save"}
+                    >
+                      <Space direction="vertical" style={{ width: "100%" }}>
+                        <Input.TextArea
+                          rows={4}
+                          value={note}
+                          placeholder="Enter your note here..."
+                          onChange={(e) => setNote(e.target.value)}
+                        />
 
-                          {activeNoteOrder.lastNoteTime && (
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              Last edited:{" "}
-                              {dayjs(activeNoteOrder.lastNoteTime).format(
-                                "YYYY-MM-DD, HH:mm:ss"
-                              )}
-                            </Text>
-                          )}
-                        </Space>
-                      </Modal>
-                    )}
+                        {activeNoteOrder?.lastNoteTime && (
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            Last edited:{" "}
+                            {dayjs(activeNoteOrder.lastNoteTime).format(
+                              "YYYY-MM-DD, HH:mm:ss"
+                            )}
+                          </Text>
+                        )}
+                      </Space>
+                    </Modal>
 
                     {order.status !== "Delivered" ? (
                       <Button
