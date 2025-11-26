@@ -71,6 +71,7 @@ export default function RouteResults() {
     order: number;
     address: string;
     travelTime: number;
+    isLast: boolean;
   }
 
   const routeModeColumns: ColumnsType<RouteRow> = [
@@ -78,8 +79,15 @@ export default function RouteResults() {
       title: "",
       dataIndex: "order",
       key: "order",
-      width: "10%",
+      width: "12%",
       align: "center",
+      render: (order: number, record: RouteRow, _index: number) => {
+        return record.isLast ? (
+          <strong>{t("single_route_destination")}</strong>
+        ) : (
+          <strong>#{order}</strong>
+        );
+      },
     },
     {
       title: t("table_address"),
@@ -123,12 +131,10 @@ export default function RouteResults() {
     (state: RootState) => state.order.selectedOrders
   );
 
- const mapRef = useRef<{
+  const mapRef = useRef<{
     triggerCalculate: (dispatcherId?: number) => void;
-    setIsCalculating: React.Dispatch<React.SetStateAction<boolean>>; 
-}>(
-    null
-);
+    setIsCalculating: React.Dispatch<React.SetStateAction<boolean>>;
+  }>(null);
 
   console.log("markers", markers);
 
@@ -416,19 +422,28 @@ export default function RouteResults() {
         children: route ? (
           <List
             size="small"
-            dataSource={route.addressMeterSequence.map((o) => o.address)}
+            dataSource={[
+              ...route.addressMeterSequence.map((waypoint) => waypoint.address),
+              route.endAddress,
+            ]}
             renderItem={(address, index) => {
               const travelTime = route.segmentTimes?.[index] ?? 0;
+              const isLast = index === route.addressMeterSequence.length;
 
               return (
                 <List.Item style={{ paddingLeft: 8, paddingRight: 8 }}>
                   <div style={{ flex: 1, marginRight: 4 }}>
-                    <Text strong>#{index + 1}</Text> — {address}
+                    {isLast ? (
+                      <Text strong>{t("all_route_destination")}</Text>
+                    ) : (
+                      <Text strong>#{index + 1}</Text>
+                    )}{" "}
+                    — {address}
                   </div>
-                  <Text
-                    style={{ color: getTimeColor(travelTime) }}
-                  >
-                    {travelTime > 0 ? `${travelTime} ${t("unit_mins")}` : t("text_no_time")}
+                  <Text style={{ color: getTimeColor(travelTime) }}>
+                    {travelTime > 0
+                      ? `${travelTime} ${t("unit_mins")}`
+                      : t("text_no_time")}
                   </Text>
                 </List.Item>
               );
@@ -567,8 +582,8 @@ export default function RouteResults() {
               isAllRoutes
                 ? -1
                 : selectedDispatcher
-                  ? selectedDispatcher.id
-                  : null
+                ? selectedDispatcher.id
+                : null
             }
             onChange={(id) => {
               if (id === -1) {
@@ -608,17 +623,28 @@ export default function RouteResults() {
                 <Table
                   rowKey="id"
                   columns={routeModeColumns}
-                  dataSource={foundRoute.addressMeterSequence.map(
-                    (o, index) => ({
-                      order: index + 1,
-                      address: o.address,
-                      travelTime: foundRoute.segmentTimes?.[index] ?? 0,
-                    })
-                  )}
+                  dataSource={[
+                    ...foundRoute.addressMeterSequence.map(
+                      (waypoint, index) => ({
+                        order: index + 1,
+                        address: waypoint.address,
+                        travelTime: foundRoute.segmentTimes?.[index] ?? null,
+                        isLast: false,
+                      })
+                    ),
+                    {
+                      order: foundRoute.addressMeterSequence.length + 1,
+                      address: foundRoute.endAddress,
+                      travelTime:
+                        foundRoute.segmentTimes?.[
+                          foundRoute.addressMeterSequence.length
+                        ] ?? null,
+                      isLast: true,
+                    },
+                  ]}
                   pagination={false}
                   size="small"
                 />
-
                 <Button
                   danger
                   type="primary"
