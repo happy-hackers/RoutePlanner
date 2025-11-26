@@ -13,7 +13,11 @@ import {
   Input,
   Switch,
 } from "antd";
-import type { TablePaginationConfig, FilterValue, SorterResult } from "antd/es/table/interface"; 
+import type {
+  TablePaginationConfig,
+  FilterValue,
+  SorterResult,
+} from "antd/es/table/interface";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
@@ -39,7 +43,7 @@ import { sortOrders } from "../utils/sortingUtils.ts";
 import { useTranslation } from "react-i18next";
 
 type TimePeriod = "Morning" | "Afternoon" | "Evening";
-type SortOrder = "ascend" | "descend" | null; 
+type SortOrder = "ascend" | "descend" | null;
 
 const { Text } = Typography;
 
@@ -261,13 +265,13 @@ export default function ViewOrders({
 
   useEffect(() => {
     setGroupPage(1);
-  }, [status, searchText, date, timePeriod, sortOrder]); 
+  }, [status, searchText, date, timePeriod, sortOrder]);
 
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       const matchesDate = date
         ? order.date === date.format("YYYY-MM-DD")
-        : true;
+        : true; // If there is a date selected, filter by the selected date. OtherWise, show the orders in all date
       const matchesTimePeriod =
         timePeriod && timePeriod.length > 0
           ? timePeriod.includes(order.time)
@@ -315,13 +319,13 @@ export default function ViewOrders({
   const sortedGroupedEntries = useMemo(() => {
     if (!sortOrder) return groupedEntries;
     return [...groupedEntries].sort((a, b) => {
-        const addressA = a[0];
-        const addressB = b[0];
-        if (sortOrder === 'ascend') {
-            return addressA.localeCompare(addressB);
-        } else {
-            return addressB.localeCompare(addressA);
-        }
+      const addressA = a[0];
+      const addressB = b[0];
+      if (sortOrder === "ascend") {
+        return addressA.localeCompare(addressB);
+      } else {
+        return addressB.localeCompare(addressA);
+      }
     });
   }, [groupedEntries, sortOrder]);
 
@@ -412,9 +416,9 @@ export default function ViewOrders({
     _filters: Record<string, FilterValue | null>,
     sorter: SorterResult<GroupRowData> | SorterResult<GroupRowData>[]
   ) => {
-      if (!Array.isArray(sorter)) {
-          setSortOrder(sorter.order as SortOrder);
-      }
+    if (!Array.isArray(sorter)) {
+      setSortOrder(sorter.order as SortOrder);
+    }
   };
 
   const groupColumns = [
@@ -444,8 +448,8 @@ export default function ViewOrders({
       key: "address",
       render: (text: string) => <Text strong>{text}</Text>,
       sorter: true,
-      sortOrder: sortOrder, 
-      showSorterTooltip: true, 
+      sortOrder: sortOrder,
+      showSorterTooltip: true,
     },
     {
       title: t("status_complete"),
@@ -602,7 +606,7 @@ export default function ViewOrders({
                 }
                 columns={groupColumns}
                 dataSource={groupedDataSource}
-                onChange={handleTableChange} 
+                onChange={handleTableChange}
                 expandable={{
                   expandedRowRender: (record) => (
                     <Table
