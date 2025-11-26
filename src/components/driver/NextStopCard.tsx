@@ -65,6 +65,8 @@ export default function NextStopCard({
         background: "#fff",
       }}
     >
+      {/* The div is for calculating the visual height of the card */}
+      <div id="card-visibility-monitor" style={{ height: 1 }}></div>
       <Space direction="vertical" size="middle" style={{ width: "100%" }}>
         <div
           style={{
