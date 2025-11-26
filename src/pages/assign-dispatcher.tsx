@@ -38,9 +38,14 @@ const customStyles = `
   }
 `;
 
-// Weight for spatial optimization.
-// 1km distance is roughly equivalent to adding 0.5 to the load count.
-const DISTANCE_WEIGHT = 0.5;
+// Weight for spatial optimization. 
+// This value converts distance (km) into an equivalent load unit (unique addresses).
+// 
+// Current setting: 
+// A 1km distance is weighted as heavily as adding 0.5 to a dispatcher's current load count. 
+// A lower value (< 0.5) prioritizes Load Balancing, while a higher value (> 1.0) prioritizes Spatial Clustering.
+// 1.0 should be a good balance between the two.  
+const DISTANCE_WEIGHT = 1.25;
 
 interface GroupRowData {
   groupKey: string;
