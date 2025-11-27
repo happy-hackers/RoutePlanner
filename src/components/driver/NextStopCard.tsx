@@ -47,6 +47,9 @@ export default function NextStopCard({
   return (
     <Card
       id="next-stop-card"
+      styles={{
+        body: { padding: 0 },
+      }}
       style={{
         position: "fixed",
         top: isFullScreen ? 0 : undefined,
@@ -65,172 +68,169 @@ export default function NextStopCard({
         background: "#fff",
       }}
     >
+      <Button
+        color="default"
+        variant="link"
+        style={{ width: "100%" }}
+        onClick={() => setIsFullScreen((prev) => !prev)}
+      >
+        {isFullScreen ? <DownOutlined /> : <UpOutlined />}
+      </Button>
       {/* The div is for calculating the visual height of the card */}
       <div id="card-visibility-monitor" style={{ height: 1 }}></div>
-      <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-        <div
-          style={{
-            position: "absolute",
-            top: 16,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 1001,
-          }}
-        >
-          <Button
-            type="primary"
-            size="small"
-            onClick={() => setIsFullScreen((prev) => !prev)}
-          >
-            {isFullScreen ? <DownOutlined /> : <UpOutlined />}
-          </Button>
-        </div>
-        {/* Header */}
-        <Space style={{ width: "100%", justifyContent: "space-between" }}>
-          <Text strong style={{ fontSize: 16 }}>
-            {isCompleted
-              ? t(`${keyPath}.header_completed`)
-              : t(`${keyPath}.header_next`)}
-            : {t(`${keyPath}.text_stop`, { stopNumber })}{" "}
-            {t(`${keyPath}.text_of`)} {totalStops}
-          </Text>
-          <Tag color={isCompleted ? "success" : "processing"}>
-            {isCompleted
-              ? t(`${keyPath}.tag_done`)
-              : t(`${keyPath}.tag_in_progress`)}
-          </Tag>
-        </Space>
-
-        {/* Customer & Address */}
-        <div>
-          <Title level={4} style={{ margin: 0 }}>
-            {stop.meters[0].customer?.name ||
-              t(`${keyPath}.placeholder_customer`)}
-          </Title>
-          <Text type="secondary" style={{ fontSize: 16 }}>
-            {stop.address}, {stop.area}
-          </Text>
-        </div>
-
-        {/* Time & Customer Hours */}
-        <Space>
-          <Text strong style={{ color: "#52c41a" }}>
-            {t(`${keyPath}.text_time_mins`, { segmentTime })}
-          </Text>
-          {stop.meters[0].customer?.openTime && (
-            <Text type="secondary">
-              {t(`${keyPath}.text_open`)}: {stop.meters[0].customer.openTime} -{" "}
-              {stop.meters[0].customer.closeTime}
+      <div style={{ padding: 16 }}>
+        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+          {/* Header */}
+          <Space style={{ width: "100%", justifyContent: "space-between" }}>
+            <Text strong style={{ fontSize: 16 }}>
+              {isCompleted
+                ? t(`${keyPath}.header_completed`)
+                : t(`${keyPath}.header_next`)}
+              : {t(`${keyPath}.text_stop`, { stopNumber })}{" "}
+              {t(`${keyPath}.text_of`)} {totalStops}
             </Text>
-          )}
-        </Space>
-
-        {isFullScreen ? (
-          <Space direction="vertical" style={{ width: "100%" }}>
-            {stop.meters.map((order) => (
-              <Card
-                key={order.id}
-                size="small"
-                style={{ background: "#fafafa" }}
-              >
-                <Space
-                  style={{ justifyContent: "space-between", width: "100%" }}
-                >
-                  <Space direction="vertical">
-                    <Text strong>
-                      {order.customer?.name ||
-                        t(`${keyPath}.placeholder_customer`)}
-                    </Text>
-                    <Text type="secondary">
-                      {t(`${keyPath}.text_meter_id`)} {order.id}
-                    </Text>
-                  </Space>
-                  <Space>
-                    <Tag
-                      color={
-                        order.status === "Delivered" ? "success" : "processing"
-                      }
-                    >
-                      {order.status === "Delivered"
-                        ? t(`${keyPath}.tag_done`)
-                        : t(`${keyPath}.tag_in_progress`)}
-                    </Tag>
-                    <Button
-                      size="middle"
-                      type="default"
-                      icon={<EditOutlined />}
-                      onClick={() => {
-                        setActiveNoteOrder(order);
-                        setNote(order.note || "");
-                      }}
-                    />
-                    <Modal
-                      title={`Add Note for Meter #${order.id}`}
-                      open={!!activeNoteOrder}
-                      onCancel={() => setActiveNoteOrder(null)}
-                      onOk={() => {
-                        if (activeNoteOrder) {
-                          onNoteSave(activeNoteOrder.id, note);
-                        }
-                        setActiveNoteOrder(null);
-                      }}
-                      zIndex={1003}
-                      okText={activeNoteOrder?.note?.trim() ? "Update" : "Save"}
-                    >
-                      <Space direction="vertical" style={{ width: "100%" }}>
-                        <Input.TextArea
-                          rows={4}
-                          value={note}
-                          placeholder="Enter your note here..."
-                          onChange={(e) => setNote(e.target.value)}
-                        />
-
-                        {activeNoteOrder?.lastNoteTime && (
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            Last edited:{" "}
-                            {dayjs(activeNoteOrder.lastNoteTime).format(
-                              "YYYY-MM-DD, HH:mm:ss"
-                            )}
-                          </Text>
-                        )}
-                      </Space>
-                    </Modal>
-
-                    {order.status !== "Delivered" ? (
-                      <Button
-                        size="middle"
-                        type="primary"
-                        icon={<CheckOutlined />}
-                        onClick={() => onMeterDone(order.id)}
-                      />
-                    ) : (
-                      <Button
-                        size="middle"
-                        icon={<UndoOutlined />}
-                        onClick={() => onMeterUndo(order.id)}
-                      >
-                        {t(`${keyPath}.button_undo`)}
-                      </Button>
-                    )}
-                  </Space>
-                </Space>
-              </Card>
-            ))}
+            <Tag color={isCompleted ? "success" : "processing"}>
+              {isCompleted
+                ? t(`${keyPath}.tag_done`)
+                : t(`${keyPath}.tag_in_progress`)}
+            </Tag>
           </Space>
-        ) : null}
 
-        {/* Action Buttons */}
-        <Space style={{ width: "100%" }}>
-          <Button
-            size="large"
-            icon={<UnorderedListOutlined />}
-            onClick={onViewAll}
-            style={{ flex: 1 }}
-          >
-            {t(`${keyPath}.button_view_all`)}
-          </Button>
+          {/* Customer & Address */}
+          <div>
+            <Title level={4} style={{ margin: 0 }}>
+              {stop.meters[0].customer?.name ||
+                t(`${keyPath}.placeholder_customer`)}
+            </Title>
+            <Text type="secondary" style={{ fontSize: 16 }}>
+              {stop.address}, {stop.area}
+            </Text>
+          </div>
+
+          {/* Time & Customer Hours */}
+          <Space>
+            <Text strong style={{ color: "#52c41a" }}>
+              {t(`${keyPath}.text_time_mins`, { segmentTime })}
+            </Text>
+            {stop.meters[0].customer?.openTime && (
+              <Text type="secondary">
+                {t(`${keyPath}.text_open`)}: {stop.meters[0].customer.openTime}{" "}
+                - {stop.meters[0].customer.closeTime}
+              </Text>
+            )}
+          </Space>
+
+          {isFullScreen ? (
+            <Space direction="vertical" style={{ width: "100%" }}>
+              {stop.meters.map((order) => (
+                <Card
+                  key={order.id}
+                  size="small"
+                  style={{ background: "#fafafa" }}
+                >
+                  <Space
+                    style={{ justifyContent: "space-between", width: "100%" }}
+                  >
+                    <Space direction="vertical">
+                      <Text strong>
+                        {order.customer?.name ||
+                          t(`${keyPath}.placeholder_customer`)}
+                      </Text>
+                      <Text type="secondary">
+                        {t(`${keyPath}.text_meter_id`)} {order.id}
+                      </Text>
+                    </Space>
+                    <Space>
+                      <Tag
+                        color={
+                          order.status === "Delivered"
+                            ? "success"
+                            : "processing"
+                        }
+                      >
+                        {order.status === "Delivered"
+                          ? t(`${keyPath}.tag_done`)
+                          : t(`${keyPath}.tag_in_progress`)}
+                      </Tag>
+                      <Button
+                        size="middle"
+                        type="default"
+                        icon={<EditOutlined />}
+                        onClick={() => {
+                          setActiveNoteOrder(order);
+                          setNote(order.note || "");
+                        }}
+                      />
+                      <Modal
+                        title={`Add Note for Meter #${order.id}`}
+                        open={!!activeNoteOrder}
+                        onCancel={() => setActiveNoteOrder(null)}
+                        onOk={() => {
+                          if (activeNoteOrder) {
+                            onNoteSave(activeNoteOrder.id, note);
+                          }
+                          setActiveNoteOrder(null);
+                        }}
+                        zIndex={1003}
+                        okText={
+                          activeNoteOrder?.note?.trim() ? "Update" : "Save"
+                        }
+                      >
+                        <Space direction="vertical" style={{ width: "100%" }}>
+                          <Input.TextArea
+                            rows={4}
+                            value={note}
+                            placeholder="Enter your note here..."
+                            onChange={(e) => setNote(e.target.value)}
+                          />
+
+                          {activeNoteOrder?.lastNoteTime && (
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              Last edited:{" "}
+                              {dayjs(activeNoteOrder.lastNoteTime).format(
+                                "YYYY-MM-DD, HH:mm:ss"
+                              )}
+                            </Text>
+                          )}
+                        </Space>
+                      </Modal>
+
+                      {order.status !== "Delivered" ? (
+                        <Button
+                          size="middle"
+                          type="primary"
+                          icon={<CheckOutlined />}
+                          onClick={() => onMeterDone(order.id)}
+                        />
+                      ) : (
+                        <Button
+                          size="middle"
+                          icon={<UndoOutlined />}
+                          onClick={() => onMeterUndo(order.id)}
+                        >
+                          {t(`${keyPath}.button_undo`)}
+                        </Button>
+                      )}
+                    </Space>
+                  </Space>
+                </Card>
+              ))}
+            </Space>
+          ) : null}
+
+          {/* Action Buttons */}
+          <Space style={{ width: "100%" }}>
+            <Button
+              size="large"
+              icon={<UnorderedListOutlined />}
+              onClick={onViewAll}
+              style={{ flex: 1 }}
+            >
+              {t(`${keyPath}.button_view_all`)}
+            </Button>
+          </Space>
         </Space>
-      </Space>
+      </div>
     </Card>
   );
 }
