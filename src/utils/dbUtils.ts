@@ -726,6 +726,77 @@ export const getDriverActiveRoute = async (
   return route;
 };
 
+// Get driver's active routes within a range of dates
+export const getDriverRoutesInRange = async (
+  dispatcherId: number,
+  startDate: string,
+  endDate: string
+): Promise<DeliveryRoute[]> => {
+  const { data, error } = await supabase
+    .from("delivery_routes")
+    .select("*")
+    .eq("dispatcher_id", dispatcherId)
+    .gte("route_date", startDate)
+    .lte("route_date", endDate)
+    .eq("is_active", true);
+
+  if (error || !data) return [];
+
+  // For each route, fetch fresh order data
+  const routes = await Promise.all(
+    data
+      .filter((route) => Array.isArray(route.address_meter_sequence))
+      .map(async (route) => {
+        // Extract order IDs from the route’s meters
+        console.log("route", route);
+        const addressSequence = route.address_meter_sequence || [];
+        const orderIds = addressSequence.flatMap((entry: any) =>
+          entry.meters.map((order: any) => order.id)
+        );
+
+        const { data: freshOrders, error: ordersError } = await supabase
+          .from("orders")
+          .select("*, customers(*)")
+          .in("id", orderIds);
+
+        if (ordersError || !freshOrders) {
+          const { created_time, ...rest } = route;
+          return camelcaseKeys(rest, { deep: true }) as DeliveryRoute;
+        }
+
+        const cleanedOrders = freshOrders.map(({ created_time, ...rest }) => ({
+          ...rest,
+        }));
+        const camelOrders = camelcaseKeys(cleanedOrders, { deep: true });
+
+        const freshAddressMeterSequence = addressSequence.map((entry: any) => {
+          const freshMeters = entry.meters
+            .map((order: any) =>
+              camelOrders.find((o: any) => o.id === order.id)
+            )
+            .filter(Boolean);
+
+          return {
+            address: entry.address,
+            lat: entry.lat,
+            lng: entry.lng,
+            meters: freshMeters,
+          };
+        });
+
+        const { created_time, ...rest } = route;
+        const processedRoute = camelcaseKeys(rest, {
+          deep: true,
+        }) as DeliveryRoute;
+        processedRoute.addressMeterSequence = freshAddressMeterSequence as any;
+
+        return processedRoute;
+      })
+  );
+
+  return routes;
+};
+
 // Update order status (mark as delivered)
 export const updateOrderStatus = async (
   orderId: number,

@@ -13,6 +13,7 @@
   "message_logout_success": "Logged out successfully",
   "message_fail_logout": "Failed to logout",
   "result_no_route_title": "No Route Found",
+  "recent_and_upcoming_routes_title": "Last & Next Month's Routes",
   "result_no_route_subtitle": "No active route found for {{date}}",
   "language_select": "Language:"
 }

@@ -11,6 +11,7 @@ import {
   App,
   Row,
   Col,
+  Table,
 } from "antd";
 import { EnvironmentOutlined, LogoutOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -19,6 +20,7 @@ import RouteListView from "../components/driver/RouteListView";
 import DriverMap from "../components/driver/DriverMap";
 import {
   getDriverActiveRoute,
+  getDriverRoutesInRange,
   updateMeterNote,
   updateOrderStatus,
 } from "../utils/dbUtils";
@@ -55,6 +57,8 @@ export default function DriverRoute() {
     lng: number;
   } | null>(null);
   const [hasWarned, setHasWarned] = useState(true);
+  const [availableRoutes, setAvailableRoutes] = useState<DeliveryRoute[]>([]);
+  const [routesLoading, setRoutesLoading] = useState(false);
 
   const { message, modal } = App.useApp();
   const currentStop = stops[currentStopIndex];
@@ -153,6 +157,34 @@ export default function DriverRoute() {
     }
   };
 
+  const fetchSurroundingMonthRoutes = async () => {
+    if (!dispatcher) return;
+    setRoutesLoading(true);
+    try {
+      // From one month ago
+      const startDate = dayjs()
+        .subtract(1, "month")
+        .startOf("month")
+        .format("YYYY-MM-DD");
+
+      // To one month ahead
+      const endDate = dayjs()
+        .add(1, "month")
+        .endOf("month")
+        .format("YYYY-MM-DD");
+
+      const routes = await getDriverRoutesInRange(
+        dispatcher.id,
+        startDate,
+        endDate
+      );
+
+      setAvailableRoutes(routes);
+    } finally {
+      setRoutesLoading(false);
+    }
+  };
+
   // Load route on mount and date change
   useEffect(() => {
     if (dispatcher) {
@@ -160,6 +192,13 @@ export default function DriverRoute() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatcher?.id, selectedDate]);
+
+  // When no route is found, fetch the next month's routes
+  useEffect(() => {
+    if (!deliveryRoute && dispatcher) {
+      fetchSurroundingMonthRoutes();
+    }
+  }, [dispatcher?.id, deliveryRoute]);
 
   // Handle mark as done
   const handleMeterDone = async (orderId: number) => {
@@ -252,6 +291,30 @@ export default function DriverRoute() {
     }
   };
 
+  const columns = [
+    {
+      title: t("table_date", "Route Date"),
+      dataIndex: "routeDate",
+      render: (text: string) => dayjs(text).format("YYYY-MM-DD"),
+    },
+    {
+      title: t("table_stops", "Stops"),
+      render: (_: any, route: DeliveryRoute) =>
+        route.addressMeterSequence.length,
+    },
+    {
+      title: t("table_meters", "Total Meters"),
+      render: (_: any, route: DeliveryRoute) => {
+        // Sum all meters across all stops (addressMeterSequence entries)
+        const totalMeters = route.addressMeterSequence.reduce(
+          (acc: number, stop: any) => acc + (stop.meters?.length || 0),
+          0
+        );
+        return totalMeters;
+      },
+    },
+  ];
+
   // Loading state
   if (authLoading || loading) {
     return (
@@ -301,6 +364,31 @@ export default function DriverRoute() {
               />
             }
           />
+          <div style={{ marginTop: 32 }}>
+            <Title level={5}>
+              {t(
+                "recent_and_upcoming_routes_title",
+                "Last & Next Month's Routes"
+              )}
+            </Title>
+
+            <Table
+              loading={routesLoading}
+              dataSource={availableRoutes}
+              rowKey={(route) => route.id}
+              pagination={false}
+              locale={{
+                emptyText: t("no_routes_found", "No routes available"),
+              }}
+              onRow={(route) => ({
+                onClick: () => {
+                  setDeliveryRoute(route);
+                  setStops(route.addressMeterSequence);
+                },
+              })}
+              columns={columns}
+            />
+          </div>
         </Content>
       </Layout>
     );
