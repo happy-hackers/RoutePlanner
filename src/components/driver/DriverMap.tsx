@@ -6,7 +6,7 @@ import {
   useMap,
 } from "react-leaflet";
 import L, { type LatLngExpression } from "leaflet";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DeliveryRoute } from "../../types/delivery-route";
 import { CompassOutlined } from "@ant-design/icons";
 
@@ -143,13 +143,15 @@ export default function DriverMap({
     });
   };
 
-  const points: [number, number][] = [
-    [deliveryRoute.startLat, deliveryRoute.startLng],
-    [deliveryRoute.endLat, deliveryRoute.endLng],
-    ...deliveryRoute.addressMeterSequence.map(
-      (s) => [s.lat, s.lng] as [number, number]
-    ),
-  ];
+  const points = useMemo<[number, number][]>(() => {
+    return [
+      [deliveryRoute.startLat, deliveryRoute.startLng],
+      [deliveryRoute.endLat, deliveryRoute.endLng],
+      ...deliveryRoute.addressMeterSequence.map(
+        (s) => [s.lat, s.lng] as [number, number]
+      ),
+    ];
+  }, [deliveryRoute]);
 
   // Polyline coordinates
   const polylineCoords: LatLngExpression[] =

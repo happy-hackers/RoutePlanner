@@ -158,7 +158,7 @@ export default function DriverRoute() {
       fetchRouteData(selectedDate.format("YYYY-MM-DD"));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatcher, selectedDate]);
+  }, [selectedDate]);
 
   // Handle mark as done
   const handleMeterDone = async (orderId: number) => {
