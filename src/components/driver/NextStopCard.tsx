@@ -78,7 +78,7 @@ export default function NextStopCard({
       </Button>
       {/* The div is for calculating the visual height of the card */}
       <div id="card-visibility-monitor" style={{ height: 1 }}></div>
-      <div style={{ padding: 16 }}>
+      <div style={{ padding: "16px 24px 24px 24px" }}>
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
           {/* Header */}
           <Space style={{ width: "100%", justifyContent: "space-between" }}>

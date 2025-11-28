@@ -20,7 +20,7 @@ const LanguageSwitcher: React.FC = () => {
       value={i18n.language}
       onChange={changeLanguage}
       options={options}
-      style={{ width: 160 }}
+      style={{ width: 100 }}
     />
   );
 };

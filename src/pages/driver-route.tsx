@@ -28,6 +28,7 @@ import { useAuth } from "../contexts/AuthContext";
 import type { DeliveryRoute } from "../types/delivery-route";
 import { useTranslation } from "react-i18next";
 import type { AddressMetersElement } from "../types/route.ts";
+import LanguageSwitcher from "../components/LanguageSwitcher.tsx";
 
 const { Header, Content } = Layout;
 const { Title } = Typography;
@@ -158,7 +159,7 @@ export default function DriverRoute() {
       fetchRouteData(selectedDate.format("YYYY-MM-DD"));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate]);
+  }, [dispatcher?.id, selectedDate]);
 
   // Handle mark as done
   const handleMeterDone = async (orderId: number) => {
@@ -318,18 +319,17 @@ export default function DriverRoute() {
           justifyContent: "space-between",
         }}
       >
-        <Title level={4} style={{ margin: 0 }}>
+        <Title level={5} style={{ margin: 0 }}>
           {t("header_title", { dispatcherName: dispatcher.name })}
         </Title>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <LanguageSwitcher />
           <DatePicker
             value={selectedDate}
             onChange={(date) => date && setSelectedDate(date)}
             format="YYYY-MM-DD"
           />
-          <Button icon={<LogoutOutlined />} onClick={handleLogout}>
-            {t("button_logout")}
-          </Button>
+          <Button icon={<LogoutOutlined />} onClick={handleLogout}></Button>
         </div>
       </Header>
 
