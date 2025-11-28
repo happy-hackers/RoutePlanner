@@ -12,7 +12,7 @@ import { UpOutlined, DownOutlined } from "@ant-design/icons";
 import type { Order } from "../../types/order";
 import dayjs from "dayjs";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 interface NextStopCardProps {
   stop: AddressMetersElement;
@@ -98,10 +98,6 @@ export default function NextStopCard({
 
           {/* Customer & Address */}
           <div>
-            <Title level={4} style={{ margin: 0 }}>
-              {stop.meters[0].customer?.name ||
-                t(`${keyPath}.placeholder_customer`)}
-            </Title>
             <Text type="secondary" style={{ fontSize: 16 }}>
               {stop.address}, {stop.area}
             </Text>
