@@ -200,7 +200,6 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
       handleCalculate,
       foundRoute,
       calculateRoute,
-      calculateRoutebyTime,
     } = useRoutingAndGeocoding({
       orderMarkers,
       setOrderMarkers,
@@ -225,11 +224,7 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
 
     useImperativeHandle(ref, () => ({
       triggerCalculate(dispatcherId: number) {
-        if (foundRoute && foundRoute.optimizationMode === "byTime") {
-          calculateRoutebyTime(dispatcherId);
-        } else {
-          calculateRoute(dispatcherId);
-        }
+        calculateRoute(dispatcherId);
       },
       setIsCalculating: setIsCalculating,
     }));
@@ -498,17 +493,18 @@ const GoogleMap = forwardRef<MapRef, NavigationMapProp>(
               <Select
                 placeholder={t("selectOptionPlaceholder")}
                 value={searchOptions}
-                onChange={(value) => setSearchOptions(value)}
+                onChange={(value) => {
+                  setSearchOptions(value);
+                  setStartTime(null);
+                }}
                 style={{ width: 140 }}
               >
                 <Select.Option value="normal">
                   {t("optionNormal")}
                 </Select.Option>
-                <Select.Option value="byTime">
-                  {t("optionByTime")}
-                </Select.Option>
+                <Select.Option value="time">{t("optionByTime")}</Select.Option>
               </Select>
-              {searchOptions === "byTime" && (
+              {searchOptions === "time" && (
                 <TimePicker
                   placeholder={t("selectStartTimePlaceholder")}
                   value={startTime}

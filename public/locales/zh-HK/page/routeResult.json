@@ -9,6 +9,7 @@
   "unit_mins": "分鐘",
   "all_route_destination": "終點",
   "single_route_destination": "終點",
+  "text_no_time": "無",
   "button_confirm_save_route": "確認並儲存路線",
   "button_clear_route": "清除路線",
   "button_calculate": "計算",

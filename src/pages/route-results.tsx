@@ -336,16 +336,6 @@ export default function RouteResults() {
     onSelectAll: handleAllRowSelect,
   };
 
-  const getTimeColor = (time: number) => {
-    let color = "inherit";
-
-    if (time <= 10) color = "green";
-    else if (time <= 30) color = "orange";
-    else color = "red";
-
-    return color;
-  };
-
   const dispatcherItems: CollapseProps["items"] = dispatchers.map(
     (dispatcher) => {
       const route = newRoutes.find((r) => r.dispatcherId === dispatcher.id);
@@ -427,7 +417,7 @@ export default function RouteResults() {
               route.endAddress,
             ]}
             renderItem={(address, index) => {
-              const travelTime = route.segmentTimes?.[index] ?? 0;
+              const travelTime = route.segmentTimes?.[index] ?? null;
               const isLast = index === route.addressMeterSequence.length;
 
               return (
@@ -440,8 +430,8 @@ export default function RouteResults() {
                     )}{" "}
                     — {address}
                   </div>
-                  <Text style={{ color: getTimeColor(travelTime) }}>
-                    {travelTime > 0
+                  <Text strong style={{ color: "green" }}>
+                    {travelTime !== null
                       ? `${travelTime} ${t("unit_mins")}`
                       : t("text_no_time")}
                   </Text>

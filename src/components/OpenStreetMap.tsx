@@ -342,7 +342,6 @@ const OpenStreetMap = forwardRef(
       setStartTime,
       handleCalculate,
       calculateRoute,
-      calculateRoutebyTime,
       foundRoute,
     } = useRoutingAndGeocoding({
       orderMarkers,
@@ -384,11 +383,7 @@ const OpenStreetMap = forwardRef(
 
     useImperativeHandle(ref, () => ({
       triggerCalculate(dispatcherId: number) {
-        if (searchOptions === "normal") {
-          calculateRoute(dispatcherId);
-        } else {
-          calculateRoutebyTime(dispatcherId);
-        }
+        calculateRoute(dispatcherId);
       },
       setIsCalculating: setIsCalculating,
     }));
@@ -418,17 +413,18 @@ const OpenStreetMap = forwardRef(
               <Select
                 placeholder={t("selectOptionPlaceholder")}
                 value={searchOptions}
-                onChange={(value) => setSearchOptions(value)}
+                onChange={(value) => {
+                  setSearchOptions(value);
+                  setStartTime(null);
+                }}
                 style={{ width: 140 }}
               >
                 <Select.Option value="normal">
                   {t("optionNormal")}
                 </Select.Option>
-                <Select.Option value="byTime">
-                  {t("optionByTime")}
-                </Select.Option>
+                <Select.Option value="time">{t("optionByTime")}</Select.Option>
               </Select>
-              {searchOptions === "byTime" && (
+              {searchOptions === "time" && (
                 <TimePicker
                   placeholder={t("selectStartTimePlaceholder")}
                   value={startTime}
