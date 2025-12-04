@@ -59,7 +59,7 @@ class RouteInput(BaseModel):
     startTime: Optional[str] = None
 
 
-def get_matrix_from_google_batched(locations, api_key, departure_time: str = None):
+def get_matrix_from_google_batched(locations, departure_time: str = None):
     """
     Calls Google Routes Distance Matrix API in batches (max 100 elements = 10*10)
     so it can handle larger address lists.
@@ -68,7 +68,7 @@ def get_matrix_from_google_batched(locations, api_key, departure_time: str = Non
     url = "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix"
     headers = {
         "Content-Type": "application/json",
-        "X-Goog-Api-Key": api_key,
+        "X-Goog-Api-Key": google_api_key,
         "X-Goog-FieldMask": "originIndex,destinationIndex,duration,distanceMeters,condition",
     }
 
@@ -144,12 +144,15 @@ def build_time_and_distance_matrices(elements, n):
     return google_time_matrix, google_distance_matrix
 
 
-def build_matrices_from_supabase(points, start_seconds):
+def build_matrices_from_supabase(points, target_time_str):
     """
     Build time & distance matrices by fetching paths from Supabase 'path_calculations'.
     Each record: (start_lat, start_lng, end_lat, end_lng, duration, distance).
     """
     print("Fetching travel data from Supabase...")
+    # Transfer the UTC string to time seconds
+    start_seconds = time_to_seconds(target_time_str)
+
     n = len(points)
     time_matrix = [[INF] * n for _ in range(n)]
     distance_matrix = [[INF] * n for _ in range(n)]
@@ -180,11 +183,11 @@ def build_matrices_from_supabase(points, start_seconds):
         if start in key_points and end in key_points:
             i = key_points.index(start)
             j = key_points.index(end)
-            # Choose the record whose target_time is closest to current start time
+            # Choose the record whose target_utc_time is closest to current start time
             best = min(
                 recs,
                 key=lambda r: abs(
-                    time_to_seconds(str(r["target_time"])) - start_seconds
+                    time_to_seconds(str(r["target_utc_time"])) - start_seconds
                 ),
             )
             time_matrix[i][j] = int(best.get("duration", INF))
@@ -220,9 +223,47 @@ def build_matrices_from_supabase(points, start_seconds):
     return time_matrix, distance_matrix
 
 
-def build_matrices(points, start_seconds):
+def store_matrix_into_DB(time_matrix, distance_matrix, locations, target_time_str):
+    # prepare batch upserts
+    upsert_rows = []
+    for i, (start_lat, start_lng) in enumerate(locations):
+        for j, (end_lat, end_lng) in enumerate(locations):
+            if i == j:
+                continue
+            duration = int(time_matrix[i][j])
+            if duration == INF or duration <= 0:
+                continue
+            distance = round(float(distance_matrix[i][j]), 2)
+            upsert_rows.append(
+                {
+                    "start_lat": round(start_lat, 6),
+                    "start_lng": round(start_lng, 6),
+                    "end_lat": round(end_lat, 6),
+                    "end_lng": round(end_lng, 6),
+                    "distance": distance,
+                    "duration": duration,
+                    "target_utc_time": target_time_str,
+                }
+            )
+
+    # upsert into Supabase
+    if upsert_rows:
+        resp = (
+            supabase.table("path_calculations")
+            .upsert(
+                upsert_rows,
+                on_conflict=("start_lat,start_lng,end_lat,end_lng,target_utc_time"),
+            )
+            .execute()
+        )
+        count = len(upsert_rows)
+        print(f"Upserted {count} rows for time {target_time_str}")
+
+
+def build_matrices(points, departure_dt):
     print("Build matrices...")
-    time_matrix, distance_matrix = build_matrices_from_supabase(points, start_seconds)
+    utc_time_str = departure_dt.time().isoformat()
+    time_matrix, distance_matrix = build_matrices_from_supabase(points, utc_time_str)
     missing_pairs = []
     for i, (start_lat, start_lng) in enumerate(points):
         for j, (end_lat, end_lng) in enumerate(points):
@@ -238,11 +279,21 @@ def build_matrices(points, start_seconds):
         print(f"Fetching {len(missing_pairs)} missing pairs from Google API...")
         # Build unique list of all coordinates involved
         unique_points = list({p for pair in missing_pairs for p in pair})
-        google_matrix = get_matrix_from_google_batched(unique_points, google_api_key)
+        # Add 1 minute to departure_dt to avoid Google API error "Timestamp must be set to a future time"
+        departure_dt_future = departure_dt + timedelta(minutes=1)
+        google_matrix = get_matrix_from_google_batched(
+            unique_points,
+            departure_time=departure_dt_future.isoformat(),
+        )
         google_time_matrix, google_distance_matrix = build_time_and_distance_matrices(
             google_matrix, len(unique_points)
         )
         print("google_time_matrix", google_time_matrix)
+
+        store_matrix_into_DB(
+            google_time_matrix, google_distance_matrix, unique_points, utc_time_str
+        )
+
         index_map = {p: idx for idx, p in enumerate(unique_points)}
         for start, end in missing_pairs:
             i_main = points.index(start)
@@ -288,101 +339,25 @@ def time_to_seconds(t: str) -> int:
     return dt.hour * 3600 + dt.minute * 60 + dt.second
 
 
-def get_current_time_in_seconds():
-    now = datetime.now()
-    return now.hour * 3600 + now.minute * 60 + now.second
-
-
-@app.post("/upload-path")
-async def upload_addresses(data: CoordinateList):
-    coords = data.coords
-    if len(coords) < 2:
-        return {"success": False, "error": "Need at least 2 coordinates"}
-
-    locations = [(c.lat, c.lng) for c in coords]
-
-    print(f"Received {len(locations)} coordinates")
-
-    # Use the start of tomorrow's day (UTC) as base time.
-    base_time = (datetime.now(timezone.utc) + timedelta(days=1)).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
-    total_rows = 0
-
-    # ---- STEP 2: Loop through each hour (00–23) ----
-    for hour in range(24):
-        target_time = f"{hour:02d}:00:00"
-        print(f"Processing hour {target_time}...")
-
-        # generate the RFC3339 timestamp for this hour
-        departure_time = base_time.replace(hour=hour)
-        departure_iso = departure_time.isoformat()
-
-        # fetch new data from Google (hour‑specific)
-        elements = get_matrix_from_google_batched(
-            locations, google_api_key, departure_time=departure_iso
-        )
-
-        time_matrix, distance_matrix = build_time_and_distance_matrices(
-            elements, len(locations)
-        )
-
-        # prepare batch upserts
-        upsert_rows = []
-        for i, (start_lat, start_lng) in enumerate(locations):
-            for j, (end_lat, end_lng) in enumerate(locations):
-                if i == j:
-                    continue
-                duration = int(time_matrix[i][j])
-                if duration == INF or duration <= 0:
-                    continue
-                distance = round(float(distance_matrix[i][j]), 2)
-                upsert_rows.append(
-                    {
-                        "start_lat": round(start_lat, 6),
-                        "start_lng": round(start_lng, 6),
-                        "end_lat": round(end_lat, 6),
-                        "end_lng": round(end_lng, 6),
-                        "distance": distance,
-                        "duration": duration,
-                        "target_time": target_time,
-                    }
-                )
-
-        # upsert into Supabase for this hour
-        if upsert_rows:
-            resp = (
-                supabase.table("path_calculations")
-                .upsert(
-                    upsert_rows,
-                    on_conflict=("start_lat,start_lng,end_lat,end_lng,target_time"),
-                )
-                .execute()
-            )
-            count = len(upsert_rows)
-            total_rows += count
-            print(f"Upserted {count} rows for hour {target_time}")
-
-    return {
-        "success": True,
-        "message": f"Stored 24-hour path matrices for {len(coords)} addresses.",
-        "rows_inserted": total_rows,
-        "count": len(coords),
-        "coords": coords,
-    }
-
-
 @app.post("/optimize-route")
 async def route_calculation(mode: str, data: RouteInput):
-    if data.startTime:
-        start_seconds = time_to_seconds(data.startTime)
-    else:
-        start_seconds = get_current_time_in_seconds()
+    if not data.startTime:
+        return {"error": "Missing start time"}
+    # Parse to datetime
+    dt_local = datetime.fromisoformat(data.startTime)
+
+    # Local time (with no date)
+    local_time_only = dt_local.time().isoformat()
+
+    # Convert to UTC datetime
+    dt_utc = dt_local.astimezone(timezone.utc)
+
+    start_seconds = time_to_seconds(local_time_only)
     all_points = [(data.startPoint.lat, data.startPoint.lng)]  # Firstly add start point
     for wp in data.waypoints:
         all_points.append((wp.lat, wp.lng))
     all_points.append((data.endPoint.lat, data.endPoint.lng))  # Lastly add end point
-    time_matrix, distance_matrix = build_matrices(all_points, start_seconds)
+    time_matrix, distance_matrix = build_matrices(all_points, dt_utc)
     print("final_time_matrix", time_matrix)
     routing_data = {
         "time_matrix": time_matrix,

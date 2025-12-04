@@ -301,7 +301,13 @@ export const useRoutingAndGeocoding = ({
         startCoord,
         endCoord,
         waypointsWithTimes,
-        startTime ? startTime.format("HH:mm:ss") : null
+        startTime
+          ? dayjs() // today’s date + selected time
+              .hour(startTime.hour())
+              .minute(startTime.minute())
+              .second(startTime.second())
+              .format("YYYY-MM-DDTHH:mm:ssZ")
+          : dayjs().format("YYYY-MM-DDTHH:mm:ssZ")
       );
 
       if (!optimizedRouteResult.error) {
