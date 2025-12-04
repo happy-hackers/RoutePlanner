@@ -94,12 +94,11 @@ export default function RouteListView({
                           width: 24,
                           height: 24,
                           borderRadius: "50%",
-                          border: "2px solid #d9d9d9",
+                          border: "2px solid",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
                           fontSize: 14,
-                          color: "#8c8c8c",
                         }}
                       >
                         {index + 1}
@@ -109,12 +108,7 @@ export default function RouteListView({
 
                   {/* Stop Details */}
                   <Space direction="vertical" size="small" style={{ flex: 1 }}>
-                    <Text strong delete={isCompleted} style={{ fontSize: 16 }}>
-                      {index + 1}.{" "}
-                      {stop.meters[0].customer?.name ||
-                        t(`${keyPath}.placeholder_customer`)}
-                    </Text>
-                    <Text type="secondary" delete={isCompleted}>
+                    <Text strong delete={isCompleted}>
                       {stop.address}
                     </Text>
                     <Space>
