@@ -1,11 +1,16 @@
-import React, { forwardRef, useMemo, type Dispatch, type SetStateAction } from 'react';
-import { useSelector } from 'react-redux';
-import type { RootState } from '../store';
-import OpenStreetMap from './OpenStreetMap';
-import GoogleMap from './GoogleMap';
-import type { Route } from '../types/route.ts';
-import type { MarkerData } from '../types/markers.ts';
-import type { Dispatcher } from '../types/dispatchers';
+import React, {
+  forwardRef,
+  useMemo,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store";
+import OpenStreetMap from "./OpenStreetMap";
+import GoogleMap from "./GoogleMap";
+import type { Route } from "../types/route.ts";
+import type { MarkerData } from "../types/markers.ts";
+import type { Dispatcher } from "../types/dispatchers";
 
 interface MapProps {
   orderMarkers: MarkerData[];
@@ -18,6 +23,7 @@ interface MapProps {
   selectedDispatcher: Dispatcher | null;
   isCalculating: boolean;
   setIsCalculating: Dispatch<SetStateAction<boolean>>;
+  hoveredOrderId?: number | null;
 }
 
 type MapRef = {
@@ -25,23 +31,19 @@ type MapRef = {
   setIsCalculating: Dispatch<SetStateAction<boolean>>;
 };
 
-const DynamicMap = forwardRef<MapRef, MapProps>(
-  (props, ref) => {
-    const mapType = useSelector((state: RootState) => state.config.mapProvider);
+const DynamicMap = forwardRef<MapRef, MapProps>((props, ref) => {
+  const mapType = useSelector((state: RootState) => state.config.mapProvider);
 
-    const MapComponent = useMemo(() => {
-      if (mapType === 'GoogleMap') {
-        return GoogleMap;
-      }
-      return OpenStreetMap;
-    }, [mapType]);
+  const MapComponent = useMemo(() => {
+    if (mapType === "GoogleMap") {
+      return GoogleMap;
+    }
+    return OpenStreetMap;
+  }, [mapType]);
 
-    return (
-      <MapComponent {...props} ref={ref} />
-    );
-  }
-);
+  return <MapComponent {...props} ref={ref} />;
+});
 
-DynamicMap.displayName = 'DynamicMap';
+DynamicMap.displayName = "DynamicMap";
 
 export default DynamicMap;
