@@ -5,7 +5,6 @@ import LanguageSwitcher from "../components/LanguageSwitcher.tsx";
 import { useTranslation } from "react-i18next";
 import { setMapProvider } from "../store/configSlice"; // 导入 action
 import { useDispatch } from "react-redux";
-import PathUploadModal from "../components/batch-upload/pathUploadModal";
 
 export type MapOption = "OpenStreetMap" | "GoogleMap";
 const defaultMapOption: MapOption = "OpenStreetMap";
@@ -20,7 +19,6 @@ interface SettingConfig {
 export default function Setting() {
   const { t } = useTranslation("setting");
   const [useDefaultAddr, setUseDefaultAddr] = useState(false);
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const settingInfo: SettingConfig = getSettingInfo();
   const { useDefaultAddress, startAddress, endAddress, mapProvider } =
     settingInfo;
@@ -82,15 +80,6 @@ export default function Setting() {
             </Select.Option>
             <Select.Option value="GoogleMap">Google Map</Select.Option>
           </Select>
-        </Form.Item>
-        <Form.Item label={t("usual_address_upload")} wrapperCol={{ span: 16 }}>
-          <Button type="primary" onClick={() => setIsUploadModalOpen(true)}>
-            {t("button_address_upload")}
-          </Button>
-          <PathUploadModal
-            isOpen={isUploadModalOpen}
-            setOpen={setIsUploadModalOpen}
-          />
         </Form.Item>
         <Form.Item wrapperCol={{ offset: 6, span: 16 }}>
           <Button type="primary" htmlType="submit">
