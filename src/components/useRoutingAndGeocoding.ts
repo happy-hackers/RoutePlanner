@@ -1,4 +1,10 @@
-import { useState, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import dayjs, { Dayjs } from "dayjs";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import type { MarkerData } from "../types/markers";
@@ -36,16 +42,6 @@ interface BaseOptimizedRouteResult {
   segmentTimes: number[];
   totalTime: number;
   totalDistance: number;
-}
-
-interface TimeOptimizedRouteResultSnake {
-  order: number[];
-  startCoord: Coords;
-  endCoord: Coords;
-  segment_times: number[];
-  total_time: number;
-  totalDistance: number;
-  error?: string;
 }
 
 type TimeOptimizedRouteResult = BaseOptimizedRouteResult & {
@@ -117,63 +113,6 @@ export const useRoutingAndGeocoding = ({
     });
   }
 
-  async function getOptimizedWaypointOrder(
-    startAddress: string,
-    endAddress: string,
-    waypoints: Coords[]
-  ): Promise<BaseOptimizedRouteResult> {
-    return new Promise((resolve, reject) => {
-      if (!directionsServiceRef.current) {
-        return reject("DirectionsService not initialized");
-      }
-      directionsServiceRef.current.route(
-        {
-          origin: startAddress,
-          destination: endAddress,
-          waypoints: waypoints.map((wp) => ({ location: wp })),
-          optimizeWaypoints: true,
-          travelMode: google.maps.TravelMode.DRIVING,
-        },
-        (result, status) => {
-          if (status === google.maps.DirectionsStatus.OK && result) {
-            const route = result.routes[0];
-            const legs = route.legs;
-            const startCoord = {
-              lat: legs[0].start_location.lat(),
-              lng: legs[0].start_location.lng(),
-            };
-            const endCoord = {
-              lat: legs[legs.length - 1].end_location.lat(),
-              lng: legs[legs.length - 1].end_location.lng(),
-            };
-            const order = result.routes[0].waypoint_order;
-            let totalDistance = 0;
-            let totalTime = 0;
-            const segmentTimes = legs.map((leg) =>
-              Math.round((leg.duration?.value ?? 0) / 60)
-            );
-            for (const leg of legs) {
-              totalDistance += leg.distance?.value ?? 0;
-              totalTime += leg.duration?.value ?? 0;
-            }
-            totalTime = Math.round(totalTime / 60);
-
-            resolve({
-              order,
-              startCoord,
-              endCoord,
-              segmentTimes: segmentTimes,
-              totalTime: totalTime,
-              totalDistance: totalDistance,
-            });
-          } else {
-            reject(status);
-          }
-        }
-      );
-    });
-  }
-
   async function getOptimizedWaypointOrderByTime(
     startPoint: Coords,
     endPoint: Coords,
@@ -191,11 +130,14 @@ export const useRoutingAndGeocoding = ({
       endPoint,
       startTime,
     };
-    const response = await fetch(`${SERVER_URL}/optimize-route`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const response = await fetch(
+      `${SERVER_URL}/optimize-route?mode=${searchOptions}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
     const result: TimeOptimizedRouteResult = await response.json();
 
     if (result.error) {
@@ -331,7 +273,7 @@ export const useRoutingAndGeocoding = ({
     });
   };
 
-  const calculateRoutebyTime = async (dispatcherId?: number) => {
+  const calculateRoute = async (dispatcherId?: number) => {
     if (!startAddress || !endAddress) {
       message.error(t("errorStartEndRequired"));
       return;
@@ -359,58 +301,24 @@ export const useRoutingAndGeocoding = ({
         startCoord,
         endCoord,
         waypointsWithTimes,
-        startTime ? startTime.format("HH:mm:ss") : null
+        startTime
+          ? dayjs() // today’s date + selected time
+              .hour(startTime.hour())
+              .minute(startTime.minute())
+              .second(startTime.second())
+              .format("YYYY-MM-DDTHH:mm:ssZ")
+          : dayjs().format("YYYY-MM-DDTHH:mm:ssZ")
       );
 
       if (!optimizedRouteResult.error) {
-        const {
-          segment_times,
-          total_time,
-          ...rest
-        } = optimizedRouteResult as unknown as TimeOptimizedRouteResultSnake;;
-        const finalResult: TimeOptimizedRouteResult = {
-          ...rest,
-          segmentTimes: segment_times,
-          totalTime: total_time,
-        };
-
         await processRouteResult(
-          finalResult,
+          optimizedRouteResult,
           dispatcherId,
           oMarkers,
           startCoord,
           endCoord
         );
       }
-    } catch (error) {
-      console.error("Routing error:", error);
-      message.error(t("errorRouteCalculationFailed"));
-    } finally {
-      setIsCalculating(false);
-    }
-  };
-
-  const calculateRoute = async (dispatcherId?: number) => {
-    if (!startAddress || !endAddress) {
-      message.error(t("errorStartEndRequired"));
-      return;
-    }
-    setIsCalculating(true);
-    try {
-      let oMarkers: MarkerData[];
-      if (dispatcherId)
-        oMarkers = [
-          ...orderMarkers.filter((m) => m.dispatcherId === dispatcherId),
-        ];
-      else oMarkers = [...orderMarkers];
-
-      const optimizedRouteResult = await getOptimizedWaypointOrder(
-        startAddress,
-        endAddress,
-        oMarkers.map((m) => m.position)
-      );
-
-      await processRouteResult(optimizedRouteResult, dispatcherId, oMarkers);
     } catch (error) {
       console.error("Routing error:", error);
       message.error(t("errorRouteCalculationFailed"));
@@ -429,15 +337,7 @@ export const useRoutingAndGeocoding = ({
       return;
     }
     const idToCalculate = selectedDispatcher?.id;
-    if (searchOptions === "normal") {
-      calculateRoute(idToCalculate);
-    } else {
-      if (!startTime) {
-        message.error(t("errorStartTimeRequired"));
-        return;
-      }
-      calculateRoutebyTime(idToCalculate);
-    }
+    calculateRoute(idToCalculate);
   };
 
   return {
@@ -451,7 +351,6 @@ export const useRoutingAndGeocoding = ({
     setStartTime,
     handleCalculate,
     calculateRoute,
-    calculateRoutebyTime,
     geocodeAddress,
     foundRoute,
     setIsCalculating,

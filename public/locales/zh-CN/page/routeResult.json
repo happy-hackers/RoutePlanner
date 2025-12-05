@@ -9,6 +9,7 @@
   "unit_mins": "分钟",
   "all_route_destination": "终点",
   "single_route_destination": "终点",
+  "text_no_time": "无",
   "button_confirm_save_route": "确认并保存路线",
   "button_clear_route": "清除路线",
   "button_calculate": "计算",

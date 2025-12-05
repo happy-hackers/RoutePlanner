@@ -9,6 +9,7 @@
   "unit_mins": "mins",
   "all_route_destination": "Destination",
   "single_route_destination": "Dest",
+  "text_no_time": "N/A",
   "button_confirm_save_route": "Confirm & Save the Route",
   "button_clear_route": "Clear Route",
   "button_calculate": "Calculate",

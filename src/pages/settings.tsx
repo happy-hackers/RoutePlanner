@@ -17,10 +17,11 @@ interface SettingConfig {
 }
 
 export default function Setting() {
-  const { t } = useTranslation('setting');
+  const { t } = useTranslation("setting");
   const [useDefaultAddr, setUseDefaultAddr] = useState(false);
   const settingInfo: SettingConfig = getSettingInfo();
-  const { useDefaultAddress, startAddress, endAddress, mapProvider } = settingInfo;
+  const { useDefaultAddress, startAddress, endAddress, mapProvider } =
+    settingInfo;
   const dispatch = useDispatch();
   const { message } = App.useApp();
   const [form] = Form.useForm();
@@ -30,13 +31,13 @@ export default function Setting() {
       useDefaultAddress,
       startAddress,
       endAddress,
-      mapProvider: mapProvider || defaultMapOption
+      mapProvider: mapProvider || defaultMapOption,
     });
     setUseDefaultAddr(useDefaultAddress);
   }, [useDefaultAddress, form, startAddress, endAddress, mapProvider]);
 
   const onFinish = async (values: SettingConfig) => {
-    console.log("values", values)
+    console.log("values", values);
     updateSettingInfo(values);
     if (values.mapProvider) {
       dispatch(setMapProvider(values.mapProvider));
@@ -74,7 +75,9 @@ export default function Setting() {
         </Form.Item>
         <Form.Item label={t("label_map_option")} name="mapProvider">
           <Select>
-            <Select.Option value="OpenStreetMap">OpenStreetMap (Leaflet)</Select.Option>
+            <Select.Option value="OpenStreetMap">
+              OpenStreetMap (Leaflet)
+            </Select.Option>
             <Select.Option value="GoogleMap">Google Map</Select.Option>
           </Select>
         </Form.Item>
