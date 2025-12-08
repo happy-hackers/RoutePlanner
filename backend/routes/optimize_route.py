@@ -1,19 +1,10 @@
+import numpy as np
 from fastapi import APIRouter
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 from services.matrices import build_matrices, time_to_seconds
 from datetime import datetime, timezone
 from pydantic import BaseModel
 from typing import Optional, List
-
-
-class CoordInput(BaseModel):
-    lat: float
-    lng: float
-    address: Optional[str] = None
-
-
-class CoordinateList(BaseModel):
-    coords: List[CoordInput]
 
 
 class Point(BaseModel):
@@ -40,6 +31,7 @@ router = APIRouter(prefix="/optimize-route")
 
 @router.post("")
 async def optimize(mode: str, data: RouteInput):
+    print("Calculating route...")
     if not data.startTime:
         return {"error": "Missing start time"}
     # Parse to datetime
@@ -52,10 +44,11 @@ async def optimize(mode: str, data: RouteInput):
     dt_utc = dt_local.astimezone(timezone.utc)
 
     start_seconds = time_to_seconds(local_time_only)
-    all_points = [(data.startPoint.lat, data.startPoint.lng)]  # Firstly add start point
-    for wp in data.waypoints:
-        all_points.append((wp.lat, wp.lng))
-    all_points.append((data.endPoint.lat, data.endPoint.lng))  # Lastly add end point
+    all_points = (
+        [(data.startPoint.lat, data.startPoint.lng)]
+        + [(wp.lat, wp.lng) for wp in data.waypoints]
+        + [(data.endPoint.lat, data.endPoint.lng)]
+    )
     time_matrix, distance_matrix = build_matrices(all_points, dt_utc)
     print("final_time_matrix", time_matrix)
     routing_data = {
@@ -88,13 +81,12 @@ async def optimize(mode: str, data: RouteInput):
         print("Running NORMAL mode: ignoring time windows")
     if mode == "time":
         print("Running TIME-SENSITIVE mode: applying time windows")
-        time_windows = [(0, 24 * 60 * 60)]  # Start point open all day
-        for wp in data.waypoints:
-            open_sec = time_to_seconds(wp.open)
-            close_sec = time_to_seconds(wp.close)
-            print("(open_sec, close_sec)", (open_sec, close_sec))
-            time_windows.append((open_sec, close_sec))
-        time_windows.append((0, 24 * 60 * 60))  # End point open all day
+        wp_times = [
+            (time_to_seconds(wp.open), time_to_seconds(wp.close))
+            for wp in data.waypoints
+        ]
+        # Start point and end point open all day
+        time_windows = [(0, 24 * 60 * 60)] + wp_times + [(0, 24 * 60 * 60)]
 
         routing.AddDimension(
             transit_callback_index,  # Travel time function
@@ -133,26 +125,39 @@ async def optimize(mode: str, data: RouteInput):
         return {
             "error": "No feasible solution found within the opening time of these customers. Please select other ways"
         }
-    route, segment_times, total_time, total_distance = [], [], 0, 0
-    index = routing.Start(0)  # get the starting routing index for vehicle 0
-    while not routing.IsEnd(
-        index
-    ):  # this will make "route" variable not contain the the index of the end node
-        route.append(manager.IndexToNode(index))
-        previous_index = index
-        index = solution.Value(routing.NextVar(index))  # get the next node index
-        travel_time = routing.GetArcCostForVehicle(
-            previous_index, index, 0
-        )  # get the travel time between current and next node
-        from_node = manager.IndexToNode(previous_index)
-        to_node = manager.IndexToNode(index)
-        travel_distance = distance_matrix[from_node][to_node]
-        total_distance += travel_distance
-        segment_times.append(round(travel_time / 60))
-        total_time += travel_time
-    # Now route has start point but not end point
+    indices = []
+    index = routing.Start(0)
+    while not routing.IsEnd(index):
+        indices.append(index)
+        index = solution.Value(routing.NextVar(index))
+    indices.append(index)  # include the end node
+
+    nodes = np.array([manager.IndexToNode(i) for i in indices])
+    # Pair consecutive nodes
+    from_nodes, to_nodes = nodes[:-1], nodes[1:]
+
+    travel_times = np.array(
+        [
+            routing.GetArcCostForVehicle(int(from_index), int(to_index), 0)
+            for from_index, to_index in zip(from_nodes, to_nodes)
+        ]
+    )
+    travel_distances = np.array(
+        [
+            distance_matrix[from_index][to_index]
+            for from_index, to_index in zip(from_nodes, to_nodes)
+        ]
+    )
+
+    segment_times = (travel_times / 60).round().astype(int).tolist()
+    total_time = int(travel_times.sum() / 60)
+    total_distance = travel_distances.sum()
+    route = nodes.tolist()
+
     print("segment_times", segment_times)
+    # Remove start point and end point
     route.pop(0)
+    route.pop(-1)
     index = [x - 1 for x in route]
     total_time = round(total_time / 60)
     # Return the order of waypoints, the estimated time between each waypoints and the total time of the route
