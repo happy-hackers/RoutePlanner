@@ -102,7 +102,7 @@ export default function DriverLogin() {
           ) : (
             <>
               <Tabs defaultActiveKey="password">
-                <Tabs.TabPane tab="Password" key="password">
+                <Tabs.TabPane tab={t("password_login")} key="password">
                   {/* existing email + password form */}
                   <div style={{ marginBottom: "20px" }}>
                     <Input
@@ -155,7 +155,7 @@ export default function DriverLogin() {
                   </Button>
                 </Tabs.TabPane>
 
-                <Tabs.TabPane tab="Email Link" key="email">
+                <Tabs.TabPane tab={t("email_login")} key="email">
                   <Input
                     size="large"
                     prefix={<MailOutlined />}
@@ -167,7 +167,7 @@ export default function DriverLogin() {
                     autoComplete="email"
                   />
                   <Button type="primary" onClick={() => handleEmailLogin()}>
-                    Send Email Link
+                    {t("send_email_link")}
                   </Button>
                 </Tabs.TabPane>
               </Tabs>

@@ -15,5 +15,8 @@
   "result_no_route_title": "未找到路线",
   "recent_and_upcoming_routes_title": "上月到下月的路线",
   "result_no_route_subtitle": "{{date}} 未找到任何激活路线",
+  "table_date": "路线日期",
+  "table_stops": "站点数",
+  "table_meters": "表数",
   "language_select": "语言:"
 }

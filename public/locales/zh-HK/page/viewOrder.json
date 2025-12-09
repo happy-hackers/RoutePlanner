@@ -12,6 +12,8 @@
   "label_search": "搜尋",
   "placeholder_search": "請輸入地址或訂單編號",
   "label_view_mode": "視圖模式",
+  "grouped_view": "分組",
+  "table_view": "表",
   "table_id": "編號",
   "table_delivery_time": "派送時間",
   "table_address": "地址",

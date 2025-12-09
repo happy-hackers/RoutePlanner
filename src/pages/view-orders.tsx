@@ -565,8 +565,8 @@ export default function ViewOrders({
               <Switch
                 checked={groupView}
                 onChange={() => setGroupView(!groupView)}
-                checkedChildren="Grouped View"
-                unCheckedChildren="Table View"
+                checkedChildren={t("grouped_view")}
+                unCheckedChildren={t("table_view")}
                 style={{
                   backgroundColor: groupView ? "#31694E" : "#B87C4C",
                 }}

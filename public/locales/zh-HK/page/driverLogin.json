@@ -1,6 +1,9 @@
 {
   "app_name": "路線規劃器",
   "portal_title": "司機入口",
+  "password_login": "密碼登入",
+  "email_login": "郵箱登入",
+  "send_email_link": "發送郵箱連結",
   "placeholder_email": "電子郵件",
   "placeholder_password": "密碼",
   "checkbox_remember_me": "記住我",

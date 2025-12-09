@@ -15,5 +15,8 @@
   "result_no_route_title": "未找到路線",
   "recent_and_upcoming_routes_title": "上月到下月的路線",
   "result_no_route_subtitle": "{{date}} 未找到任何啟用路線",
+  "table_date": "路線日期",
+  "table_stops": "站點數",
+  "table_meters": "錶數",
   "language_select": "語言:"
 }
