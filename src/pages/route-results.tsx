@@ -398,7 +398,6 @@ export default function RouteResults() {
                     loading={isCalculating}
                     onClick={(e) => {
                       e.stopPropagation();
-                      mapRef.current?.setIsCalculating(true);
                       mapRef.current?.triggerCalculate(dispatcher.id);
                     }}
                   >

@@ -15,5 +15,8 @@
   "result_no_route_title": "No Route Found",
   "recent_and_upcoming_routes_title": "Last & Next Month's Routes",
   "result_no_route_subtitle": "No active route found for {{date}}",
+  "table_date": "Route Date",
+  "table_stops": "Stops",
+  "table_meters": "Total Meters",
   "language_select": "Language:"
 }

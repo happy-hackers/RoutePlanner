@@ -1,6 +1,9 @@
 {
   "app_name": "RoutePlanner",
   "portal_title": "Driver Portal",
+  "password_login": "Password",
+  "email_login": "Email",
+  "send_email_link": "Send Email Link",
   "placeholder_email": "Email",
   "placeholder_password": "Password",
   "checkbox_remember_me": "Remember me",
