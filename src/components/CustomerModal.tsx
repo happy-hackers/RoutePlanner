@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Modal,
   Form as AntForm,
@@ -8,12 +8,17 @@ import {
   App,
   Select,
   Row,
-  Col
+  Col,
 } from "antd";
 import { addCustomer, updateCustomer } from "../utils/dbUtils";
 import type { Customer } from "../types/customer.ts";
 import dayjs from "dayjs";
-import areaData from "../hong_kong_areas.json"
+import areaData from "../hong_kong_areas.json";
+import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
+import { useTranslation } from "react-i18next";
+import type { Rule } from "antd/lib/form";
+
+const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 
 interface CustomerModalProps {
   visible: boolean;
@@ -30,20 +35,84 @@ export default function CustomerModal({
   customer,
   mode,
 }: CustomerModalProps) {
+  const { t } = useTranslation(["addCustomer", "hongkong"]);
   type Area = keyof typeof areaData;
-  
+
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
 
   const areas = Object.keys(areaData);
   const districts = selectedArea ? Object.keys(areaData[selectedArea]) : [];
-  
+
   const [form] = AntForm.useForm();
   const { message } = App.useApp();
+
+  const [addressValue, setAddressValue] = useState<string>("");
+  const [suggestions, setSuggestions] = useState<
+    {
+      value: string;
+      label: string;
+      subdistrict?: string;
+    }[]
+  >([]);
+
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
+  const autocompleteService =
+    useRef<google.maps.places.AutocompleteSuggestion | null>(null);
+  const sessionToken = useRef<
+    google.maps.places.AutocompleteSessionToken | undefined
+  >(undefined);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setOptions({ key: GOOGLE_API_KEY });
+    (async () => {
+      await importLibrary("places");
+      await importLibrary("geocoding");
+      geocoderRef.current = new google.maps.Geocoder();
+      autocompleteService.current =
+        new google.maps.places.AutocompleteSuggestion();
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!autocompleteService.current) return;
+    if (!addressValue) {
+      setSuggestions([]);
+      return;
+    }
+
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(async () => {
+      if (!sessionToken.current) {
+        sessionToken.current =
+          new google.maps.places.AutocompleteSessionToken();
+      }
+
+      const results =
+        await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(
+          {
+            input: addressValue,
+            region: "HK",
+            locationBias: {
+              center: { lat: 22.3193, lng: 114.1694 },
+              radius: 50000,
+            },
+          }
+        );
+
+      setSuggestions(
+        results.suggestions.map((s) => ({
+          value: s.placePrediction?.placeId ?? "",
+          label: s.placePrediction?.text.text ?? "",
+          subdistrict: s.placePrediction?.secondaryText?.text ?? "",
+        }))
+      );
+    }, 300);
+  }, [addressValue]);
 
   useEffect(() => {
     if (visible) {
       if (mode === "edit" && customer) {
-        console.log("customer", customer)
         // edit mode: fill existing data
         form.setFieldsValue({
           name: customer.name,
@@ -89,13 +158,12 @@ export default function CustomerModal({
         const result = await addCustomer(newCustomer);
 
         if (result.success && result.data) {
-          message.success("Customer created successfully!");
-          //message.success("Customer added successfully!");
+          message.success(t(`msg_add_success`));
           onSuccess();
           setSelectedArea(null);
           onCancel();
         } else {
-          message.error(`Failed to add customer: ${result.error}`);
+          message.error(t(`msg_add_fail`, { error: result.error }));
         }
       } else if (mode === "edit") {
         if (!customer) return;
@@ -114,16 +182,16 @@ export default function CustomerModal({
 
         const result = await updateCustomer(updatedCustomer);
         if (result.success) {
-          message.success("Customer updated successfully!");
+          message.success(t(`msg_edit_success`));
           onSuccess();
           onCancel();
         } else {
-          message.error(`Failed to update customer: ${result.error}`);
+          message.error(t(`msg_edit_fail`, { error: result.error }));
         }
       }
     } catch (error) {
       console.error("Network error:", error);
-      message.error("Network error occurred");
+      message.error(t(`msg_network_error`));
     }
   };
 
@@ -133,9 +201,81 @@ export default function CustomerModal({
     onCancel();
   };
 
+  async function geocodeAddress(
+    placeId: string
+  ): Promise<{ lat: number; lng: number }> {
+    return new Promise((resolve, reject) => {
+      geocoderRef.current?.geocode({ placeId }, (results, status) => {
+        if (
+          status === google.maps.GeocoderStatus.OK &&
+          results &&
+          results.length > 0
+        ) {
+          const loc = results[0].geometry.location;
+          resolve({ lat: loc.lat(), lng: loc.lng() });
+        } else {
+          reject(t(`msg_geocode_fail`, { status }));
+        }
+      });
+    });
+  }
+
+  const handleSelect = async (
+    value: string,
+    option: (typeof suggestions)[0]
+  ) => {
+    if (!value) return;
+
+    try {
+      const latLng = await geocodeAddress(value);
+      let area = "";
+      let district = "";
+
+      // Find area/district from subdistrict
+      if (option.subdistrict) {
+        for (const [a, districtsObj] of Object.entries(areaData)) {
+          for (const [d, subdistricts] of Object.entries(districtsObj)) {
+            if ((subdistricts as string[]).includes(option.subdistrict!)) {
+              area = a;
+              district = d;
+            }
+          }
+        }
+      }
+
+      form.setFieldsValue({
+        detailedAddress: option.label,
+        area,
+        district,
+        lat: latLng.lat,
+        lng: latLng.lng,
+      });
+
+      setSelectedArea(area as keyof typeof areaData);
+    } catch (err) {
+      console.error("Error fetching place details:", err);
+      message.error(t(`msg_geocode_select_fail`));
+    }
+  };
+
+  const validateCloseTime: Rule = ({ getFieldValue }) => ({
+    validator(_, value: dayjs.Dayjs | undefined) {
+      const openTime: dayjs.Dayjs | undefined = getFieldValue("openTime");
+      if (!value || !openTime) {
+        return Promise.resolve();
+      }
+      if (value.isAfter(openTime)) {
+        return Promise.resolve();
+      }
+      return Promise.reject(
+        new Error(t("validation_close_time_after_open_time"))
+      );
+    },
+  });
+
   return (
     <Modal
-      title={mode === "add" ? "Add New Customer" : "Edit Customer"}
+      title={mode === "add" ? t(`modal_title_add`) : t(`modal_title_edit`)}
       open={visible}
       onCancel={handleCancel}
       footer={null}
@@ -143,40 +283,46 @@ export default function CustomerModal({
     >
       <AntForm form={form} layout="vertical" onFinish={handleSubmit}>
         <AntForm.Item
-          label="Name"
+          label={t(`label_name`)}
           name="name"
           rules={[
             {
               required: true,
-              message: "Please input the name of the customer!",
+              message: t(`validation_name_required`),
             },
           ]}
         >
-          <Input placeholder="Name" />
+          <Input placeholder={t(`placeholder_name`)} />
         </AntForm.Item>
         <AntForm.Item
-          label="Open Time"
+          label={t(`label_open_time`)}
           name="openTime"
-          rules={[{ required: true, message: "Please select a time!" }]}
+          rules={[{ required: true, message: t(`validation_time_required`) }]}
         >
           <TimePicker style={{ width: "100%" }} />
         </AntForm.Item>
         <AntForm.Item
-          label="Close Time"
+          label={t(`label_close_time`)}
           name="closeTime"
-          rules={[{ required: true, message: "Please select a time!" }]}
+          dependencies={["openTime"]}
+          rules={[
+            { required: true, message: t(`validation_time_required`) },
+            validateCloseTime,
+          ]}
         >
           <TimePicker style={{ width: "100%" }} />
         </AntForm.Item>
         <Row gutter={20}>
           <Col span={10}>
             <AntForm.Item
-              label="Area"
+              label={t(`label_area`)}
               name="area"
-              rules={[{ required: true, message: "Please select an area!" }]}
+              rules={[
+                { required: true, message: t(`validation_area_required`) },
+              ]}
             >
               <Select
-                placeholder="Select Area"
+                placeholder={t(`placeholder_select_area`)}
                 onChange={(value) => {
                   setSelectedArea(value);
                   form.setFieldsValue({
@@ -184,9 +330,11 @@ export default function CustomerModal({
                   });
                 }}
                 options={areas.map((area) => ({
-                    value: area,
-                    label: area,
-                  }))}
+                  value: area,
+                  label: t("hongkong:region_" + area.replace(/ /g, "_"), {
+                    defaultValue: area,
+                  }),
+                }))}
                 optionFilterProp="label"
                 showSearch
               />
@@ -194,17 +342,21 @@ export default function CustomerModal({
           </Col>
           <Col span={10}>
             <AntForm.Item
-              label="District"
+              label={t(`label_district`)}
               name="district"
-              rules={[{ required: true, message: "Please select a district!" }]}
+              rules={[
+                { required: true, message: t(`validation_district_required`) },
+              ]}
             >
               <Select
-                placeholder="Select District"
+                placeholder={t(`placeholder_select_district`)}
                 disabled={!selectedArea}
                 options={districts.map((district) => ({
-                    value: district,
-                    label: district,
-                  }))}
+                  value: district,
+                  label: t("hongkong:area_" + district.replace(/ /g, "_"), {
+                    defaultValue: district,
+                  }),
+                }))}
                 optionFilterProp="label"
                 showSearch
               />
@@ -212,50 +364,66 @@ export default function CustomerModal({
           </Col>
         </Row>
         <AntForm.Item
-          label="Detailed Address"
+          label={t(`label_detailed_address`)}
           name="detailedAddress"
           rules={[
-            {
-              required: true,
-              message: "Please input the detailed address of the customer!",
-            },
+            { required: true, message: t(`validation_address_required`) },
           ]}
         >
-          <Input placeholder="Address" />
+          <Select
+            showSearch
+            placeholder={t(`placeholder_search_address`)}
+            filterOption={false}
+            onSearch={(value) => {
+              setAddressValue(value);
+            }}
+            options={suggestions}
+            onSelect={handleSelect}
+            onChange={(value) => {
+              form.setFieldsValue({ detailedAddress: value });
+              // Clear lat/lng if manually typing
+              form.setFieldsValue({ lat: undefined, lng: undefined });
+            }}
+          />
         </AntForm.Item>
         <AntForm.Item
-          label="Longitude"
+          label={t(`label_lng`)}
           name="lng"
+          hidden
           rules={[
             {
               required: true,
-              message: "Please input the longitude of the customer!",
+              message: t(`validation_lng_required`),
             },
           ]}
         >
-          <Input placeholder="Longitude" />
+          <Input placeholder={t(`placeholder_lng`)} />
         </AntForm.Item>
         <AntForm.Item
-          label="Latitude"
+          label={t(`label_lat`)}
           name="lat"
+          hidden
           rules={[
             {
               required: true,
-              message: "Please input the latitude of the customer!",
+              message: t(`validation_lat_required`),
             },
           ]}
         >
-          <Input placeholder="Latitude" />
+          <Input placeholder={t(`placeholder_lat`)} />
         </AntForm.Item>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <Button onClick={onCancel} style={{ marginRight: 8 }}>
-            Cancel
+            {t(`button_cancel`)}
           </Button>
           <Button type="primary" htmlType="submit">
-            {mode === "add" ? "Add Customer" : "Update Customer"}
+            {mode === "add"
+              ? t(`button_add_customer`)
+              : t(`button_update_customer`)}
           </Button>
         </div>
       </AntForm>
     </Modal>
   );
 }
+

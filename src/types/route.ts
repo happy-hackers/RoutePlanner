@@ -2,6 +2,7 @@ import type { LatLngExpression } from "leaflet";
 import type { Order } from "./order";
 
 export interface Route {
+  id: number;
   dispatcherId: number;
   routeDate: string; // format: YYYY-MM-DD
 
@@ -13,10 +14,11 @@ export interface Route {
   endLat: number;
   endLng: number;
   
-  orderSequence: Order[];
+  orderSequence?: Order[];
+  addressMeterSequence: AddressMetersElement[];
   segmentTimes: number[];
-  total_time: number;
-  total_distance: number;
+  totalTime: number;
+  totalDistance: number;
   polylineCoordinates: LatLngExpression[];
   createdBy: string;
 
@@ -24,4 +26,11 @@ export interface Route {
   is_active: boolean;
 }
 
-//interface Coordinate { lat: number; lng: number; }
+export interface AddressMetersElement { 
+  address: string, 
+  lat: number, 
+  lng: number, 
+  area: string,
+  district: string,
+  meters: Order[]
+}

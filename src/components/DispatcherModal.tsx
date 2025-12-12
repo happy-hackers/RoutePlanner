@@ -1,30 +1,144 @@
 import { useEffect, useState } from "react";
-import { Modal, Form, Input, Select, Checkbox, Button, Space, App, Cascader, type CascaderProps } from "antd";
-import { CopyOutlined, ReloadOutlined } from "@ant-design/icons";
+import {
+  Modal,
+  Form,
+  Input,
+  Select,
+  Checkbox,
+  Button,
+  Space,
+  App,
+  Cascader,
+  type CascaderProps,
+} from "antd";
+import { CopyOutlined, ReloadOutlined, CheckOutlined } from "@ant-design/icons";
 import { addDispatcher, updateDispatchers } from "../utils/dbUtils";
-import { createDriverAuth, updateDriverPassword } from "../utils/authUtils";
+import {
+  createDriverAuth,
+  generateRandomPassword,
+  UpdateDriverAuth,
+  updateDriverPassword,
+} from "../utils/authUtils";
 import type { Dispatcher } from "../types/dispatchers";
-import areaData from "../hong_kong_areas.json"
+import areaData from "../hong_kong_areas.json";
+import { useTranslation } from "react-i18next";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 const { Option } = Select;
 const { SHOW_CHILD } = Cascader;
+
 interface Option {
   value: string | number;
   label: string;
   children?: Option[];
 }
 
-const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const days = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const periods = ["Morning", "Afternoon", "Evening"];
 
-const options: Option[] = Object.entries(areaData).map(([region, districts]) => ({
-  label: region,
-  value: region,
-  children: Object.keys(districts).map((district) => ({
-    label: district,
-    value: district,
-  })),
-}));
+interface ActiveDaysInputProps {
+  value?: Record<string, string[]>;
+  onChange?: (value: Record<string, string[]>) => void;
+}
+
+const ActiveDaysInput = ({ value = {}, onChange }: ActiveDaysInputProps) => {
+  const { t } = useTranslation(["addDispatcher"]);
+
+  const handleCheckboxChange = (
+    day: string,
+    period: string,
+    checked: boolean
+  ) => {
+    const currentPeriods = value[day] || [];
+    const newPeriods = checked
+      ? [...currentPeriods, period]
+      : currentPeriods.filter((p: string) => p !== period);
+
+    const newValue = { ...value };
+    if (newPeriods.length > 0) {
+      newValue[day] = newPeriods;
+    } else {
+      delete newValue[day];
+    }
+
+    onChange?.(newValue);
+  };
+
+  const handleDayCheckboxChange = (day: string, checked: boolean) => {
+    const newValue = { ...value };
+    if (checked) {
+      newValue[day] = [...periods];
+    } else {
+      delete newValue[day];
+    }
+    onChange?.(newValue);
+  };
+
+  return (
+    <div
+      style={{
+        border: "1px solid #d9d9d9",
+        borderRadius: "4px",
+        padding: "12px",
+      }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "40px 60px repeat(3, 1fr)",
+          gap: "8px",
+          alignItems: "center",
+        }}
+      >
+        <div></div>
+        <div></div>
+        {periods.map((period) => (
+          <div
+            key={period}
+            style={{
+              fontWeight: "bold",
+              textAlign: "center",
+              color: "black",
+            }}
+          >
+            {t(`period_${period.toLowerCase()}`)}
+          </div>
+        ))}
+
+        {days.map((day) => {
+          const dayPeriods = value[day] || [];
+          const isAllSelected = dayPeriods.length === periods.length;
+
+          return (
+            <div key={day} style={{ display: "contents" }}>
+              <div style={{ textAlign: "center" }}>
+                <Checkbox
+                  checked={isAllSelected}
+                  onChange={(e) =>
+                    handleDayCheckboxChange(day, e.target.checked)
+                  }
+                />
+              </div>
+              <div style={{ fontWeight: "500", color: "black" }}>
+                {t(`day_${day}`)}
+              </div>
+              {periods.map((period) => (
+                <div key={`${day}-${period}`} style={{ textAlign: "center" }}>
+                  <Checkbox
+                    checked={dayPeriods.includes(period)}
+                    onChange={(e) =>
+                      handleCheckboxChange(day, period, e.target.checked)
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 interface DispatcherModalProps {
   visible: boolean;
@@ -43,94 +157,97 @@ export default function DispatcherModal({
 }: DispatcherModalProps) {
   const [form] = Form.useForm();
   const { message } = App.useApp();
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState("");
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  const generateRandomPassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
-    let pwd = '';
-    for (let i = 0; i < 12; i++) {
-      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return pwd;
-  };
+  const { t } = useTranslation(["addDispatcher", "hongkong"]);
 
   const handleGeneratePassword = () => {
     const newPassword = generateRandomPassword();
     setPassword(newPassword);
-    message.success('New password generated');
+    message.success(t("msg_password_generated"));
   };
 
   const handleCopyPassword = () => {
     navigator.clipboard.writeText(password);
-    message.success('Password copied to clipboard');
+    message.success(t("msg_password_copied"));
   };
 
-  /*const getDistrictOptions = (selectedRegions: string[]) => {
-    return Object.entries(areaData)
-      .filter(([region]) => selectedRegions.includes(region))
-      .map(([region, districts]) => ({
-        label: region,
-        value: region,
-        children: Object.keys(districts).map((district) => ({
-          label: district,
-          value: district,
-        })),
-      }));
+  const resetPassword = async () => {
+    if (showPasswordReset && password && dispatcher?.authUserId) {
+      const pwdResult = await updateDriverPassword(
+        dispatcher.authUserId,
+        password
+      );
+      if (pwdResult.success) {
+        message.success(t("msg_edit_pwd_success"));
+        navigator.clipboard.writeText(password);
+      } else {
+        message.warning(t("msg_edit_pwd_fail", { error: pwdResult.error }));
+      }
+    }
   };
 
-  const districtOptions = useMemo(
-    () => getDistrictOptions(selectedAreas),
-    [selectedAreas]
-  );*/
+  const handleResetPassword = async () => {
+    await resetPassword();
+    setShowPasswordReset(false);
+  };
 
   useEffect(() => {
     if (visible) {
+      form.resetFields(); 
+      setPassword("");
+      setShowPasswordReset(false);
+
       if (mode === "edit" && dispatcher) {
-        // edit mode: fill existing data
         form.setFieldsValue({
           name: dispatcher.name,
           email: dispatcher.email,
           phone: dispatcher.phone,
-          activeDay: dispatcher.activeDay,
+          activeDay: dispatcher.activeDay || {},
           responsibleArea: dispatcher.responsibleArea,
         });
-        setPassword('');
-        setShowPasswordReset(false);
       } else {
-        // add mode: clear form and generate password
-        form.resetFields();
         setPassword(generateRandomPassword());
-        setShowPasswordReset(false);
       }
     }
   }, [visible, mode, dispatcher, form]);
 
   const handleSubmit = async (values: {
     name: string;
-    email?: string;
+    email: string;
     phone?: string;
     activeDay: Record<string, string[]>;
     responsibleArea: string[][];
   }) => {
     try {
       setLoading(true);
+      // Normalize phone number if provided
+      let normalizedPhone: string | undefined = values.phone;
+      if (values.phone) {
+        const phoneNumber = parsePhoneNumberFromString(values.phone);
+        if (phoneNumber && phoneNumber.isValid()) {
+          normalizedPhone = phoneNumber.number; // E.164 format
+        } else {
+          message.error(t("msg_invalid_phone_number"));
+          setLoading(false);
+          return;
+        }
+      }
 
       if (mode === "add") {
-        // Create auth account if email is provided
         let authUserId: string | undefined;
 
         if (values.email && password) {
           const authResult = await createDriverAuth({
             email: values.email,
             password: password,
-            dispatcherId: 0, // Will be updated after dispatcher is created
+            dispatcherId: 0,
             name: values.name,
           });
 
           if (!authResult.success) {
-            message.error(authResult.error || 'Failed to create auth account');
+            message.error(authResult.error || t("msg_auth_fail_default"));
             setLoading(false);
             return;
           }
@@ -138,11 +255,10 @@ export default function DispatcherModal({
           authUserId = authResult.user?.id;
         }
 
-        // Create dispatcher record
         const result = await addDispatcher({
           name: values.name,
           email: values.email,
-          phone: values.phone,
+          phone: normalizedPhone,
           authUserId: authUserId,
           activeDay: values.activeDay || {},
           responsibleArea: values.responsibleArea || [],
@@ -150,15 +266,15 @@ export default function DispatcherModal({
 
         if (result.success && result.data) {
           if (values.email && password) {
-            message.success("Dispatcher added with auth account! Password copied to clipboard.");
+            message.success(t("msg_add_auth_success"));
             navigator.clipboard.writeText(password);
           } else {
-            message.success("Dispatcher added successfully!");
+            message.success(t("msg_add_noauth_success"));
           }
           onSuccess();
           onCancel();
         } else {
-          message.error(`Failed to add dispatcher: ${result.error}`);
+          message.error(t("msg_add_fail", { error: result.error }));
         }
       } else {
         if (!dispatcher) return;
@@ -167,7 +283,7 @@ export default function DispatcherModal({
           ...dispatcher,
           name: values.name,
           email: values.email,
-          phone: values.phone,
+          phone: normalizedPhone,
           activeDay: values.activeDay || {},
           responsibleArea: values.responsibleArea || [],
         };
@@ -175,27 +291,31 @@ export default function DispatcherModal({
         const result = await updateDispatchers([updatedDispatcher]);
 
         if (result.success) {
-          // If password reset was requested
-          if (showPasswordReset && password && dispatcher.authUserId) {
-            const pwdResult = await updateDriverPassword(dispatcher.authUserId, password);
-            if (pwdResult.success) {
-              message.success('Dispatcher updated and password reset! Password copied to clipboard.');
-              navigator.clipboard.writeText(password);
-            } else {
-              message.warning('Dispatcher updated but password reset failed: ' + pwdResult.error);
+          resetPassword();
+          if (dispatcher?.authUserId) {
+            const result = await UpdateDriverAuth(
+              {
+                email: values.email,
+                name: values.name,
+                dispatcherId: dispatcher.id,
+              },
+              dispatcher.authUserId
+            );
+            if (!result.success) {
+              message.error(t("msg_edit_auth_fail", { error: result.error }));
+              return;
             }
-          } else {
-            message.success("Dispatcher updated successfully!");
           }
+          message.success(t("msg_edit_success"));
           onSuccess();
           onCancel();
         } else {
-          message.error(`Failed to update dispatcher: ${result.error}`);
+          message.error(t("msg_edit_fail", { error: result.error }));
         }
       }
     } catch (error) {
       console.error("Network error:", error);
-      message.error("Network error occurred");
+      message.error(t("msg_network_error"));
     } finally {
       setLoading(false);
     }
@@ -205,77 +325,90 @@ export default function DispatcherModal({
     form.resetFields();
     onCancel();
   };
-  const onChange: CascaderProps<Option, 'value', true>['onChange'] = (value) => {
+  const onChange: CascaderProps<Option, "value", true>["onChange"] = (
+    value
+  ) => {
     console.log(value);
   };
 
+  const options: Option[] = Object.entries(areaData).map(
+    ([region, districts]) => ({
+      label: t(`region_${region}`.replace(/ /g, "_"), { ns: "hongkong" }),
+      value: region,
+      children: Object.keys(districts).map((district) => ({
+        label: t(`area_${district}`.replace(/ /g, "_"), { ns: "hongkong" }),
+        value: district,
+      })),
+    })
+  );
+
   return (
     <Modal
-      title={mode === "add" ? "Add New Dispatcher" : "Edit Dispatcher"}
+      title={mode === "add" ? t("modal_title_add") : t("modal_title_edit")}
       open={visible}
       onCancel={handleCancel}
       footer={null}
       width={500}
+      destroyOnHidden={true} 
     >
       <Form
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
-        initialValues={{
-          activeDay: {},
-          responsibleArea: [],
-        }}
       >
         <Form.Item
           name="name"
-          label="Dispatcher Name"
-          rules={[{ required: true, message: "Please enter dispatcher name" }]}
+          label={t("label_name")}
+          rules={[{ required: true, message: t("validation_name_required") }]}
         >
-          <Input placeholder="Enter dispatcher name" />
+          <Input placeholder={t("placeholder_name")} />
         </Form.Item>
 
         <Form.Item
           name="email"
-          label="Email (for driver login)"
+          label={t("label_email")}
           rules={[
-            { type: 'email', message: 'Please enter valid email' },
+            {
+              required: true,
+              type: "email",
+              message: t("validation_email_invalid"),
+            },
           ]}
         >
-          <Input placeholder="driver@example.com" type="email" />
+          <Input placeholder={t("placeholder_email")} type="email" />
         </Form.Item>
 
-        <Form.Item name="phone" label="Phone">
-          <Input placeholder="+852 1234 5678" />
+        <Form.Item name="phone" label={t("label_phone")}>
+          <Input placeholder={t("placeholder_phone")} />
         </Form.Item>
 
-        {/* Password Section */}
         {mode === "add" ? (
-          <Form.Item label="Password (for driver login)">
-            <Space.Compact style={{ width: '100%' }}>
+          <Form.Item label={t("label_password_add")}>
+            <Space.Compact style={{ width: "100%" }}>
               <Input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
+                placeholder={t("placeholder_password")}
               />
               <Button
                 icon={<ReloadOutlined />}
                 onClick={handleGeneratePassword}
-                title="Generate random password"
+                title={t("button_generate_password")}
               />
               <Button
                 icon={<CopyOutlined />}
                 onClick={handleCopyPassword}
                 type="primary"
-                title="Copy password"
+                title={t("button_copy_password")}
               />
             </Space.Compact>
-            <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
-              Copy this password to send to the driver via SMS/WhatsApp
+            <div style={{ marginTop: "8px", fontSize: "12px", color: "#666" }}>
+              {t("text_copy_password_tip")}
             </div>
           </Form.Item>
         ) : (
           dispatcher?.authUserId && (
-            <Form.Item label="Password">
+            <Form.Item label={t("label_password_edit")}>
               {!showPasswordReset ? (
                 <Button
                   onClick={() => {
@@ -283,15 +416,23 @@ export default function DispatcherModal({
                     setPassword(generateRandomPassword());
                   }}
                 >
-                  Reset Password
+                  {t("button_reset_password")}
                 </Button>
               ) : (
                 <>
-                  <Space.Compact style={{ width: '100%' }}>
+                  <Space.Compact style={{ width: "100%" }}>
                     <Input
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="New password"
+                      placeholder={t("placeholder_new_password")}
+                    />
+                    <Button
+                      icon={<CheckOutlined />}
+                      onClick={handleResetPassword}
+                      type="primary"
+                      style={{
+                        backgroundColor: "green",
+                      }}
                     />
                     <Button
                       icon={<ReloadOutlined />}
@@ -303,8 +444,14 @@ export default function DispatcherModal({
                       type="primary"
                     />
                   </Space.Compact>
-                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
-                    New password will be set when you save
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      fontSize: "12px",
+                      color: "#666",
+                    }}
+                  >
+                    {t("text_new_password_tip")}
                   </div>
                 </>
               )}
@@ -312,88 +459,13 @@ export default function DispatcherModal({
           )
         )}
 
-        <Form.Item name="activeDay" label="Active Days">
-          <Form.Item noStyle shouldUpdate>
-            {({ getFieldValue, setFieldValue }) => {
-              const activeDay = getFieldValue("activeDay") || {};
-
-              const handleCheckboxChange = (day: string, period: string, checked: boolean) => {
-                const currentPeriods = activeDay[day] || [];
-                const newPeriods = checked
-                  ? [...currentPeriods, period]
-                  : currentPeriods.filter((p: string) => p !== period);
-
-                const newActiveDay = { ...activeDay };
-                if (newPeriods.length > 0) {
-                  newActiveDay[day] = newPeriods;
-                } else {
-                  delete newActiveDay[day];
-                }
-
-                setFieldValue("activeDay", newActiveDay);
-              };
-
-              const handleDayCheckboxChange = (day: string, checked: boolean) => {
-                const newActiveDay = { ...activeDay };
-                if (checked) {
-                  // Select all periods for this day
-                  newActiveDay[day] = [...periods];
-                } else {
-                  // Deselect all periods for this day
-                  delete newActiveDay[day];
-                }
-                setFieldValue("activeDay", newActiveDay);
-              };
-
-              return (
-                <div style={{ border: "1px solid #d9d9d9", borderRadius: "4px", padding: "12px" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "40px 60px repeat(3, 1fr)", gap: "8px", alignItems: "center" }}>
-                    {/* Header row */}
-                    <div></div>
-                    <div></div>
-                    {periods.map((period) => (
-                      <div key={period} style={{ fontWeight: "bold", textAlign: "center", color: "black" }}>
-                        {period}
-                      </div>
-                    ))}
-
-                    {/* Day rows */}
-                    {days.map((day) => {
-                      const dayPeriods = activeDay[day] || [];
-                      const isAllSelected = dayPeriods.length === periods.length;
-
-                      return (
-                        <>
-                          <div key={`${day}-checkbox`} style={{ textAlign: "center" }}>
-                            <Checkbox
-                              checked={isAllSelected}
-                              onChange={(e) => handleDayCheckboxChange(day, e.target.checked)}
-                            />
-                          </div>
-                          <div key={`${day}-label`} style={{ fontWeight: "500", color: "black" }}>
-                            {day}
-                          </div>
-                          {periods.map((period) => (
-                            <div key={`${day}-${period}`} style={{ textAlign: "center" }}>
-                              <Checkbox
-                                checked={dayPeriods.includes(period)}
-                                onChange={(e) => handleCheckboxChange(day, period, e.target.checked)}
-                              />
-                            </div>
-                          ))}
-                        </>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            }}
-          </Form.Item>
+        <Form.Item name="activeDay" label={t("label_active_days")}>
+          <ActiveDaysInput />
         </Form.Item>
 
-        <Form.Item name="responsibleArea" label="Responsible Areas">
+        <Form.Item name="responsibleArea" label={t("label_responsible_areas")}>
           <Cascader
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
             options={options}
             onChange={onChange}
             multiple
@@ -404,9 +476,9 @@ export default function DispatcherModal({
         <Form.Item>
           <Space>
             <Button type="primary" htmlType="submit" loading={loading}>
-              {mode === "add" ? "Add Dispatcher" : "Update Dispatcher"}
+              {mode === "add" ? t("button_add") : t("button_update")}
             </Button>
-            <Button onClick={handleCancel}>Cancel</Button>
+            <Button onClick={handleCancel}>{t("button_cancel")}</Button>
           </Space>
         </Form.Item>
       </Form>

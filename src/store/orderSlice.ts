@@ -7,15 +7,15 @@ export type TimePeriod = "Morning" | "Afternoon" | "Evening";
 interface OrderState {
   selectedOrders: Order[];
   status: OrderStatus[];
-  date: Dayjs;
+  date: Dayjs | null;
   timePeriod: TimePeriod[];
 }
 
 const initialState: OrderState = {
   selectedOrders: [],
-  status: ["In Progress"],
+  status: ["Pending"],
   date: dayjs(),
-  timePeriod: ["Afternoon"],
+  timePeriod: [],
 };
 
 const orderSlice = createSlice({
@@ -28,7 +28,7 @@ const orderSlice = createSlice({
     setStatus(state, action: PayloadAction<OrderStatus[]>) {
       state.status = action.payload;
     },
-    setDate(state, action: PayloadAction<Dayjs>) {
+    setDate(state, action: PayloadAction<Dayjs | null>) {
       state.date = action.payload;
     },
     setTimePeriod(state, action: PayloadAction<TimePeriod[]>) {
@@ -37,5 +37,6 @@ const orderSlice = createSlice({
   },
 });
 
-export const { setSelectedOrders, setStatus, setDate, setTimePeriod } = orderSlice.actions;
+export const { setSelectedOrders, setStatus, setDate, setTimePeriod } =
+  orderSlice.actions;
 export default orderSlice.reducer;

@@ -1,0 +1,16 @@
+{
+  "table_id": "訂單編號",
+  "table_address": "地址",
+  "table_dispatcher": "配送員",
+  "dispatcher_not_assigned": "未分配",
+  "dispatcher_unknown": "未知",
+  "message_unassigned_success": "訂單 {{orderId}} 未分配",
+  "message_update_failed": "更新訂單 {{orderId}} 失敗: {{error}}",
+  "message_assigned_success": "訂單 {{orderId}} 已分配給 {{dispatcherName}}",
+  "title_assigned_orders": "分配給 {{dispatcherName}} 的訂單",
+  "title_all_orders": "所有訂單",
+  "text_responsible_areas": "負責區域:",
+  "text_total_orders": "訂單總數: {{count}}",
+  "text_select_dispatcher": "選擇一位配送員查看其分配的訂單",
+  "pagination_total_orders": "第 {{start}}-{{end}} 條 (共 {{total}} 條訂單)"
+}

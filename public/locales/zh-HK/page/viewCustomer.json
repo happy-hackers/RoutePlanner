@@ -1,0 +1,20 @@
+{
+  "card_title": "客戶",
+  "header_id": "編號",
+  "header_name": "名稱",
+  "header_address": "地址",
+  "header_open_time": "營業開始時間",
+  "header_close_time": "營業結束時間",
+  "header_action": "操作",
+  "button_edit": "編輯",
+  "button_delete": "刪除",
+  "button_cancel": "取消",
+  "button_add_customer": "新增客戶",
+  "modal_delete_title": "刪除客戶",
+  "modal_delete_content_main": "您確定要刪除客戶 **{{name}}** 嗎？",
+  "modal_delete_warning_label": "警告",
+  "modal_delete_warning_text": "這將永久刪除該客戶及其所有關聯訂單。此操作無法撤銷。",
+  "message_success_deleted_with_orders": "客戶刪除成功（同時刪除了 {{count}} 份訂單）",
+  "message_success_deleted_no_orders": "客戶刪除成功",
+  "message_error_delete_failed": "刪除客戶失敗：{{error}}"
+}

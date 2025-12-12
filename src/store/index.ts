@@ -1,11 +1,13 @@
 import { configureStore } from "@reduxjs/toolkit";
 import orderReducer from "./orderSlice";
 import dispatcherReducer from "./dispatcherSlice";
+import configReducer from './configSlice';
 
 const store = configureStore({
   reducer: {
     order: orderReducer,
-    dispatcher: dispatcherReducer
+    dispatcher: dispatcherReducer,
+    config: configReducer,
   },
 });
 

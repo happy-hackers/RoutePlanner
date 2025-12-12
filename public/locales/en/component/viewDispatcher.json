@@ -1,0 +1,16 @@
+{
+  "table_id": "ID",
+  "table_address": "Address",
+  "table_dispatcher": "Dispatcher",
+  "dispatcher_not_assigned": "Not Assigned",
+  "dispatcher_unknown": "Unknown",
+  "message_unassigned_success": "Order {{orderId}} is not assigned",
+  "message_update_failed": "Failed to update order {{orderId}}: {{error}}",
+  "message_assigned_success": "Order {{orderId}} assigned to {{dispatcherName}}",
+  "title_assigned_orders": "Orders assigned to {{dispatcherName}}",
+  "title_all_orders": "All Orders",
+  "text_responsible_areas": "Responsible areas:",
+  "text_total_orders": "Total orders: {{count}}",
+  "text_select_dispatcher": "Select a dispatcher to view their assigned orders",
+  "pagination_total_orders": "{{start}}-{{end}} of {{total}} orders"
+}

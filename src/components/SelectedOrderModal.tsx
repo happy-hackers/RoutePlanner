@@ -5,6 +5,7 @@ import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../store";
 import ActionConfirmModal from "./ActionConfirmModal";
 import { setSelectedOrders } from "../store/orderSlice";
+import { useTranslation } from "react-i18next";
 
 const { Text } = Typography;
 
@@ -12,29 +13,28 @@ interface ServerListModalProps {
   orders: Order[];
   isVisible: boolean;
   setVisibility: (value: boolean) => void;
-  setSelectedRowIds: React.Dispatch<React.SetStateAction<number[]>>;
 }
 
 const SelectedOrderModal: React.FC<ServerListModalProps> = ({
   orders,
   isVisible,
   setVisibility,
-  setSelectedRowIds,
 }) => {
   const [isActionConfirm, setIsActionConfirm] = useState(false);
   const dispatch = useDispatch();
   const selectedOrders = useSelector(
     (state: RootState) => state.order.selectedOrders
   );
+  const { t } = useTranslation("selectOrder");
 
   const columns = [
     {
-      title: "ID",
+      title: t("tableColumnId"),
       dataIndex: "id",
       key: "id",
     },
     {
-      title: "Address",
+      title: t("tableColumnAddress"),
       dataIndex: "detailedAddress",
       key: "detailedAddress",
       render: (detailedAddress: string, record: Order) => (
@@ -44,20 +44,22 @@ const SelectedOrderModal: React.FC<ServerListModalProps> = ({
       ),
     },
     {
-      title: "Time",
+      title: t("tableColumnTime"),
       dataIndex: "time",
       key: "time",
+      render: (time: string) => t(`time${time}`),
     },
     {
-      title: "Action",
+      title: t("tableColumnAction"),
       key: "action",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       render: (_: any, record: any) => (
         <Text
           type="danger"
           style={{ cursor: "pointer" }}
           onClick={() => handleDelete(record.id)}
         >
-          delete
+          {t("actionDelete")}
         </Text>
       ),
     },
@@ -65,18 +67,16 @@ const SelectedOrderModal: React.FC<ServerListModalProps> = ({
 
   const handleDelete = (id: number) => {
     dispatch(setSelectedOrders(selectedOrders.filter((order) => order.id !== id)));
-    setSelectedRowIds((prev) => prev.filter((rowId) => rowId !== id))
   };
 
   const handleDeleteAll = () => {
     dispatch(setSelectedOrders([]));
-    setSelectedRowIds([]);
   };
 
   return (
     <>
       <Modal
-        title="Selected Orders"
+        title={t("modalTitle")}
         open={isVisible}
         onCancel={() => setVisibility(false)}
         footer={[
@@ -85,7 +85,7 @@ const SelectedOrderModal: React.FC<ServerListModalProps> = ({
             danger
             onClick={() => setIsActionConfirm(true)}
           >
-            Delete all
+            {t("buttonDeleteAll")}
           </Button>,
         ]}
         styles={{
@@ -106,9 +106,9 @@ const SelectedOrderModal: React.FC<ServerListModalProps> = ({
       </Modal>
       <ActionConfirmModal
         isOpen={isActionConfirm}
-        description={"Do you want to remove all selected orders"}
-        actionText={"Yes"}
-        cancelText={"No"}
+        description={t("confirmDescription")}
+        actionText={t("confirmAction")}
+        cancelText={t("confirmCancel")}
         onConfirm={() => {
           handleDeleteAll();
           setIsActionConfirm(false);

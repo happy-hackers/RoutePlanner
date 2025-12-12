@@ -1,0 +1,12 @@
+{
+  "card_title": "設定",
+  "checkbox_use_default_address": "使用預設地址",
+  "label_start_address": "預設起始地址",
+  "label_end_address": "預設結束地址",
+  "label_language": "語言",
+  "label_map_option": "顯示地圖",
+  "button_submit": "提交",
+  "usual_address_upload": "常用地址上傳",
+  "button_address_upload": "批量上傳常用地址（上傳CSV）",
+  "message_save_success": "儲存成功"
+}

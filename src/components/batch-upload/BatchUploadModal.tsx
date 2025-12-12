@@ -5,6 +5,7 @@ import type { Order } from "../../types/order";
 import UploadPreviewModal, { type NewCustomerData } from "./UploadPreviewModal";
 import type { TimePeriod } from "../../store/orderSlice";
 import { getCurrentTimePeriod, getCurrentDateHK } from "../../utils/timeUtils";
+import { useTranslation } from 'react-i18next';
 
 import UploadInstructions from "./AutoFillControls";
 import FileUploader from "./FileUploader";
@@ -15,13 +16,19 @@ interface BatchUploadModalProps {
   isOpen: boolean;
   setOpen: (open: boolean) => void;
   onUploadComplete: () => void;
+  isMapReady: boolean;
+  isGoogleMapSelected: boolean;
 }
 
 export default function BatchUploadModal({
   isOpen,
   setOpen,
   onUploadComplete,
+  isMapReady,
+  isGoogleMapSelected,
 }: BatchUploadModalProps) {
+  const { t } = useTranslation('upload');
+  const keyPath = "batchUploadModel";
   const { message } = App.useApp();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -42,18 +49,18 @@ export default function BatchUploadModal({
   const [isProcessing, setIsProcessing] = useState(false);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
 
-  // Default values for auto-fill (always enabled)
   const [defaultDate, setDefaultDate] = useState(getCurrentDateHK());
   const [defaultTimePeriod, setDefaultTimePeriod] = useState<TimePeriod>(
     getCurrentTimePeriod()
   );
 
-  // Initialize geocoder
   useEffect(() => {
-    if (window.google && window.google.maps && !geocoderRef.current) {
-      geocoderRef.current = new google.maps.Geocoder();
+    if (isGoogleMapSelected && isMapReady && !geocoderRef.current) {
+      if (window.google && window.google.maps) {
+        geocoderRef.current = new window.google.maps.Geocoder();
+      }
     }
-  }, []);
+  }, [isGoogleMapSelected, isMapReady]);
 
   const handleClose = () => {
     setOpen(false);
@@ -71,12 +78,12 @@ export default function BatchUploadModal({
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      message.error("Please select a file");
+      message.error(t(`${keyPath}.error_select_file`));
       return;
     }
 
-    if (!geocoderRef.current) {
-      message.error("Google Maps is not loaded. Please try again.");
+    if (isGoogleMapSelected && !geocoderRef.current) {
+      message.error(t(`${keyPath}.error_maps_not_loaded`));
       return;
     }
 
@@ -105,7 +112,6 @@ export default function BatchUploadModal({
           setInvalidDateFormats(csvResult.invalidDateFormats);
         }
 
-        // validate basic fields
         const validOrders = orders.filter((order) => {
           return (
             order.date &&
@@ -115,27 +121,34 @@ export default function BatchUploadModal({
         });
 
         if (validOrders.length === 0) {
-          message.error("No valid orders found in the file");
+          message.error(t(`${keyPath}.error_no_valid_orders`));
           return;
         }
 
-        if (!geocoderRef.current) {
-          message.error("Google Maps geocoder not available. Please try again.");
-          return;
+        if (isGoogleMapSelected) {
+          if (!geocoderRef.current) {
+            message.error(t(`${keyPath}.error_geocoder_not_available`));
+            return;
+          }
+
+          const processor = new OrderProcessor(geocoderRef.current);
+          const result = await processor.processOrders(validOrders);
+
+          setNewCustomers(result.customersToCreate);
+          setProcessedOrders(result.ordersToCreate);
+          setFailedAddresses(result.failed);
+        } else {
+          // OpenStreetMap mode: Skip Geocoding, process without lat/lng
+          // Note: Your OrderProcessor or subsequent logic must handle missing lat/lng
+          setProcessedOrders(validOrders as Omit<Order, "id">[]);
         }
 
-        const processor = new OrderProcessor(geocoderRef.current);
-        const result = await processor.processOrders(validOrders);
-
-        setNewCustomers(result.customersToCreate);
-        setProcessedOrders(result.ordersToCreate);
-        setFailedAddresses(result.failed);
         setShowPreview(true);
       } catch (err) {
         message.error(
-          `Error processing file: ${
-            err instanceof Error ? err.message : "Unknown error"
-          }`
+          t(`${keyPath}.error_processing_file`, {
+            error: err instanceof Error ? err.message : t('common.unknown_error', { ns: 'common' })
+          })
         );
       } finally {
         setIsProcessing(false);
@@ -149,7 +162,6 @@ export default function BatchUploadModal({
     try {
       const customerIdMap = new Map<string, number>();
 
-      // Step 1: Create new customers
       for (const newCustomer of newCustomers) {
         const { tempId, ...customerWithoutTempId } = newCustomer;
         const result = await addCustomer(customerWithoutTempId);
@@ -158,18 +170,18 @@ export default function BatchUploadModal({
           customerIdMap.set(addressKey, result.data.id);
         } else {
           message.error(
-            `Failed to create customer: ${result.error || "Unknown error"}`
+            t(`${keyPath}.error_create_customer`, {
+              error: result.error || t('common.unknown_error', { ns: 'common' })
+            })
           );
         }
       }
 
-      // Step 2: Update orders with new customer IDs and create them
       let successCount = 0;
       for (const order of processedOrders) {
         if (order.customerId === 0) {
-          const addressKey = `${order.detailedAddress}|${order.area || ""}|${
-            order.district || ""
-          }`;
+          const addressKey = `${order.detailedAddress}|${order.area || ""}|${order.district || ""
+            }`;
           const newCustomerId = customerIdMap.get(addressKey);
           if (newCustomerId) {
             order.customerId = newCustomerId;
@@ -183,15 +195,18 @@ export default function BatchUploadModal({
       }
 
       message.success(
-        `Successfully created ${newCustomers.length} customer(s) and ${successCount} order(s)`
+        t(`${keyPath}.success_upload`, {
+          customerCount: newCustomers.length,
+          orderCount: successCount
+        })
       );
       onUploadComplete();
       handleClose();
     } catch (err) {
       message.error(
-        `Error creating records: ${
-          err instanceof Error ? err.message : "Unknown error"
-        }`
+        t(`${keyPath}.error_creating_records`, {
+          error: err instanceof Error ? err.message : t('common.unknown_error', { ns: 'common' })
+        })
       );
     } finally {
       setIsCreating(false);
@@ -201,21 +216,21 @@ export default function BatchUploadModal({
   return (
     <>
       <Modal
-        title="Upload JSON/CSV File"
+        title={t(`${keyPath}.modal_title`)}
         open={isOpen && !showPreview}
         onCancel={handleClose}
         footer={[
           <Button key="cancel" onClick={handleClose} disabled={isProcessing}>
-            Cancel
+            {t(`${keyPath}.button_cancel`)}
           </Button>,
           <Button
             key="upload"
             type="primary"
             onClick={handleUpload}
-            disabled={!selectedFile || isProcessing}
+            disabled={!selectedFile || isProcessing || (isGoogleMapSelected && !isMapReady)}
             loading={isProcessing}
           >
-            Upload
+            {t(`${keyPath}.button_upload`)}
           </Button>,
         ]}
       >

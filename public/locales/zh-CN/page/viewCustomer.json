@@ -1,0 +1,20 @@
+{
+  "card_title": "客户",
+  "header_id": "编号",
+  "header_name": "名称",
+  "header_address": "地址",
+  "header_open_time": "营业开始时间",
+  "header_close_time": "营业结束时间",
+  "header_action": "操作",
+  "button_edit": "编辑",
+  "button_delete": "删除",
+  "button_cancel": "取消",
+  "button_add_customer": "添加客户",
+  "modal_delete_title": "删除客户",
+  "modal_delete_content_main": "您确定要删除客户 **{{name}}** 吗？",
+  "modal_delete_warning_label": "警告",
+  "modal_delete_warning_text": "这将永久删除该客户及其所有关联订单。此操作无法撤销。",
+  "message_success_deleted_with_orders": "客户删除成功（同时删除了 {{count}} 份订单）",
+  "message_success_deleted_no_orders": "客户删除成功",
+  "message_error_delete_failed": "删除客户失败：{{error}}"
+}

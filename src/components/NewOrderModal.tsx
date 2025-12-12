@@ -7,15 +7,16 @@ import {
   Form as AntForm,
   App,
   Row,
-  Col
+  Col,
 } from "antd";
 import { useState, useEffect, useRef } from "react";
 import dayjs from "dayjs";
 import { addCustomer, createOrder, updateCustomer } from "../utils/dbUtils";
 import type { Order } from "../types/order";
 import type { Customer } from "../types/customer";
-import areaData from "../hong_kong_areas.json"
+import areaData from "../hong_kong_areas.json";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
+import { useTranslation } from "react-i18next";
 
 type OrderTime = "Morning" | "Afternoon" | "Evening";
 
@@ -42,17 +43,17 @@ export default function NewOrderModal({
   customers,
   fetchOrders,
 }: {
-  date?: dayjs.Dayjs;
+  date?: dayjs.Dayjs | null;
   customers: Customer[];
   fetchOrders: () => void;
 }) {
   type Area = keyof typeof areaData;
-  
+
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
   const [addressValue, setAddressValue] = useState<string>("");
   const [suggestions, setSuggestions] = useState<suggestionOption[]>([]);
 
-  console.log("resultsSuggestions", JSON.parse(JSON.stringify(suggestions)))
+  console.log("resultsSuggestions", JSON.parse(JSON.stringify(suggestions)));
 
   const areas = Object.keys(areaData);
   const districts = selectedArea ? Object.keys(areaData[selectedArea]) : [];
@@ -61,13 +62,17 @@ export default function NewOrderModal({
   const [form] = AntForm.useForm<OrderFormValues>();
 
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
-  const autocompleteService = useRef<google.maps.places.AutocompleteSuggestion | null>(null);
-  const sessionToken = useRef<google.maps.places.AutocompleteSessionToken | undefined>(undefined);
+  const autocompleteService =
+    useRef<google.maps.places.AutocompleteSuggestion | null>(null);
+  const sessionToken = useRef<
+    google.maps.places.AutocompleteSessionToken | undefined
+  >(undefined);
   const debounceTimer = useRef<NodeJS.Timeout>(null);
 
   const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 
   const { message } = App.useApp();
+  const { t } = useTranslation(["addOrder", "hongkong"]);
 
   useEffect(() => {
     setOptions({ key: GOOGLE_API_KEY });
@@ -75,10 +80,11 @@ export default function NewOrderModal({
       await importLibrary("places");
       await importLibrary("geocoding");
       geocoderRef.current = new google.maps.Geocoder();
-      autocompleteService.current = new google.maps.places.AutocompleteSuggestion();
-      geocoderRef.current = new google.maps.Geocoder(); 
+      autocompleteService.current =
+        new google.maps.places.AutocompleteSuggestion();
+      geocoderRef.current = new google.maps.Geocoder();
     })();
-  }, []);
+  }, [GOOGLE_API_KEY]);
 
   useEffect(() => {
     if (!autocompleteService.current) return;
@@ -92,31 +98,35 @@ export default function NewOrderModal({
     }
     debounceTimer.current = setTimeout(async () => {
       if (!sessionToken.current) {
-        sessionToken.current = new google.maps.places.AutocompleteSessionToken();
+        sessionToken.current =
+          new google.maps.places.AutocompleteSessionToken();
       }
       //https://developers.google.com/maps/documentation/javascript/reference/autocomplete-data#AutocompleteSuggestion
-      const results = await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
-        input: addressValue,
-        region: "HK",
-        locationBias: {
-          center: { lat: 22.3193, lng: 114.1694 },
-          radius: 50000,
-        }
-      });
+      const results =
+        await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(
+          {
+            input: addressValue,
+            region: "HK",
+            locationBias: {
+              center: { lat: 22.3193, lng: 114.1694 },
+              radius: 50000,
+            },
+          }
+        );
       setSuggestions(
         results.suggestions.map((s) => ({
           value: s.placePrediction?.placeId ?? "",
           label: s.placePrediction?.text.text ?? "",
           subdistrict: s.placePrediction?.secondaryText?.text ?? "",
         }))
-    );
+      );
     }, 300); // 300ms debounce
   }, [addressValue]);
 
   useEffect(() => {
     if (open) {
       form.setFieldsValue({
-        date: date,
+        date: date ? date : undefined,
       });
     }
   }, [open, date, form]);
@@ -141,10 +151,10 @@ export default function NewOrderModal({
       setSelectedArea(null);
       handleCancel();
       fetchOrders();
-      message.success("Order created successfully!");
+      message.success(t("message_success"));
     } else {
-      console.error("Failed to create order:", result.error);
-      message.error(`Failed to create order: ${result.error}`);
+      console.error(t("message_error_create_order"), result.error);
+      message.error(`${t("message_error_create_order")} ${result.error}`);
     }
   };
 
@@ -171,14 +181,15 @@ export default function NewOrderModal({
 
         const updateResult = await updateCustomer(updatedCustomer);
         if (updateResult.success) {
-          message.success("Customer created successfully!");
+          message.success(t("message_customer_success"));
           addOrder(values, addResult.data.id);
         } else {
-          message.error(`Failed to update customer: ${updateResult.error}`);
+          message.error(
+            `${t("message_error_update_customer")} ${updateResult.error}`
+          );
         }
-        //message.success("Customer added successfully!");
       } else {
-        message.error(`Failed to add customer: ${addResult.error}`);
+        message.error(`${t("message_error_add_customer")} ${addResult.error}`);
       }
     } else {
       addOrder(values, values.customerId);
@@ -282,29 +293,29 @@ export default function NewOrderModal({
   return (
     <>
       <Button type="primary" onClick={() => setOpen(true)}>
-        Add a new order
+        {t("button_add_new_order")}
       </Button>
       <Modal
-        title="New order form"
+        title={t("modal_title")}
         open={open}
         onCancel={handleCancel}
         footer={null}
       >
         <AntForm form={form} layout="vertical" onFinish={handleSubmit}>
           <AntForm.Item
-            label="Date Picker"
+            label={t("label_date_picker")}
             name="date"
-            rules={[{ required: true, message: "Please select a date!" }]}
+            rules={[{ required: true, message: t("rule_select_date") }]}
           >
             <DatePicker style={{ width: "100%" }} />
           </AntForm.Item>
           <AntForm.Item
-            label="Customer"
+            label={t("label_customer")}
             name="customerId"
-            rules={[{ required: true, message: "Please select customer!" }]}
+            rules={[{ required: true, message: t("rule_select_customer") }]}
           >
             <Select
-              placeholder="Select customer"
+              placeholder={t("placeholder_select_customer")}
               onChange={(value) => {
                 const selectedCustomer = customers.find(
                   (customer) => customer.id === value
@@ -322,7 +333,7 @@ export default function NewOrderModal({
               }}
             >
               <Select.Option key={-1} value={-1}>
-                ---Create New Customer
+                {t("option_create_new_customer")}
               </Select.Option>
               {customers?.map((customer) => (
                 <Select.Option key={customer.id} value={customer.id}>
@@ -334,22 +345,28 @@ export default function NewOrderModal({
           <Row gutter={20}>
             <Col span={10}>
               <AntForm.Item
-                label="Area"
+                label={t("label_area")}
                 name="area"
-                rules={[{ required: true, message: "Please select an area!" }]}
+                rules={[{ required: true, message: t("rule_select_area") }]}
               >
                 <Select
-                  placeholder="Select Area"
+                  placeholder={t("placeholder_select_area")}
                   onChange={(value) => {
                     setSelectedArea(value);
                     form.setFieldsValue({
                       district: undefined,
                     });
                   }}
-                  options={areas.map((area) => ({
-                    value: area,
-                    label: area,
-                  }))}
+                  options={areas.map((area) => {
+                    const areaKey = area.replace(/ /g, "_");
+                    return {
+                      value: area,
+                      // UPDATED: Changed 'area_' to 'region_' to match your Traditional Chinese keys
+                      label: t(`hongkong:region_${areaKey}`, {
+                        defaultValue: area,
+                      }),
+                    };
+                  })}
                   optionFilterProp="label"
                   showSearch
                 />
@@ -357,19 +374,23 @@ export default function NewOrderModal({
             </Col>
             <Col span={10}>
               <AntForm.Item
-                label="District"
+                label={t("label_district")}
                 name="district"
-                rules={[
-                  { required: true, message: "Please select a district!" },
-                ]}
+                rules={[{ required: true, message: t("rule_select_district") }]}
               >
                 <Select
-                  placeholder="Select District"
+                  placeholder={t("placeholder_select_district")}
                   disabled={!selectedArea}
-                  options={districts.map((district) => ({
-                    value: district,
-                    label: district,
-                  }))}
+                  options={districts.map((district) => {
+                    const districtKey = district.replace(/ /g, "_");
+                    return {
+                      value: district,
+                      // UPDATED: Changed 'district_' to 'area_' to match your Traditional Chinese keys
+                      label: t(`hongkong:area_${districtKey}`, {
+                        defaultValue: district,
+                      }),
+                    };
+                  })}
                   optionFilterProp="label"
                   showSearch
                 />
@@ -377,18 +398,18 @@ export default function NewOrderModal({
             </Col>
           </Row>
           <AntForm.Item
-            label="Detailed Address"
+            label={t("label_detailed_address")}
             name="detailedAddress"
             rules={[
               {
                 required: true,
-                message: "Please input the address of the order!",
+                message: t("rule_input_address"),
               },
             ]}
           >
             <Select
               showSearch
-              placeholder="Search address"
+              placeholder={t("placeholder_search_address")}
               filterOption={false}
               onSearch={(value) => setAddressValue(value)}
               options={suggestions}
@@ -396,50 +417,52 @@ export default function NewOrderModal({
             />
           </AntForm.Item>
           <AntForm.Item
-            label="Longitude"
+            label={t("label_longitude")}
             name="longitude"
             hidden
             rules={[
               {
                 required: true,
-                message: "Please input the longitude of the order!",
+                message: t("rule_input_longitude"),
               },
             ]}
           >
-            <Input placeholder="Longitude" />
+            <Input placeholder={t("placeholder_longitude")} />
           </AntForm.Item>
           <AntForm.Item
-            label="Latitude"
+            label={t("label_latitude")}
             name="latitude"
             hidden
             rules={[
               {
                 required: true,
-                message: "Please input the latitude of the order!",
+                message: t("rule_input_latitude"),
               },
             ]}
           >
-            <Input placeholder="Latitude" />
+            <Input placeholder={t("placeholder_latitude")} />
           </AntForm.Item>
           <AntForm.Item
-            label="Delivery Time"
+            label={t("label_delivery_time")}
             name="deliveryTime"
             rules={[
-              { required: true, message: "Please select delivery time!" },
+              { required: true, message: t("rule_select_delivery_time") },
             ]}
           >
-            <Select placeholder="Select delivery time">
-              <Select.Option value="Morning">Morning</Select.Option>
-              <Select.Option value="Afternoon">Afternoon</Select.Option>
-              <Select.Option value="Evening">Evening</Select.Option>
+            <Select placeholder={t("placeholder_select_delivery_time")}>
+              <Select.Option value="Morning">{t("time_morning")}</Select.Option>
+              <Select.Option value="Afternoon">
+                {t("time_afternoon")}
+              </Select.Option>
+              <Select.Option value="Evening">{t("time_evening")}</Select.Option>
             </Select>
           </AntForm.Item>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             <Button onClick={handleCancel} style={{ marginRight: 8 }}>
-              Cancel
+              {t("button_cancel")}
             </Button>
             <Button type="primary" htmlType="submit">
-              Add
+              {t("button_add")}
             </Button>
           </div>
         </AntForm>

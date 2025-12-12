@@ -5,10 +5,12 @@ import { getAllDispatchers, deleteDispatcher } from "../utils/dbUtils";
 import type { Dispatcher } from "../types/dispatchers";
 import DispatcherModal from "../components/DispatcherModal";
 import { sortDispatchers } from "../utils/sortingUtils";
+import { useTranslation } from "react-i18next";
 
 const { Text } = Typography;
 
 export default function SetDispatcher() {
+  const { t } = useTranslation(["setDispatcher", "hongkong"]);
   const { modal, message } = App.useApp();
   const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -23,7 +25,6 @@ export default function SetDispatcher() {
 
   const fetchDispatchers = async () => {
     const dispatchers = await getAllDispatchers();
-    console.log(dispatchers);
     if (dispatchers) {
       const sortedDispatchers = sortDispatchers(dispatchers);
       setDispatchers(sortedDispatchers);
@@ -48,61 +49,63 @@ export default function SetDispatcher() {
   };
 
   const handleModalSuccess = () => {
-    fetchDispatchers(); // 刷新dispatcher列表
+    fetchDispatchers();
   };
 
   const handleDeleteDispatcher = (dispatcher: Dispatcher) => {
     modal.confirm({
-      title: "Delete Dispatcher",
+      title: t("modal_delete_title"),
       icon: <DeleteOutlined style={{ color: "red" }} />,
       content: (
         <div>
-          <p>
-            Are you sure you want to delete dispatcher <strong>{dispatcher.name}</strong>?
-          </p>
+          <p>{t("modal_delete_content_main", { name: dispatcher.name })}</p>
           <p style={{ color: "red", marginTop: 8 }}>
-            <strong>Warning:</strong> This will permanently delete the dispatcher
-            and unassign all their orders. This action cannot be undone.
+            <strong>{t("modal_delete_warning_label")}:</strong>{" "}
+            {t("modal_delete_warning_text")}
           </p>
         </div>
       ),
-      okText: "Delete",
+      okText: t("button_delete"),
       okType: "danger",
-      cancelText: "Cancel",
+      cancelText: t("button_cancel"),
       onOk: async () => {
         const result = await deleteDispatcher(dispatcher.id);
         if (result.success) {
+          const messageKey =
+            result.orderCount && result.orderCount > 0
+              ? "message_success_deleted_with_orders"
+              : "message_success_deleted_no_orders";
+
           message.success(
-            `Dispatcher deleted successfully${
-              result.orderCount && result.orderCount > 0
-                ? ` (${result.orderCount} order${
-                    result.orderCount > 1 ? "s" : ""
-                  } unassigned)`
-                : ""
-            }`
+            t(messageKey, {
+              count: result.orderCount || 0,
+              name: dispatcher.name,
+            })
           );
           fetchDispatchers();
         } else {
-          message.error(`Failed to delete dispatcher: ${result.error}`);
+          message.error(
+            t("message_error_delete_failed", { error: result.error })
+          );
         }
       },
     });
   };
 
   return (
-    <Card title="Dispatchers" style={{ maxWidth: "70%", margin: "0 auto" }}>
-      <Row gutter={12} style={{ marginBottom: 12 }}>
-        <Col span={4}>
-          <Text strong>Dispatcher's Name</Text>
-        </Col>
-        <Col span={10}>
-          <Text strong>Active Day</Text>
-        </Col>
-        <Col span={7}>
-          <Text strong>Responsible Area</Text>
-        </Col>
+    <Card title={t("card_title")} style={{ maxWidth: "70%", margin: "0 auto" }}>
+      <Row gutter={24} style={{ marginBottom: 12 }}>
         <Col span={3}>
-          <Text strong>Actions</Text>
+          <Text strong>{t("header_dispatcher_name")}</Text>
+        </Col>
+        <Col span={8}>
+          <Text strong>{t("header_active_day")}</Text>
+        </Col>
+        <Col span={8}>
+          <Text strong>{t("header_responsible_area")}</Text>
+        </Col>
+        <Col span={5}>
+          <Text strong>{t("header_actions")}</Text>
         </Col>
       </Row>
 
@@ -110,28 +113,46 @@ export default function SetDispatcher() {
         <Row
           key={dispatcher.id}
           align="middle"
-          gutter={12}
+          gutter={24}
           style={{
             marginBottom: 12,
             padding: "8px 0",
             borderBottom: "1px solid #f0f0f0",
           }}
         >
-          <Col span={4}>
+          <Col span={3}>
             <Text>{dispatcher.name}</Text>
           </Col>
-          <Col span={10}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 8px", fontSize: "12px" }}>
+          <Col span={8}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "4px 8px",
+                fontSize: "12px",
+              }}
+            >
               {(() => {
                 const activeDay = dispatcher.activeDay || {};
 
                 if (Object.keys(activeDay).length === 0) {
-                  return <Text type="secondary" style={{ fontSize: "12px" }}>No active days</Text>;
+                  return (
+                    <Text type="secondary" style={{ fontSize: "12px" }}>
+                      {t("text_no_active_days")}
+                    </Text>
+                  );
                 }
 
-                const dayOrder = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+                const dayOrder = [
+                  "Mon",
+                  "Tue",
+                  "Wed",
+                  "Thu",
+                  "Fri",
+                  "Sat",
+                  "Sun",
+                ];
 
-                // Separate days into two groups: full periods and partial periods
                 const fullPeriodDays: [string, string[]][] = [];
                 const partialPeriodDays: [string, string[]][] = [];
 
@@ -144,21 +165,31 @@ export default function SetDispatcher() {
                   }
                 });
 
-                // Sort both groups by day order
-                fullPeriodDays.sort(([dayA], [dayB]) => dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB));
-                partialPeriodDays.sort(([dayA], [dayB]) => dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB));
+                fullPeriodDays.sort(
+                  ([dayA], [dayB]) =>
+                    dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB)
+                );
+                partialPeriodDays.sort(
+                  ([dayA], [dayB]) =>
+                    dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB)
+                );
 
-                // Combine: full periods first, then partial periods
                 const sortedDays = [...fullPeriodDays, ...partialPeriodDays];
 
                 return sortedDays.map(([day, periods]) => {
                   const periodList = periods as string[];
                   const isAllPeriods = periodList.length === 3;
 
-                  // Display format: "Mon" (all periods) or "Sat: Morning / Afternoon" (partial)
+                  const translatedDay = t(`day_${day}`, { defaultValue: day });
+                  const translatedPeriods = periodList.map((p) =>
+                    t(`period_${p}`, { defaultValue: p })
+                  );
+
                   const displayText = isAllPeriods
-                    ? day
-                    : `${day}: ${periodList.join(" / ")}`;
+                    ? translatedDay
+                    : `${translatedDay}: ${translatedPeriods.join(
+                        t("period_separator", { defaultValue: " / " })
+                      )}`;
 
                   return (
                     <div
@@ -177,22 +208,67 @@ export default function SetDispatcher() {
               })()}
             </div>
           </Col>
-          <Col span={7}>
-            <div style={{ maxHeight: "60px", overflow: "hidden" }}>
-              {dispatcher.responsibleArea?.map((area) => (
-                <div key={area[1]} style={{ fontSize: "12px", color: "#666" }}>
-                  {area[1]}
+
+          <Col span={8}>
+            {(() => {
+              const areas = dispatcher.responsibleArea || [];
+              const isOverflow = areas.length > 9;
+              const displayAreas = isOverflow
+                ? areas.slice(0, 8)
+                : areas.slice(0, 9);
+
+              return (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gap: "4px 8px",
+                    fontSize: "12px",
+                    color: "#666",
+                  }}
+                >
+                  {displayAreas.map((area) => {
+                    const areaKey = area[1].replace(/ /g, "_");
+                    const areaName = t(`hongkong:area_${areaKey}`, {
+                      defaultValue: area[1],
+                    });
+                    return (
+                      <div
+                        key={area[1]}
+                        title={areaName}
+                        style={{
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {areaName}
+                      </div>
+                    );
+                  })}
+                  {isOverflow && (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        color: "#999",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      ...
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </Col>
-          <Col span={3}>
+
+          <Col span={5}>
             <Button
               type="link"
               size="small"
               onClick={() => handleEditDispatcher(dispatcher)}
             >
-              Edit
+              {t("button_edit")}
             </Button>
             <Button
               type="link"
@@ -201,7 +277,7 @@ export default function SetDispatcher() {
               icon={<DeleteOutlined />}
               onClick={() => handleDeleteDispatcher(dispatcher)}
             >
-              Delete
+              {t("button_delete")}
             </Button>
           </Col>
         </Row>
@@ -210,7 +286,7 @@ export default function SetDispatcher() {
       <Row style={{ marginTop: 16 }}>
         <Col>
           <Button type="primary" onClick={handleAddDispatcher}>
-            Add Dispatcher
+            {t("button_add_dispatcher")}
           </Button>
         </Col>
       </Row>

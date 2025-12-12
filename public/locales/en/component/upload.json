@@ -1,0 +1,59 @@
+{
+    "autoFillControls": {
+        "upload_instructions_title": "Upload Instructions",
+        "upload_instructions_desc1": "Upload a JSON or CSV file to import orders in bulk. Missing date/time data will be automatically filled with current Hong Kong date/time.",
+        "upload_instructions_date_label": "Date Format",
+        "upload_instructions_date_format_text1": "Dates must be in",
+        "upload_instructions_date_format_text2": "format",
+        "upload_instructions_date_rejection": "Other formats will be rejected."
+    },
+    "batchUploadModel": {
+        "modal_title": "Upload JSON/CSV File",
+        "button_cancel": "Cancel",
+        "button_upload": "Upload",
+        "error_select_file": "Please select a file",
+        "error_maps_not_loaded": "Google Maps is not loaded. Please try again.",
+        "error_no_valid_orders": "No valid orders found in the file",
+        "error_geocoder_not_available": "Google Maps geocoder not available. Please try again.",
+        "error_processing_file": "Error processing file: {{error}}",
+        "error_create_customer": "Failed to create customer: {{error}}",
+        "error_creating_records": "Error creating records: {{error}}",
+        "success_upload": "Successfully created {{customerCount}} customer(s) and {{orderCount}} order(s)"
+    },
+    "fileUploader": {
+        "error_file_type": "Only JSON and CSV files are allowed",
+        "success_file_select": "File selected, please click the upload button",
+        "text_drag_prompt": "Click or drag JSON/CSV file to this area to upload",
+        "text_hint": "Upload a JSON or CSV file to import orders in bulk.",
+        "text_selected_file": "Selected file"
+    },
+    "uploadPreview": {
+        "modal_title": "Preview Batch Upload",
+        "button_cancel": "Cancel",
+        "button_confirm_create": "Confirm & Create",
+        "col_customer_name": "Customer Name",
+        "col_detailed_address": "Detailed Address",
+        "col_area": "Area",
+        "col_district": "District",
+        "col_open_time": "Open Time",
+        "col_close_time": "Close Time",
+        "summary_title": "Summary",
+        "summary_new_customer_text": "new customer(s) will be created",
+        "summary_order_import_text": "order(s) will be imported",
+        "alert_geocode_failure_title": "Geocoding Failures",
+        "alert_geocode_failure_desc_part1": "The following {{count}} address(es) failed geocoding and will be skipped:",
+        "alert_invalid_date_title": "Invalid Date Format - Rows Skipped",
+        "alert_invalid_date_desc_part1": "The following {{count}} row(s) had invalid date formats and will be skipped. Only YYYY-MM-DD format is accepted (e.g., 2025-01-20):",
+        "text_row": "Row {{rowNumber}}",
+        "text_order_id": "(Order {{orderId}})",
+        "text_invalid_format": "- Invalid format:",
+        "table_new_customers_title": "New Customers to be Created",
+        "alert_auto_fill_title": "Auto-filled Data ({{count}} order(s))",
+        "alert_auto_fill_desc_part1": "The following orders had missing date/time data that was auto-filled with your defaults:",
+        "text_order": "Order {{orderId}}",
+        "text_used_default_date": "Used default date",
+        "text_used_default_time": "Used default time period",
+        "alert_no_data_title": "No Valid Data",
+        "alert_no_data_desc": "No customers or orders can be created from the uploaded file."
+    }
+}

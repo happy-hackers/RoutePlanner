@@ -1,0 +1,20 @@
+{
+    "inputStartPlaceholder": "Input Start (lng,lat)",
+    "inputEndPlaceholder": "Input End (lng,lat)",
+    "selectOptionPlaceholder": "Select Option",
+    "optionNormal": "Normal",
+    "optionByTime": "Opening Time",
+    "selectStartTimePlaceholder": "Select Start Time",
+    "calculateButton": "Calculate",
+    "errorStartEndRequired": "Start location and destination should be entered",
+    "errorStartTimeRequired": "Please select a star time before calculating the route.",
+    "errorNoRouteFound": "No route found",
+    "errorRouteCalculationFailed": "Route calculation failed",
+    "geocodeError": "Geocode failed for",
+    "popupStart": "Start",
+    "popupEnd": "End",
+    "popupStop": "Stop",
+    "footerTotalTime": "Total Time",
+    "dispatcher": "dispatcher",
+    "timeNotAvailable": "N/A"
+  }

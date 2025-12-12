@@ -6,7 +6,8 @@ import type { RootState } from "../store";
 import { updateOrder } from "../utils/dbUtils";
 import { setSelectedOrders } from "../store/orderSlice";
 import type { MarkerData } from "../types/markers";
-import { setMarkersList } from "../utils/markersUtils";
+import { useTranslation } from "react-i18next";
+import { getGroupedMarkers } from "../utils/markersUtils";
 
 const { Title, Text } = Typography;
 
@@ -31,7 +32,7 @@ export default function Dispatcherform({
   setMarkers,
   setHoveredOrderId
 }: DispatcherformProps) {
-  // get global time information from redux
+  const { t } = useTranslation("viewDispatcher");
   const { message } = App.useApp();
   const dispatch = useDispatch();
   const selectedOrders = useSelector((state: RootState) => state.order.selectedOrders);
@@ -51,14 +52,15 @@ export default function Dispatcherform({
       const result = await updateOrder(updatedOrder);
       if (result.success) {
         const newOrders = selectedOrders.map((order) =>
-          order.id === updatedOrder.id ? {...updatedOrder, customer} : order
+          order.id === updatedOrder.id ? { ...updatedOrder, customer } : order
         );
         dispatch(setSelectedOrders(newOrders));
-        const newMarkers = setMarkersList(newOrders, dispatchers)
-        setMarkers(newMarkers);
-        message.success(`Order ${order.id} is not assigned`);
+        const markers = getGroupedMarkers(newOrders, dispatchers);
+
+        setMarkers(markers);
+        message.success(t('message_unassigned_success', { orderId: order.id }));
       } else {
-        message.error(`Failed to update order ${order.id}: ${result.error}`);
+        message.error(t('message_update_failed', { orderId: order.id, error: result.error }));
       }
     } else {
       const updatedOrder: Order = {
@@ -69,50 +71,57 @@ export default function Dispatcherform({
       const result = await updateOrder(updatedOrder);
       if (result.success) {
         const newOrders = selectedOrders.map((order) =>
-          order.id === updatedOrder.id ? {...updatedOrder, customer} : order
+          order.id === updatedOrder.id ? { ...updatedOrder, customer } : order
         );
         dispatch(setSelectedOrders(newOrders));
         let newMarkers;
         if (selectedDispatcher) {
           const newOrderData = newOrders.filter(order => order.dispatcherId === selectedDispatcher.id);
-          newMarkers = setMarkersList(newOrderData, dispatchers)
+          newMarkers = getGroupedMarkers(newOrderData, dispatchers);
         } else {
-          newMarkers = setMarkersList(newOrders, dispatchers)
+          newMarkers = getGroupedMarkers(newOrders, dispatchers);
         }
         setMarkers(newMarkers);
-        message.success(`Order ${order.id} assigned to ${name || "Unknown"}`);
+        message.success(t('message_assigned_success', { orderId: order.id, dispatcherName: name || t('dispatcher_unknown') }));
       } else {
-        message.error(`Failed to update order ${order.id}: ${result.error}`);
+        message.error(t('message_update_failed', { orderId: order.id, error: result.error }));
       }
     }
   };
+
+  const sortedDispatchers = [...dispatchers].sort((a, b) => {
+    return a.name.localeCompare(b.name);
+  });
+
   const options = [
-    { value: -1, label: "Not Assigned" },
-    ...dispatchers.map((dispatcher) => ({
+    { value: -1, label: t("dispatcher_not_assigned") },
+    ...sortedDispatchers.map((dispatcher) => ({
       value: dispatcher.id,
       label: dispatcher.name,
     })),
   ];
 
+  const WIDE_DROPDOWN_CLASS = "local-wide-select-dropdown";
+
   const columns = [
     {
-      title: "ID",
+      title: t("table_id"),
       dataIndex: "id",
       key: "id",
-      width: "12%",
+      width: "20%",
       sorter: (a: Order, b: Order) => {
         return a.id - b.id;
       },
       sortDirections: ["ascend", "descend"] as unknown as ("ascend" | "descend" | null)[],
     },
     {
-      title: "Address",
+      title: t("table_address"),
       dataIndex: "detailedAddress",
       key: "detailedAddress",
       ellipsis: true,
       width: "60%",
       sorter: (a: Order, b: Order) =>
-        a.detailedAddress.localeCompare(b.detailedAddress), 
+        a.detailedAddress.localeCompare(b.detailedAddress),
       sortDirections: ["ascend", "descend"] as unknown as ("ascend" | "descend" | null)[],
       render: (detailedAddress: string, record: Order) => (
         <Text>
@@ -121,15 +130,15 @@ export default function Dispatcherform({
       ),
     },
     {
-      title: "Dispatcher",
+      title: t("table_dispatcher"),
       dataIndex: "dispatcherId",
       key: "dispatcherId",
-      width: "28%",
+      width: "20%",
       sorter: (a: Order, b: Order) => {
         const nameA =
-          dispatchers.find((d) => d.id === a.dispatcherId)?.name || "Not Assigned";
+          dispatchers.find((d) => d.id === a.dispatcherId)?.name || t("dispatcher_not_assigned");
         const nameB =
-          dispatchers.find((d) => d.id === b.dispatcherId)?.name || "Not Assigned";
+          dispatchers.find((d) => d.id === b.dispatcherId)?.name || t("dispatcher_not_assigned");
         return nameA.localeCompare(nameB);
       },
       sortDirections: ["ascend", "descend"] as unknown as ("ascend" | "descend" | null)[],
@@ -138,19 +147,21 @@ export default function Dispatcherform({
         return (
           <Select
             style={{ width: "100%" }}
-            value={value?? -1}
+            value={value ?? -1}
             onChange={(value) => {
               const label = options.find((opt) => opt.value === value)?.label;
               handleChange(value, label, record);
             }}
             options={options}
+            rootClassName={WIDE_DROPDOWN_CLASS}
+            virtual={true}
+            listHeight={300}
           />
         );
       },
     },
   ];
 
-  // Filter orders for the selected dispatcher
   const dispatcherOrders = selectedDispatcher
     ? orders.filter((order) => order.dispatcherId === selectedDispatcher.id)
     : [];
@@ -166,10 +177,12 @@ export default function Dispatcherform({
     >
       {selectedDispatcher ? (
         <>
-          <Title level={4}>Orders assigned to {selectedDispatcher.name}</Title>
+          <Title level={4}>
+            {t("title_assigned_orders", { dispatcherName: selectedDispatcher.name })}
+          </Title>
           <Space direction="vertical" style={{ marginBottom: 16 }}>
             <Text>
-              <strong>Responsible areas:</strong>
+              <strong>{t("text_responsible_areas")}</strong>
               <br />
               <Space size={[0, 8]} wrap style={{ marginTop: 4 }}>
                 {Object.entries(
@@ -190,7 +203,7 @@ export default function Dispatcherform({
             </Text>
 
             <Text type="secondary">
-              Total orders: {dispatcherOrders.length}
+              {t("text_total_orders", { count: dispatcherOrders.length })}
             </Text>
           </Space>
           <Table
@@ -198,13 +211,13 @@ export default function Dispatcherform({
             dataSource={dispatcherOrders}
             rowKey="id"
             pagination={{
-              pageSize: 10,
+              pageSize: 20,
               showSizeChanger: true,
               showQuickJumper: true,
               showTotal: (total, range) =>
-                `${range[0]}-${range[1]} of ${total} orders`,
+                t("pagination_total_orders", { start: range[0], end: range[1], total }),
             }}
-            scroll={{ y: 380 }}
+            scroll={{ y: "calc(100vh - 380px)" }}
             onRow={(record) => ({
               onMouseEnter: () => setHoveredOrderId(record.id),
               onMouseLeave: () => setHoveredOrderId(null),
@@ -213,29 +226,10 @@ export default function Dispatcherform({
         </>
       ) : (
         <>
-          <Title level={4}>All Orders</Title>
+          <Title level={4}>{t("title_all_orders")}</Title>
           <Text type="secondary">
-            Select a dispatcher to view their assigned orders
+            {t("text_select_dispatcher")}
           </Text>
-          {/*<p style={{ marginTop: 8 }}>
-            <Text strong>Current Time Period: </Text>
-            <Text type="secondary">{date?.format("YYYY-MM-DD")} </Text>
-            {timePeriod.map((period) => (
-              <Tag
-                key={period}
-                color={
-                  period === "Morning"
-                    ? "gold"
-                    : period === "Afternoon"
-                    ? "cyan"
-                    : "purple"
-                }
-                style={{ textTransform: "capitalize" }}
-              >
-                {period}
-              </Tag>
-            ))}
-          </p>*/}
           <Table
             columns={columns}
             dataSource={orders}
@@ -245,9 +239,9 @@ export default function Dispatcherform({
               showSizeChanger: true,
               showQuickJumper: true,
               showTotal: (total, range) =>
-                `${range[0]}-${range[1]} of ${total} orders`,
+                t("pagination_total_orders", { start: range[0], end: range[1], total }),
             }}
-            scroll={{ y: 440 }}
+            scroll={{ y: "calc(100vh - 280px)" }}
             style={{ marginTop: 8 }}
             onRow={(record) => ({
               onMouseEnter: () => setHoveredOrderId(record.id),
