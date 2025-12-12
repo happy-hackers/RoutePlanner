@@ -17,7 +17,7 @@
   "label_password_edit": "Password",
   "button_reset_password": "Reset Password",
   "placeholder_new_password": "New password",
-  "text_new_password_tip": "New password will be set when you save",
+  "text_new_password_tip": "New password will be set when you press the green button",
   "label_active_days": "Active Days",
   "period_morning": "Morning",
   "period_afternoon": "Afternoon",
@@ -47,9 +47,11 @@
   "msg_add_auth_success": "Dispatcher added with auth account! Password copied to clipboard.",
   "msg_add_noauth_success": "Dispatcher added successfully!",
   "msg_add_fail": "Failed to add dispatcher: {{error}}",
-  "msg_edit_pwd_success": "Dispatcher updated and password reset! Password copied to clipboard.",
+  "msg_edit_pwd_success": "Password reset! Password is copied to clipboard.",
   "msg_edit_pwd_fail": "Dispatcher updated but password reset failed: {{error}}",
   "msg_edit_success": "Dispatcher updated successfully!",
+  "msg_edit_auth_fail": "Dispatcher update but auth information update failed",
   "msg_edit_fail": "Failed to update dispatcher: {{error}}",
+  "msg_invalid_phone_number": "Invalid phone number format",
   "msg_network_error": "Network error occurred"
 }

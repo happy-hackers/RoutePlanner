@@ -14,13 +14,23 @@ export interface Route {
   endLat: number;
   endLng: number;
   
-  orderSequence: Order[];
+  orderSequence?: Order[];
+  addressMeterSequence: AddressMetersElement[];
   segmentTimes: number[];
-  total_time: number;
-  total_distance: number;
+  totalTime: number;
+  totalDistance: number;
   polylineCoordinates: LatLngExpression[];
   createdBy: string;
 
   version: number;
   is_active: boolean;
+}
+
+export interface AddressMetersElement { 
+  address: string, 
+  lat: number, 
+  lng: number, 
+  area: string,
+  district: string,
+  meters: Order[]
 }

@@ -4,6 +4,9 @@
   "label_start_address": "Default Start Address",
   "label_end_address": "Default End Address",
   "label_language": "Language",
+  "label_map_option": "Map Option",
   "button_submit": "Submit",
+  "usual_address_upload": "Usual Addresses upload",
+  "button_address_upload": "Bulk Import usual address (Upload CSV)",
   "message_save_success": "Saved successfully"
 }

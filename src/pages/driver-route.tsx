@@ -1,42 +1,124 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Layout, Button, message, Spin, Result, DatePicker, Typography } from 'antd';
-import { EnvironmentOutlined, LogoutOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import NextStopCard from '../components/driver/NextStopCard';
-import RouteListView from '../components/driver/RouteListView';
-import DriverMap from '../components/driver/DriverMap';
-import { getDriverActiveRoute, updateOrderStatus } from '../utils/dbUtils';
-import { generateGoogleMapsUrl, getNextIncompleteStopIndex } from '../utils/mapUtils';
-import { logoutDriver } from '../utils/authUtils';
-import { useAuth } from '../contexts/AuthContext';
-import type { DeliveryRoute } from '../types/delivery-route';
-import type { Order } from '../types/order';
-import { useTranslation } from 'react-i18next';
+import { useState, useEffect } from "react";
+import sound from "../assets/sounds/sms-received1.mp3";
+import { useNavigate } from "react-router-dom";
+import {
+  Layout,
+  Button,
+  Spin,
+  Result,
+  DatePicker,
+  Typography,
+  App,
+  Row,
+  Col,
+  Table,
+} from "antd";
+import { EnvironmentOutlined, LogoutOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
+import NextStopCard from "../components/driver/NextStopCard";
+import RouteListView from "../components/driver/RouteListView";
+import DriverMap from "../components/driver/DriverMap";
+import {
+  getDriverActiveRoute,
+  getDriverRoutesInRange,
+  updateMeterNote,
+  updateOrderStatus,
+} from "../utils/dbUtils";
+import { generateGoogleMapsUrl, getDistance } from "../utils/mapUtils";
+import { logoutDriver } from "../utils/authUtils";
+import { useAuth } from "../contexts/AuthContext";
+import type { DeliveryRoute } from "../types/delivery-route";
+import { useTranslation } from "react-i18next";
+import type { AddressMetersElement } from "../types/route.ts";
 import LanguageSwitcher from "../components/LanguageSwitcher.tsx";
 
 const { Header, Content } = Layout;
 const { Title } = Typography;
 
-type ViewMode = 'next' | 'list';
+type ViewMode = "next" | "list";
 
 export default function DriverRoute() {
-  const { t } = useTranslation('driverRoute');
+  const { t } = useTranslation("driverRoute");
   const navigate = useNavigate();
   const { user, dispatcher, loading: authLoading } = useAuth();
 
   // State
   const [loading, setLoading] = useState(true);
-  const [deliveryRoute, setDeliveryRoute] = useState<DeliveryRoute | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [deliveryRoute, setDeliveryRoute] = useState<DeliveryRoute | null>(
+    null
+  );
+  //const [orders, setOrders] = useState<Order[]>([]);
+  const [stops, setStops] = useState<AddressMetersElement[]>([]);
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
-  const [viewMode, setViewMode] = useState<ViewMode>('next');
+  const [viewMode, setViewMode] = useState<ViewMode>("next");
   const [selectedDate, setSelectedDate] = useState(dayjs());
+  const [driverLocation, setDriverLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const [hasWarned, setHasWarned] = useState(true);
+  const [availableRoutes, setAvailableRoutes] = useState<DeliveryRoute[]>([]);
+  const [routesLoading, setRoutesLoading] = useState(false);
+
+  const { message, modal } = App.useApp();
+  const currentStop = stops[currentStopIndex];
+
+  function hasIncompleteMeters(stop: AddressMetersElement): boolean {
+    return stop.meters.some((meter) => meter.status !== "Delivered");
+  }
+
+  // Watch driver location
+  useEffect(() => {
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setDriverLocation({ lat: latitude, lng: longitude });
+      },
+      (error) => console.error("Geolocation error:", error),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 5000 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
+  // Detect departure and trigger alert
+  useEffect(() => {
+    if (!driverLocation || !currentStop) return;
+
+    const stopLat = currentStop.lat;
+    const stopLng = currentStop.lng;
+
+    const distance = getDistance(
+      driverLocation.lat,
+      driverLocation.lng,
+      stopLat,
+      stopLng
+    );
+
+    if (distance > 80 && hasIncompleteMeters(currentStop) && !hasWarned) {
+      const incompleteCount = currentStop.meters.filter(
+        (m) => m.status !== "Delivered"
+      ).length;
+
+      modal.info({
+        title: `You have ${incompleteCount} incompleted meters in the current stop`,
+      });
+      const notification_sound = new Audio(sound);
+      notification_sound.play();
+      if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200]);
+      }
+      setHasWarned(true);
+    }
+    if (distance <= 80) {
+      setHasWarned(false);
+    }
+  }, [driverLocation, currentStop, hasWarned, modal]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/driver-login');
+      navigate("/driver-login");
     }
   }, [user, authLoading, navigate]);
 
@@ -49,105 +131,152 @@ export default function DriverRoute() {
     try {
       setLoading(true);
 
-      // Get active route (orderSequence already contains full Order objects)
+      // Get active route
       const routeData = await getDriverActiveRoute(dispatcher.id, date);
 
       if (!routeData) {
         setDeliveryRoute(null);
-        setOrders([]);
+        setStops([]);
         return;
       }
 
       setDeliveryRoute(routeData);
 
-      // Orders are already in the route's orderSequence
-      setOrders(routeData.orderSequence);
+      setStops(routeData.addressMeterSequence);
 
       // Set current stop to first incomplete
-      const firstIncomplete = routeData.orderSequence.findIndex(o => o.status !== 'Delivered');
+      const firstIncomplete = routeData.addressMeterSequence.findIndex((stop) =>
+        stop.meters.some((order) => order.status !== "Delivered")
+      );
       setCurrentStopIndex(firstIncomplete !== -1 ? firstIncomplete : 0);
-
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      message.error(t('message_fail_load_route'));
+      message.error(t("message_fail_load_route"));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSurroundingMonthRoutes = async () => {
+    if (!dispatcher) return;
+    setRoutesLoading(true);
+    try {
+      // From one month ago
+      const startDate = dayjs()
+        .subtract(1, "month")
+        .startOf("month")
+        .format("YYYY-MM-DD");
+
+      // To one month ahead
+      const endDate = dayjs()
+        .add(1, "month")
+        .endOf("month")
+        .format("YYYY-MM-DD");
+
+      const routes = await getDriverRoutesInRange(
+        dispatcher.id,
+        startDate,
+        endDate
+      );
+
+      setAvailableRoutes(routes);
+    } finally {
+      setRoutesLoading(false);
     }
   };
 
   // Load route on mount and date change
   useEffect(() => {
     if (dispatcher) {
-      fetchRouteData(selectedDate.format('YYYY-MM-DD'));
+      fetchRouteData(selectedDate.format("YYYY-MM-DD"));
     }
-  }, [dispatcher, selectedDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatcher?.id, selectedDate]);
+
+  // When no route is found, fetch the next month's routes
+  useEffect(() => {
+    if (!deliveryRoute && dispatcher) {
+      fetchSurroundingMonthRoutes();
+    }
+  }, [dispatcher?.id, deliveryRoute]);
 
   // Handle mark as done
-  const handleDone = async () => {
-    const currentOrder = orders[currentStopIndex];
-
+  const handleMeterDone = async (orderId: number) => {
     try {
-      // Update database
-      await updateOrderStatus(currentOrder.id, 'Delivered');
+      await updateOrderStatus(orderId, "Delivered");
 
-      // Update local state
-      setOrders(prev => prev.map(o =>
-        o.id === currentOrder.id ? { ...o, status: 'Delivered' as const } : o
-      ));
+      setStops((prev) =>
+        prev.map((stop) => ({
+          ...stop,
+          meters: stop.meters.map((order) =>
+            order.id === orderId
+              ? { ...order, status: "Delivered" as const }
+              : order
+          ),
+        }))
+      );
 
-      message.success(t('message_done_success'));
-
-      // Auto-advance to next incomplete stop
-      const nextIndex = getNextIncompleteStopIndex(orders, currentStopIndex);
-
-      if (nextIndex !== -1) {
-        setCurrentStopIndex(nextIndex);
-      } else {
-        // All done!
-        message.success(t('message_all_done'));
-      }
-
+      message.success(t("message_done_success"), 1);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      message.error(t('message_fail_update_status'));
+      message.error(t("message_fail_update_status"));
     }
   };
 
   // Handle undo (revert delivered status)
-  const handleUndo = async () => {
-    const currentOrder = orders[currentStopIndex];
-
-    // Only allow undo for delivered orders
-    if (currentOrder.status !== 'Delivered') {
-      message.warning(t('message_warning_not_delivered'));
-      return;
-    }
-
+  const handleMeterUndo = async (orderId: number) => {
     try {
-      // Update database back to In Progress
-      await updateOrderStatus(currentOrder.id, 'In Progress');
+      await updateOrderStatus(orderId, "In Progress");
 
-      // Update local state
-      setOrders(prev => prev.map(o =>
-        o.id === currentOrder.id ? { ...o, status: 'In Progress' as const } : o
-      ));
+      setStops((prev) =>
+        prev.map((stop) => ({
+          ...stop,
+          meters: stop.meters.map((order) =>
+            order.id === orderId
+              ? { ...order, status: "In Progress" as const }
+              : order
+          ),
+        }))
+      );
 
-      message.success(t('message_undo_success'));
-
+      message.success(t("message_undo_success"), 1);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      message.error(t('message_fail_revert_status'));
+      message.error(t("message_fail_revert_status"));
+    }
+  };
+
+  const handleSaveNote = async (orderId: number, note: string) => {
+    try {
+      await updateMeterNote(orderId, note);
+      setStops((prev) =>
+        prev.map((stop) => ({
+          ...stop,
+          meters: stop.meters.map((order) =>
+            order.id === orderId
+              ? { ...order, note: note, lastNoteTime: new Date().toISOString() }
+              : order
+          ),
+        }))
+      );
+      message.success("Note saved!");
+    } catch (e) {
+      message.error("Failed to save note");
     }
   };
 
   // Handle stop selection from list
   const handleStopSelect = (index: number) => {
     setCurrentStopIndex(index);
-    setViewMode('next');
+    setViewMode("next");
+    setHasWarned(true);
   };
 
   // Open Google Maps
   const handleOpenGoogleMaps = () => {
-    if (deliveryRoute && orders.length > 0) {
-      const url = generateGoogleMapsUrl(deliveryRoute, orders);
-      window.open(url, '_blank');
+    if (deliveryRoute && stops.length > 0) {
+      const url = generateGoogleMapsUrl(deliveryRoute);
+      window.open(url, "_blank");
     }
   };
 
@@ -155,17 +284,48 @@ export default function DriverRoute() {
   const handleLogout = async () => {
     const result = await logoutDriver();
     if (result.success) {
-      message.success(t('message_logout_success'));
-      navigate('/driver-login');
+      message.success(t("message_logout_success"));
+      navigate("/driver-login");
     } else {
-      message.error(t('message_fail_logout'));
+      message.error(t("message_fail_logout"));
     }
   };
+
+  const columns = [
+    {
+      title: t("table_date", "Route Date"),
+      dataIndex: "routeDate",
+      render: (text: string) => dayjs(text).format("YYYY-MM-DD"),
+    },
+    {
+      title: t("table_stops", "Stops"),
+      render: (_: any, route: DeliveryRoute) =>
+        route.addressMeterSequence.length,
+    },
+    {
+      title: t("table_meters", "Total Meters"),
+      render: (_: any, route: DeliveryRoute) => {
+        // Sum all meters across all stops (addressMeterSequence entries)
+        const totalMeters = route.addressMeterSequence.reduce(
+          (acc: number, stop: any) => acc + (stop.meters?.length || 0),
+          0
+        );
+        return totalMeters;
+      },
+    },
+  ];
 
   // Loading state
   if (authLoading || loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
         <Spin size="large" />
       </div>
     );
@@ -179,76 +339,110 @@ export default function DriverRoute() {
   // No route found
   if (!deliveryRoute) {
     return (
-      <Result
-        status="info"
-        title={t('result_no_route_title')}
-        subTitle={t('result_no_route_subtitle', { date: selectedDate.format('YYYY-MM-DD') })}
-        extra={
-          <DatePicker
-            value={selectedDate}
-            onChange={(date) => date && setSelectedDate(date)}
+      <Layout style={{ minHeight: "100vh" }}>
+        <Header style={{ background: "#fff", padding: "0 16px" }}>
+          <Row justify="end">
+            <Col>
+              <Button icon={<LogoutOutlined />} onClick={handleLogout}>
+                {t("button_logout")}
+              </Button>
+            </Col>
+          </Row>
+        </Header>
+
+        <Content style={{ margin: "24px" }}>
+          <Result
+            status="info"
+            title={t("result_no_route_title")}
+            subTitle={t("result_no_route_subtitle", {
+              date: selectedDate.format("YYYY-MM-DD"),
+            })}
+            extra={
+              <DatePicker
+                value={selectedDate}
+                onChange={(date) => date && setSelectedDate(date)}
+              />
+            }
           />
-        }
-      />
+          <div style={{ marginTop: 32 }}>
+            <Title level={5}>
+              {t(
+                "recent_and_upcoming_routes_title",
+                "Last & Next Month's Routes"
+              )}
+            </Title>
+
+            <Table
+              loading={routesLoading}
+              dataSource={availableRoutes}
+              rowKey={(route) => route.id}
+              pagination={false}
+              locale={{
+                emptyText: t("no_routes_found", "No routes available"),
+              }}
+              onRow={(route) => ({
+                onClick: () => {
+                  setDeliveryRoute(route);
+                  setStops(route.addressMeterSequence);
+                },
+              })}
+              columns={columns}
+            />
+          </div>
+        </Content>
+      </Layout>
     );
   }
 
-  const currentOrder = orders[currentStopIndex];
-
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: "100vh" }}>
       {/* Header */}
-      <Header style={{
-        background: '#fff',
-        padding: '0 16px',
-        borderBottom: '1px solid #f0f0f0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <Title level={4} style={{ margin: 0 }}>
-          {t('header_title', { dispatcherName: dispatcher.name })}
+      <Header
+        style={{
+          background: "#fff",
+          padding: "0 16px",
+          borderBottom: "1px solid #f0f0f0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Title level={5} style={{ margin: 0 }}>
+          {t("header_title", { dispatcherName: dispatcher.name })}
         </Title>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ whiteSpace: 'nowrap' }}>
-            {t('language_select')} 
-          </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <LanguageSwitcher />
           <DatePicker
             value={selectedDate}
             onChange={(date) => date && setSelectedDate(date)}
-            format="MMM DD"
+            format="YYYY-MM-DD"
           />
-          <Button
-            icon={<LogoutOutlined />}
-            onClick={handleLogout}
-          >
-            {t('button_logout')}
-          </Button>
+          <Button icon={<LogoutOutlined />} onClick={handleLogout}></Button>
         </div>
       </Header>
 
       {/* Content */}
-      <Content style={{ position: 'relative', height: 'calc(100vh - 64px)' }}>
-        {viewMode === 'next' ? (
+      <Content style={{ position: "relative", height: "calc(100vh - 64px)" }}>
+        {viewMode === "next" ? (
           <>
             {/* Map View */}
             <DriverMap
               deliveryRoute={deliveryRoute}
-              orders={orders}
+              stops={stops}
               currentStopIndex={currentStopIndex}
               onStopSelect={handleStopSelect}
             />
 
             {/* Next Stop Card (overlay at bottom) */}
             <NextStopCard
-              order={currentOrder}
+              stop={currentStop}
               stopNumber={currentStopIndex + 1}
-              totalStops={orders.length}
+              totalStops={stops.length}
               segmentTime={deliveryRoute.segmentTimes[currentStopIndex] || 0}
-              onDone={handleDone}
-              onUndo={handleUndo}
-              onViewAll={() => setViewMode('list')}
+              onViewAll={() => setViewMode("list")}
+              onMeterDone={handleMeterDone}
+              onMeterUndo={handleMeterUndo}
+              onNoteSave={handleSaveNote}
             />
 
             {/* Floating Google Maps Button */}
@@ -258,42 +452,41 @@ export default function DriverRoute() {
               icon={<EnvironmentOutlined />}
               onClick={handleOpenGoogleMaps}
               style={{
-                position: 'fixed',
+                position: "fixed",
                 top: 80,
                 right: 16,
-                zIndex: 1000,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                zIndex: 1001,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
               }}
             >
-              {t('button_google_maps')}
+              {t("button_google_maps")}
             </Button>
           </>
         ) : (
           <>
             {/* List View */}
             <RouteListView
-              orders={orders}
+              stops={stops}
               segmentTimes={deliveryRoute.segmentTimes}
               currentStopIndex={currentStopIndex}
               onStopSelect={handleStopSelect}
-              onUndo={handleUndo}
             />
 
             {/* Back to Map Button */}
             <Button
               type="primary"
               size="large"
-              onClick={() => setViewMode('next')}
+              onClick={() => setViewMode("next")}
               style={{
-                position: 'fixed',
+                position: "fixed",
                 bottom: 16,
                 left: 16,
                 right: 16,
                 height: 56,
-                zIndex: 1000
+                zIndex: 1000,
               }}
             >
-              {t('button_back_to_map')}
+              {t("button_back_to_map")}
             </Button>
           </>
         )}

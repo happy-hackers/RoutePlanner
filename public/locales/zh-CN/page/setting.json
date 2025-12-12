@@ -4,6 +4,9 @@
   "label_start_address": "默认起始地址",
   "label_end_address": "默认结束地址",
   "label_language": "语言",
+  "label_map_option": "显示地图",
   "button_submit": "提交",
+  "usual_address_upload": "常用地址上传",
+  "button_address_upload": "批量上传常用地址（上传CSV）",
   "message_save_success": "保存成功"
 }

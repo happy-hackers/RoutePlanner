@@ -1,6 +1,6 @@
-import { supabase } from './dbUtils';
-import { supabaseAdmin } from './supabaseAdmin';
-import type { User } from '@supabase/supabase-js';
+import { supabase } from "./dbUtils";
+import { supabaseAdmin } from "./supabaseAdmin";
+import type { User } from "@supabase/supabase-js";
 
 export interface AuthResult {
   success: boolean;
@@ -23,37 +23,40 @@ export const loginDriver = async (
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      password
+      password,
     });
 
     if (error) {
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
 
     return {
       success: true,
-      user: data.user
+      user: data.user,
     };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Login failed'
+      error: error instanceof Error ? error.message : "Login failed",
     };
   }
 };
 
 // Logout driver
-export const logoutDriver = async (): Promise<{ success: boolean; error?: string }> => {
+export const logoutDriver = async (): Promise<{
+  success: boolean;
+  error?: string;
+}> => {
   try {
     const { error } = await supabase.auth.signOut();
 
     if (error) {
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
 
@@ -61,7 +64,7 @@ export const logoutDriver = async (): Promise<{ success: boolean; error?: string
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Logout failed'
+      error: error instanceof Error ? error.message : "Logout failed",
     };
   }
 };
@@ -69,10 +72,12 @@ export const logoutDriver = async (): Promise<{ success: boolean; error?: string
 // Get current authenticated user
 export const getCurrentUser = async (): Promise<User | null> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     return user;
   } catch (error) {
-    console.error('Error getting current user:', error);
+    console.error("Error getting current user:", error);
     return null;
   }
 };
@@ -94,30 +99,50 @@ export const createDriverAuth = async (
       options: {
         data: {
           dispatcher_id: authData.dispatcherId,
-          name: authData.name
+          name: authData.name,
         },
         // Skip email verification for admin-created accounts
-        emailRedirectTo: `${window.location.origin}/driver-route`
-      }
+        emailRedirectTo: `${window.location.origin}/driver-route`,
+      },
     });
 
     if (error) {
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
 
     return {
       success: true,
-      user: data.user ?? undefined
+      user: data.user ?? undefined,
     };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to create driver account'
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to create driver account",
     };
   }
+};
+
+export const UpdateDriverAuth = async (
+  authData: Omit<DriverAuthData, "password">,
+  authUserId: string
+): Promise<{ success: boolean; error?: string }> => {
+  const { error } = await supabase.auth.admin.updateUserById(authUserId, {
+    email: authData.email,
+    user_metadata: {
+      dispatcher_id: authData.dispatcherId,
+      name: authData.name,
+    },
+  });
+  if (error) {
+    return { success: false, error: error.message };
+  }
+  return { success: true };
 };
 
 // Update driver password (called by admin)
@@ -136,7 +161,7 @@ export const updateDriverPassword = async (
     if (error) {
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
 
@@ -144,7 +169,8 @@ export const updateDriverPassword = async (
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update password'
+      error:
+        error instanceof Error ? error.message : "Failed to update password",
     };
   }
 };
@@ -152,19 +178,47 @@ export const updateDriverPassword = async (
 // Get session
 export const getSession = async () => {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     return session;
   } catch (error) {
-    console.error('Error getting session:', error);
+    console.error("Error getting session:", error);
     return null;
   }
 };
 
 // Listen to auth state changes
 export const onAuthStateChange = (callback: (user: User | null) => void) => {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
     callback(session?.user ?? null);
   });
 
   return subscription;
+};
+
+export const generateRandomPassword = () => {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%";
+  let pwd = "";
+  for (let i = 0; i < 12; i++) {
+    pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return pwd;
+};
+
+export const loginWithEmailLink = async (email: string) => {
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: `${window.location.origin}/driver-route`,
+    },
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+  return { success: true, message: "Check your email for the login link!" };
 };

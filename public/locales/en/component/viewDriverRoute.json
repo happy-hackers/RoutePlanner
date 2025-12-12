@@ -11,7 +11,8 @@
         "text_open": "Open",
         "button_view_all": "View All",
         "button_undo": "Undo",
-        "button_mark_done": "Mark as Done"
+        "button_mark_done": "Mark as Done",
+        "text_meter_id": "Meter ID:"
     },
     "routeListView": {
         "progress_header_text": "Progress",

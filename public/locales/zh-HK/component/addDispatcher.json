@@ -17,7 +17,7 @@
   "label_password_edit": "密碼",
   "button_reset_password": "重設密碼",
   "placeholder_new_password": "新密碼",
-  "text_new_password_tip": "新密碼將在您儲存時生效",
+  "text_new_password_tip": "新密碼將在您按下綠色按鈕時保存",
   "label_active_days": "活躍時段",
   "period_morning": "上午",
   "period_afternoon": "下午",
@@ -47,9 +47,11 @@
   "msg_add_auth_success": "已新增調度員及登入帳號！密碼已複製到剪貼板。",
   "msg_add_noauth_success": "調度員新增成功！",
   "msg_add_fail": "新增調度員失敗: {{error}}",
-  "msg_edit_pwd_success": "調度員已更新並重設密碼！密碼已複製到剪貼板。",
+  "msg_edit_pwd_success": "已重設密碼！密碼已複製到剪貼板。",
   "msg_edit_pwd_fail": "調度員已更新但密碼重設失敗: {{error}}",
   "msg_edit_success": "調度員更新成功！",
+  "msg_edit_auth_fail": "調度員已更新但認證帳戶資訊更新失敗",
   "msg_edit_fail": "更新調度員失敗: {{error}}",
+  "msg_invalid_phone_number": "無效的電話號碼格式",
   "msg_network_error": "發生網絡錯誤"
 }

@@ -9,5 +9,6 @@ dependencies = [
     "fastapi>=0.118.2",
     "ortools>=9.12.4544",
     "requests>=2.32.4",
+    "supabase>=2.6.0",
     "uvicorn>=0.33.0",
 ]

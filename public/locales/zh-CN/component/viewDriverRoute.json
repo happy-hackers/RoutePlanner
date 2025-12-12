@@ -11,7 +11,8 @@
         "text_open": "营业",
         "button_view_all": "查看所有站点",
         "button_undo": "撤销",
-        "button_mark_done": "标记为已完成"
+        "button_mark_done": "标记为已完成",
+        "text_meter_id": "编号："
     },
     "routeListView": {
         "progress_header_text": "进度",

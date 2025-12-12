@@ -8,14 +8,15 @@ import {
   App,
   Select,
   Row,
-  Col
+  Col,
 } from "antd";
 import { addCustomer, updateCustomer } from "../utils/dbUtils";
 import type { Customer } from "../types/customer.ts";
 import dayjs from "dayjs";
-import areaData from "../hong_kong_areas.json"
+import areaData from "../hong_kong_areas.json";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import { useTranslation } from "react-i18next";
+import type { Rule } from "antd/lib/form";
 
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 
@@ -34,7 +35,7 @@ export default function CustomerModal({
   customer,
   mode,
 }: CustomerModalProps) {
-  const { t } = useTranslation(["addCustomer", 'hongkong']);
+  const { t } = useTranslation(["addCustomer", "hongkong"]);
   type Area = keyof typeof areaData;
 
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
@@ -257,13 +258,24 @@ export default function CustomerModal({
     }
   };
 
+  const validateCloseTime: Rule = ({ getFieldValue }) => ({
+    validator(_, value: dayjs.Dayjs | undefined) {
+      const openTime: dayjs.Dayjs | undefined = getFieldValue("openTime");
+      if (!value || !openTime) {
+        return Promise.resolve();
+      }
+      if (value.isAfter(openTime)) {
+        return Promise.resolve();
+      }
+      return Promise.reject(
+        new Error(t("validation_close_time_after_open_time"))
+      );
+    },
+  });
+
   return (
     <Modal
-      title={
-        mode === "add"
-          ? t(`modal_title_add`)
-          : t(`modal_title_edit`)
-      }
+      title={mode === "add" ? t(`modal_title_add`) : t(`modal_title_edit`)}
       open={visible}
       onCancel={handleCancel}
       footer={null}
@@ -292,7 +304,11 @@ export default function CustomerModal({
         <AntForm.Item
           label={t(`label_close_time`)}
           name="closeTime"
-          rules={[{ required: true, message: t(`validation_time_required`) }]}
+          dependencies={["openTime"]}
+          rules={[
+            { required: true, message: t(`validation_time_required`) },
+            validateCloseTime,
+          ]}
         >
           <TimePicker style={{ width: "100%" }} />
         </AntForm.Item>
@@ -301,7 +317,9 @@ export default function CustomerModal({
             <AntForm.Item
               label={t(`label_area`)}
               name="area"
-              rules={[{ required: true, message: t(`validation_area_required`) }]}
+              rules={[
+                { required: true, message: t(`validation_area_required`) },
+              ]}
             >
               <Select
                 placeholder={t(`placeholder_select_area`)}
@@ -313,7 +331,9 @@ export default function CustomerModal({
                 }}
                 options={areas.map((area) => ({
                   value: area,
-                  label: t('hongkong:region_' + area.replace(/ /g, '_'), { defaultValue: area }),
+                  label: t("hongkong:region_" + area.replace(/ /g, "_"), {
+                    defaultValue: area,
+                  }),
                 }))}
                 optionFilterProp="label"
                 showSearch
@@ -324,14 +344,18 @@ export default function CustomerModal({
             <AntForm.Item
               label={t(`label_district`)}
               name="district"
-              rules={[{ required: true, message: t(`validation_district_required`) }]}
+              rules={[
+                { required: true, message: t(`validation_district_required`) },
+              ]}
             >
               <Select
                 placeholder={t(`placeholder_select_district`)}
                 disabled={!selectedArea}
                 options={districts.map((district) => ({
                   value: district,
-                  label: t('hongkong:area_' + district.replace(/ /g, '_'), { defaultValue: district }),
+                  label: t("hongkong:area_" + district.replace(/ /g, "_"), {
+                    defaultValue: district,
+                  }),
                 }))}
                 optionFilterProp="label"
                 showSearch
@@ -342,7 +366,9 @@ export default function CustomerModal({
         <AntForm.Item
           label={t(`label_detailed_address`)}
           name="detailedAddress"
-          rules={[{ required: true, message: t(`validation_address_required`) }]}
+          rules={[
+            { required: true, message: t(`validation_address_required`) },
+          ]}
         >
           <Select
             showSearch
@@ -400,3 +426,4 @@ export default function CustomerModal({
     </Modal>
   );
 }
+
