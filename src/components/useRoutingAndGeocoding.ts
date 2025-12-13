@@ -11,7 +11,6 @@ import type { MarkerData } from "../types/markers";
 import type { AddressMetersElement, Route } from "../types/route";
 import type { Dispatcher } from "../types/dispatchers";
 import type { LatLngExpression } from "leaflet";
-import type { LatLngTuple } from "leaflet";
 import type { MessageInstance } from "antd/es/message/interface";
 
 type TFunction = (key: string) => string;
@@ -113,7 +112,7 @@ export const useRoutingAndGeocoding = ({
     });
   }
 
-  async function getOptimizedWaypointOrderByTime(
+  async function getOptimizedWaypointOrder(
     startPoint: Coords,
     endPoint: Coords,
     waypoints: {
@@ -162,21 +161,22 @@ export const useRoutingAndGeocoding = ({
     endCoord: Coords,
     orderedWaypoints: Coords[]
   ): Promise<LatLngExpression[]> => {
-    const allCoords = [startCoord, ...orderedWaypoints, endCoord]
-      .map((c) => `${c.lng},${c.lat}`)
-      .join(";");
+    const response = await fetch(`${SERVER_URL}/osrm-polyline`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        start_coord: startCoord,
+        end_coord: endCoord,
+        ordered_waypoints: orderedWaypoints,
+      }),
+    });
 
-    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${allCoords}?overview=full&geometries=geojson`;
-
-    const response = await fetch(osrmUrl);
-    const data = await response.json();
-
-    if (data.routes && data.routes.length > 0) {
-      return data.routes[0].geometry.coordinates.map(
-        (c: [number, number]) => [c[1], c[0]] as LatLngTuple
-      );
+    if (!response.ok) {
+      throw new Error(`Route request failed: ${response.status}`);
     }
-    return [];
+
+    const data: { lat: number; lng: number }[] = await response.json();
+    return data.map((c) => [c.lat, c.lng]);
   };
 
   const processRouteResult = async (
@@ -297,7 +297,7 @@ export const useRoutingAndGeocoding = ({
         close: m.customer?.closeTime ?? null,
       }));
 
-      const optimizedRouteResult = await getOptimizedWaypointOrderByTime(
+      const optimizedRouteResult = await getOptimizedWaypointOrder(
         startCoord,
         endCoord,
         waypointsWithTimes,
